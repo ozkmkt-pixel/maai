@@ -63,6 +63,44 @@
   .skrow b{font-size:11px;width:30px;text-align:left;color:#23252B;}
   .gbtn.skin{flex-direction:row;padding:5px 8px;font-size:11px;font-weight:800;}
   .gbtn.skin i{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #15181D;margin-right:3px;}
+  .card h2.pl{font-family:"M PLUS Rounded 1c",sans-serif;font-weight:900;}   /* 見出しの字体に「店」「蔵」「極」などの字がないので */
+  .skrow em{font-size:10px;color:#8A8F98;font-style:normal;margin-left:2px;}
+  .gbtn.lock{opacity:.5;box-shadow:none;cursor:default;}
+  .coin{display:inline-block;background:#2B2F37;color:#F4EEDF;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:800;margin:4px 0;}
+  .coin b{color:#FFD84A !important;}
+  .earn{background:#FFF6D8;border-radius:10px;padding:8px;font-size:14px !important;}
+  .earn small{display:block;font-size:11px;color:#6A5A2A;}
+  .row2,.row3{display:flex;gap:8px;justify-content:center;}
+  .row2 button,.row3 button{flex:1;padding:10px 6px;font-size:15px;}
+  .row2 button small{display:block;font-size:11px;opacity:.8;}
+  button:disabled{opacity:.4;cursor:default;}
+  .box{width:120px;height:120px;margin:10px auto;border-radius:14px;background:linear-gradient(#7A2E2A,#5A1E1A);box-shadow:0 6px 0 #3A120F;display:flex;align-items:center;justify-content:center;transition:box-shadow .3s;}
+  .boxIn{font-family:"M PLUS Rounded 1c",sans-serif;font-weight:900;color:#F4EEDF;font-size:26px;writing-mode:vertical-rl;letter-spacing:.2em;}
+  .box.shake{animation:shake .12s linear infinite;}
+  .box.glow0{box-shadow:0 0 30px 8px #C9CED6;} .box.glow1{box-shadow:0 0 34px 12px #3E8EDE;} .box.glow2{box-shadow:0 0 50px 20px #FFD84A;background:linear-gradient(#E8B23A,#B8860B);}
+  @keyframes shake{0%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}100%{transform:rotate(-8deg)}}
+  .card.kiwami{animation:kiwami .8s ease-out;}
+  @keyframes kiwami{0%{box-shadow:0 0 0 0 #FFD84A;transform:scale(1.04)}100%{box-shadow:0 8px 0 rgba(0,0,0,.45);transform:scale(1)}}
+  .res{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0;}
+  .res.one{grid-template-columns:1fr;justify-items:center;}
+  .res figure{margin:0;background:#C9B48A;border-radius:8px;padding:2px;border:2px solid transparent;}
+  .res figure.r1{border-color:#3E7FC4;} .res figure.r2{border-color:#FFD84A;background:#E8D28A;box-shadow:0 0 10px #FFD84A;}
+  .res canvas{display:block;margin:0 auto;width:100% !important;height:auto !important;}
+  .res.one canvas{width:110px !important;}
+  .res figure{min-width:0;}
+  .res figcaption{font-size:9px;font-weight:800;line-height:1.3;color:#23252B;}
+  .res figcaption small{display:block;font-size:8px;color:#5A4A33;}
+  .res.one figcaption{font-size:14px;} .res.one figcaption small{font-size:11px;}
+  .rare{font-style:normal;color:#FFF;border-radius:4px;padding:0 3px;margin-right:2px;font-size:9px;}
+  .tabs{display:flex;gap:4px;margin:8px 0;} .tabs button{flex:1;margin:0;padding:6px 2px;font-size:13px;background:#E4DCC9;color:#23252B;box-shadow:0 3px 0 #B9AE95;}
+  .tabs button.on{background:#23252B;color:#F4EEDF;box-shadow:0 3px 0 #000;}
+  .shopRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #DDD3BE;text-align:left;}
+  .shopName{flex:1;display:flex;flex-direction:column;} .shopName span{font-weight:800;font-size:14px;} .shopName small{font-size:10px;font-weight:800;}
+  .shopName .pro{color:#2F7A45;} .shopName .con{color:#B8322A;}
+  .shopRow button{margin:0;padding:6px 10px;font-size:13px;} .shopRow em{font-size:11px;color:#2F7A45;font-style:normal;font-weight:800;}
+  .mini{background:#C9B48A;border-radius:8px;}
+  .kura{display:flex;flex-wrap:wrap;gap:4px;} .kura span{font-size:11px;font-weight:800;border:2px solid #B9AE95;border-radius:8px;padding:3px 6px;background:#FFF;}
+  .kura span.no{color:#A0A4AA;background:#EEE8DA;}
   .catprev figcaption{font-size:11px;font-weight:800;color:#3A2A1A;}
   .stats th{font-size:11px;color:#5A5E66;padding:2px 4px;} .stats td{padding:3px 4px;border-top:1px solid #DDD3BE;}
   .stats td:first-child{text-align:left;} .stats td:not(:first-child){text-align:right;font-weight:800;width:52px;}
@@ -490,8 +528,14 @@ function endRound(){
     G.phase = 'over';
     // 負けたら同じ相手（武器・防具とも）ともう一度。勝ったら新しい相手
     const lv = win ? G.level + 1 : G.level, eW = win ? null : G.eW, eGear = win ? null : G.eGear;
-    card(win ? `<h2>勝利</h2><p>${G.e.name} を ${G.pw}-${G.ew} で倒しました。<br>次の相手は少し強くなります。</p><button id="b1">次の相手（Lv${lv}）を見る</button>`
-             : `<h2>敗北</h2><p>${G.e.name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p><button id="b1">装備を見直す</button>`,
+    // 小判：1本ごとに5、勝てば 30＋Lv×5、そのLvに初めて勝てば 50、はじき1回に1（10まで）
+    const pay = [['1本×' + G.pw, G.pw*5], ['勝利', win ? 30 + G.level*5 : 0], ['初勝利', win && G.level > bag.cleared ? 50 : 0], ['はじき×' + Math.min(10, G.count.parry), Math.min(10, G.count.parry)]].filter(x => x[1] > 0);
+    const total = pay.reduce((a, x) => a + x[1], 0);
+    if (win) bag.cleared = Math.max(bag.cleared, G.level);
+    bag.koban += total; saveBag();
+    const earn = `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
+    card(win ? `<h2>勝利</h2><p>${G.e.name} を ${G.pw}-${G.ew} で倒しました。<br>次の相手は少し強くなります。</p>${earn}<button id="b1">次の相手（Lv${lv}）を見る</button>`
+             : `<h2>敗北</h2><p>${G.e.name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p>${earn}<button id="b1">装備を見直す</button>`,
          () => loadout(lv, eW, eGear));
     return;
   }
@@ -522,12 +566,15 @@ function loadout(level, eW, eGear, practice){
     const chip = (on, attrs, name, pros, cons, note) => `<button class="gbtn${on ? ' on' : ''}" ${attrs}><span>${name}</span>` + (note ? `<small>${note}</small>` : '') +
       pros.map(t => `<small class="pro">＋${t}</small>`).join('') + cons.map(t => `<small class="con">－${t}</small>`).join('') + `</button>`;
     // 武器と防具の選択欄（who：'me' か 'foe'）
+    // 自分の防具は持っている物だけ選べる（持っていない物は鍵つきで、店の値段を出す）。練習の相手は全部選べる
     const picker = (who, wk, gear) => `<h3>武器</h3><div class="grow g4">${WKEYS.map(k => chip(k === wk, `data-who="${who}" data-w="${k}"`, WEAPONS[k].name, [], [], WEAPONS[k].desc)).join('')}</div>
-      ${SLOTS.map(s => `<h3>${ARMOR[s].label}</h3><div class="grow">${Object.entries(ARMOR[s].items).map(([k, it]) =>
-        chip(gear[s] === k, `data-who="${who}" data-s="${s}" data-k="${k}"`, it.name, it.pros, it.cons)).join('')}</div>`).join('')}`;
+      ${SLOTS.map(s => `<h3>${ARMOR[s].label}</h3><div class="grow">${Object.entries(ARMOR[s].items).map(([k, it]) => who === 'me' && !ownsArmor(k)
+        ? `<button class="gbtn lock" disabled><span>${it.name}</span><small>🔒 店で${ARMOR_PRICE[k]}枚</small></button>`
+        : chip(gear[s] === k, `data-who="${who}" data-s="${s}" data-k="${k}"`, it.name, it.pros, it.cons)).join('')}</div>`).join('')}`;
     // 見た目（スキン）：能力は変わらない
-    const skinPicker = `<h3>見た目（能力は変わりません）</h3>${Object.entries(SKINS).map(([k, d]) => `<div class="skrow"><b>${d.name}</b>${Object.entries(d.list).map(([v, n]) =>
-      `<button class="gbtn skin${mySkin[k] === v ? ' on' : ''}" data-sk="${k}" data-v="${v}">${k === 'hairC' ? `<i style="background:${v}"></i>` : ''}${n}</button>`).join('')}</div>`).join('')}
+    const skinPicker = `<h3>見た目（能力は変わりません。ガチャで増えます）</h3>${Object.entries(SKINS).map(([k, d]) => { const all = Object.entries(d.list), mine = all.filter(([v]) => ownsSkin(k, v));
+      return `<div class="skrow"><b>${d.name}</b>${mine.map(([v, n]) =>
+      `<button class="gbtn skin${mySkin[k] === v ? ' on' : ''}" data-sk="${k}" data-v="${v}">${k === 'hairC' ? `<i style="background:${v}"></i>` : ''}${n[0]}</button>`).join('')}<em>${mine.length}/${all.length}</em></div>`; }).join('')}
       <button id="skRand" class="sub">見た目をランダムに</button>`;
     ov.innerHTML = `<div class="card load">
       ${practice
@@ -548,7 +595,7 @@ function loadout(level, eW, eGear, practice){
     ov.hidden = false; ov.querySelector('.card').scrollTop = top;
     drawPreview(document.getElementById('pvMe'), mySkin, 'blue'); drawPreview(document.getElementById('pvFoe'), foeSkin, 'red');
     ov.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { mySkin = {...mySkin, [b.dataset.sk]: b.dataset.v}; save(); render(); });
-    document.getElementById('skRand').onclick = () => { mySkin = randSkin(); save(); render(); };
+    document.getElementById('skRand').onclick = () => { for (const k in SKINS) { const ks = Object.keys(SKINS[k].list).filter(v => ownsSkin(k, v)); mySkin[k] = ks[Math.floor(Math.random()*ks.length)]; } mySkin = {...mySkin}; save(); render(); };
     ov.querySelectorAll('[data-w]').forEach(b => b.onclick = () => {
       if (b.dataset.who === 'foe') eW = b.dataset.w; else myW = b.dataset.w; save(); render(); });
     ov.querySelectorAll('[data-s]').forEach(b => b.onclick = () => {
@@ -560,6 +607,107 @@ function loadout(level, eW, eGear, practice){
   const save = () => { try { localStorage.setItem('maai_weapon', myW); localStorage.setItem('maai_gear', JSON.stringify(myGear)); localStorage.setItem('maai_skin', JSON.stringify(mySkin));
     if (practice) localStorage.setItem('maai_practice', JSON.stringify({level, eW, eGear})); } catch(e) {} };
   render();
+}
+// ---------- ガチャ・店・蔵の画面 ----------
+function page(html){ ov.innerHTML = `<div class="card load">${html}</div>`; ov.hidden = false; ov.querySelector('.card').scrollTop = 0; }
+const coinBar = () => `<div class="coin">小判 <b>${bag.koban}</b>　欠片 <b>${bag.frag}</b></div>`;
+const rareTag = r => `<i class="rare" style="background:${RARE[r].c}">${RARE[r].n}</i>`;
+// 見本：いつもの侍に、その1品だけを着せる
+const itemSkin = it => ({...DEFAULT_SKIN, [it.slot]: it.key});
+const miniCv = (id, w = 64, h = 76) => `<canvas class="mini" id="${id}" width="${w*2}" height="${h*2}" style="width:${w}px;height:${h}px"></canvas>`;
+function drawMini(id, skin, slot){ const c = document.getElementById(id); if (!c) return; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
+  // 刀は横向き（刃が見える）、背中の物は斜め後ろ向き（旗が高いので少し小さく）で見せる
+  const F = slot === 'blade' ? .3 : slot === 'back' ? -Math.PI/2 + .5 : Math.PI/2 - .55, k = c.height/(slot === 'back' ? 100 : 78);
+  x.save(); x.translate(c.width/2 - (slot === 'blade' ? c.width*.12 : 0), c.height - 8); x.scale(k, k); drawHuman(x, 0, 0, F, skin, 'blue'); x.restore(); }
+const itemLabel = it => `${SKINS[it.slot].name}：${it.name}`;
+
+function rollOne(minR = 0){
+  bag.pity++;
+  const x = Math.random(); let r = x < GACHA.rates[2] ? 2 : x < GACHA.rates[2] + GACHA.rates[1] ? 1 : 0;
+  if (bag.pity >= GACHA.pity) r = 2;
+  r = Math.max(r, minR); if (r === 2) bag.pity = 0;
+  const pool = SKIN_POOL.filter(i => i.r === r), it = pool[Math.floor(Math.random()*pool.length)];
+  const dup = ownsSkin(it.slot, it.key);
+  if (dup) bag.frag += FRAG_GET[r]; else bag.skins[it.slot + ':' + it.key] = 1;
+  return {...it, dup};
+}
+function gachaScreen(){
+  page(`<h2 class="pl">ガチャ</h2>${coinBar()}
+    <div class="box" id="box"><div class="boxIn">御籤</div></div>
+    <p class="note">出るのは見た目だけ（${SKIN_POOL.length}種）。並 70%・上 25%・極 5%<br>あと <b>${GACHA.pity - bag.pity}</b> 回以内に必ず極。10連は上以上が1つ必ず出る<br>持っている物が出たら欠片（並1・上3・極10）→ 店で好きな見た目と交換</p>
+    <div class="row2"><button id="g1" ${bag.koban < GACHA.one ? 'disabled' : ''}>1回<small>${GACHA.one}枚</small></button><button id="g10" ${bag.koban < GACHA.ten ? 'disabled' : ''}>10連<small>${GACHA.ten}枚</small></button></div>
+    <button id="back" class="sub">戻る</button>`);
+  document.getElementById('g1').onclick = () => pull(1);
+  document.getElementById('g10').onclick = () => pull(10);
+  document.getElementById('back').onclick = title;
+}
+function pull(n){
+  const cost = n === 1 ? GACHA.one : GACHA.ten; if (bag.koban < cost) return;
+  bag.koban -= cost;
+  const res = []; for (let i = 0; i < n; i++) res.push(rollOne(n === 10 && i === 9 && !res.some(x => x.r >= 1) ? 1 : 0));
+  saveBag();
+  const best = Math.max(...res.map(x => x.r));
+  // 箱を振る → 札が出る（いちばん良い等級の色で光る）
+  const box = document.getElementById('box'); box.classList.add('shake');
+  ov.querySelectorAll('button').forEach(b => b.disabled = true);
+  setTimeout(() => { box.classList.add('glow' + best); }, 700);
+  setTimeout(() => showResults(res, n, best), best === 2 ? 1500 : 1100);
+}
+function showResults(res, n, best){
+  page(`<h2 class="pl">${best === 2 ? '極が出た！' : '結果'}</h2>${coinBar()}
+    <div class="res ${n === 1 ? 'one' : ''}">${res.map((it, i) => `<figure class="r${it.r}">${miniCv('rs' + i, n === 1 ? 110 : 60, n === 1 ? 130 : 70)}
+      <figcaption>${rareTag(it.r)}${it.name}<small>${SKINS[it.slot].name}${it.dup ? `・欠片+${FRAG_GET[it.r]}` : '・<b>NEW</b>'}</small></figcaption></figure>`).join('')}</div>
+    <div class="row2"><button id="again" ${bag.koban < (n === 1 ? GACHA.one : GACHA.ten) ? 'disabled' : ''}>もう${n === 1 ? '1回' : '10連'}<small>${n === 1 ? GACHA.one : GACHA.ten}枚</small></button><button id="wear" class="sub">装備を選ぶ</button></div>
+    <button id="back" class="sub">戻る</button>`);
+  if (best === 2) ov.querySelector('.card').classList.add('kiwami');
+  res.forEach((it, i) => drawMini('rs' + i, itemSkin(it), it.slot));
+  document.getElementById('again').onclick = () => { gachaScreen(); pull(n); };
+  document.getElementById('wear').onclick = () => loadout(1);
+  document.getElementById('back').onclick = gachaScreen;
+}
+// 日替わり：日付から決まる3品（その日のうちは同じ）
+function dailyItems(){
+  const d = new Date(), seed0 = d.getFullYear()*10000 + (d.getMonth() + 1)*100 + d.getDate();
+  let seed = seed0; const rnd1 = () => (seed = (seed*1103515245 + 12345) % 2147483648) / 2147483648;
+  const pick = [], pool = [...SKIN_POOL];
+  for (let i = 0; i < 3; i++) pick.push(pool.splice(Math.floor(rnd1()*pool.length), 1)[0]);
+  return pick;
+}
+function shopScreen(tab = 'armor'){
+  const tabs = [['armor', '防具'], ['frag', '欠片交換'], ['daily', '日替わり']];
+  let body = '';
+  if (tab === 'armor') body = `<p class="note">防具は能力が変わる。買えばずっと使える</p>` + SLOTS.map(s => `<h3>${ARMOR[s].label}</h3>` + Object.entries(ARMOR[s].items).map(([k, it]) => `
+    <div class="shopRow"><div class="shopName"><span>${it.name}</span>${it.pros.map(t => `<small class="pro">＋${t}</small>`).join('')}${it.cons.map(t => `<small class="con">－${t}</small>`).join('')}</div>
+      ${ownsArmor(k) ? '<em>持っている</em>' : `<button data-buy="${k}" ${bag.koban < ARMOR_PRICE[k] ? 'disabled' : ''}>${ARMOR_PRICE[k]}枚</button>`}</div>`).join('')).join('');
+  else {
+    const list = tab === 'frag' ? SKIN_POOL.filter(it => !ownsSkin(it.slot, it.key)).sort((a, b) => b.r - a.r) : dailyItems();
+    body = (tab === 'frag' ? `<p class="note">まだ持っていない見た目を、欠片で選んで手に入れる</p>` : `<p class="note">毎日変わる3品。小判で買える（ガチャより割高）</p>`) +
+      (list.length ? list.map((it, i) => { const price = tab === 'frag' ? FRAG_COST[it.r] : DAILY_PRICE[it.r], have = tab === 'frag' ? bag.frag : bag.koban, own = ownsSkin(it.slot, it.key);
+        return `<div class="shopRow">${miniCv('sh' + i, 44, 52)}<div class="shopName"><span>${rareTag(it.r)}${it.name}</span><small>${SKINS[it.slot].name}</small></div>
+          ${own ? '<em>持っている</em>' : `<button data-sk2="${i}" ${have < price ? 'disabled' : ''}>${price}${tab === 'frag' ? '欠片' : '枚'}</button>`}</div>`; }).join('') : '<p>見た目は全部そろっています</p>');
+    setTimeout(() => list.forEach((it, i) => drawMini('sh' + i, itemSkin(it), it.slot)));
+    shopScreen.list = list;
+  }
+  page(`<h2 class="pl">店</h2>${coinBar()}<div class="tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}</div>${body}
+    <button id="back" class="sub">戻る</button>`);
+  ov.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => shopScreen(b.dataset.tab));
+  ov.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy; if (bag.koban < ARMOR_PRICE[k]) return;
+    bag.koban -= ARMOR_PRICE[k]; bag.armor[k] = 1; saveBag(); shopScreen(tab); });
+  ov.querySelectorAll('[data-sk2]').forEach(b => b.onclick = () => { const it = shopScreen.list[+b.dataset.sk2], price = tab === 'frag' ? FRAG_COST[it.r] : DAILY_PRICE[it.r];
+    if (tab === 'frag') { if (bag.frag < price) return; bag.frag -= price; } else { if (bag.koban < price) return; bag.koban -= price; }
+    bag.skins[it.slot + ':' + it.key] = 1; saveBag(); shopScreen(tab); });
+  document.getElementById('back').onclick = title;
+}
+// 蔵：集めた見た目と防具の一覧（持っていない物は ？ で、等級の色だけ見える）
+function kuraScreen(){
+  const nSkin = SKIN_POOL.filter(it => ownsSkin(it.slot, it.key)).length, nArmor = Object.keys(ARMOR_PRICE).filter(ownsArmor).length;
+  page(`<h2 class="pl">蔵</h2>${coinBar()}
+    <p class="note">見た目 ${nSkin}/${SKIN_POOL.length}　防具 ${nArmor + 3}/9</p>
+    ${Object.entries(SKINS).map(([slot, d]) => `<h3>${d.name}</h3><div class="kura">${Object.entries(d.list).filter(([, v]) => v[1] >= 0).map(([key, v]) => ownsSkin(slot, key)
+      ? `<span style="border-color:${RARE[v[1]].c}">${rareTag(v[1])}${v[0]}</span>` : `<span class="no" style="border-color:${RARE[v[1]].c}">${rareTag(v[1])}？？？</span>`).join('')}</div>`).join('')}
+    <h3>防具</h3><div class="kura">${SLOTS.flatMap(s => Object.entries(ARMOR[s].items).map(([k, it]) => ownsArmor(k) ? `<span>${it.name}</span>` : `<span class="no">🔒 ${it.name}</span>`)).join('')}</div>
+    <button id="back" class="sub">戻る</button>`);
+  document.getElementById('back').onclick = title;
 }
 function openPractice(){
   let c = null; try { c = JSON.parse(localStorage.getItem('maai_practice') || 'null'); } catch(e) {}
@@ -655,23 +803,30 @@ function drawTele(f){
 const INK = '#15181D', SKIN_C = '#F6D2B0';
 const TEAM = { blue: '#3E8EDE', red: '#E0493E' };
 const IRON = '#5B6570', IRON_L = '#8A95A1', GOLD = '#E8B23A';
-// ---------- スキンの表（増やすときはここに足すだけ） ----------
+// ---------- スキンの表（[名前, 等級]。等級 -1＝最初から持っている、0＝並、1＝上、2＝極。増やすときはここに足して drawHuman に形を足す） ----------
 const SKINS = {
-  hair:   { name: '髪型', list: { mage: 'ちょんまげ', pony: '総髪（ひとつ結び）', short: '短髪', long: '長髪' } },
-  hairC:  { name: '髪色', list: { '#2A2522': '黒', '#6B4428': '茶', '#C9CED6': '銀', '#B8322C': '赤' } },
-  outfit: { name: '服',   list: { kimono: '着物', shinobi: '忍び装束', kariginu: '狩衣', yoroi: '大鎧' } },
-  head:   { name: '頭',   list: { none: 'なし', hachi: '鉢巻', kasa: '陣笠', kabuto: '鉄兜' } },
-  back:   { name: '背中', list: { none: 'なし', flag: '旗指物', cape: '陣羽織' } },
-  blade:  { name: '刀',   list: { plain: '打刀', shu: '朱鞘', yoto: '妖刀' } },
+  hair:   { name: '髪型', list: { mage: ['ちょんまげ', -1], pony: ['総髪', 0], short: ['短髪', 0], long: ['長髪', 1] } },
+  hairC:  { name: '髪色', list: { '#2A2522': ['黒', -1], '#6B4428': ['茶', 0], '#3B5BA5': ['藍', 0], '#B8322C': ['赤', 1], '#C9CED6': ['銀', 1], '#F2F2EE': ['白', 1], '#E8C25A': ['金', 2] } },
+  outfit: { name: '服',   list: { kimono: ['生成りの着物', -1], kon: ['紺の着物', 0], beni: ['紅の着物', 0], kuro: ['黒の着物', 0], shinobi: ['忍び装束', 1], kariginu: ['狩衣', 1],
+                                  yoroi: ['大鎧', 1], yoroi_kuro: ['黒漆の鎧', 2], yoroi_kin: ['金の大鎧', 2] } },
+  head:   { name: '頭',   list: { none: ['なし', -1], hachi: ['鉢巻', 0], hachi_aka: ['赤い鉢巻', 0], kasa: ['陣笠', 0], kabuto: ['鉄兜', 1], menpo: ['面頬', 1], kitsune: ['狐面', 2], kabuto_kin: ['金の兜', 2] } },
+  back:   { name: '背中', list: { none: ['なし', -1], flag: ['旗指物', 0], cape: ['陣羽織', 1], flag_kin: ['金の旗', 1], horo: ['母衣', 2] } },
+  blade:  { name: '刀',   list: { plain: ['打刀', -1], shu: ['朱鞘', 0], ao: ['青い刃', 1], sakura: ['桜の刀', 1], yoto: ['妖刀', 2], kin: ['金の刀', 2] } },
 };
-const OUTFIT = {   // 上着・袴・衿の色
-  kimono:   { top: '#E9E2D0', pants: '#2A2D34', collar: '#F4EEDF' },
-  shinobi:  { top: '#2B2F3A', pants: '#23262E', collar: '#3A3F49', mask: true },
-  kariginu: { top: '#F4EEDF', pants: '#6E4A8E', collar: '#D8CBEA', sleeve: true },
-  yoroi:    { top: IRON,      pants: '#2A2D34', collar: '#F4EEDF', armor: true },
+const OUTFIT = {   // 上着・袴・衿の色。armor は鎧（plate：胸板の色）
+  kimono:     { top: '#E9E2D0', pants: '#2A2D34', collar: '#F4EEDF' },
+  kon:        { top: '#34507F', pants: '#2A2D34', collar: '#F4EEDF' },
+  beni:       { top: '#A8413C', pants: '#2A2D34', collar: '#F4EEDF' },
+  kuro:       { top: '#2E3036', pants: '#1E2026', collar: '#C9CED6' },
+  shinobi:    { top: '#2B2F3A', pants: '#23262E', collar: '#3A3F49', mask: true },
+  kariginu:   { top: '#F4EEDF', pants: '#6E4A8E', collar: '#D8CBEA', sleeve: true },
+  yoroi:      { top: IRON,      pants: '#2A2D34', collar: '#F4EEDF', armor: true, plate: IRON_L },
+  yoroi_kuro: { top: '#26282E', pants: '#1E2026', collar: '#F4EEDF', armor: true, plate: '#4A4E58' },
+  yoroi_kin:  { top: '#C9A23A', pants: '#2A2D34', collar: '#F4EEDF', armor: true, plate: '#F2D27A' },
 };
 const BLADE = { plain: { edge: '#DDE3EA', grip: '#2A2D34', guard: GOLD }, shu: { edge: '#DDE3EA', grip: '#B8322C', guard: '#2A2D34' },
-                yoto: { edge: '#B58BFF', grip: '#3A2450', guard: '#7A4FC7', glow: true } };
+                ao: { edge: '#7FD4FF', grip: '#1E3A5A', guard: '#C9CED6', glow: true }, sakura: { edge: '#FFC2D4', grip: '#6B2E45', guard: '#F28CAA', glow: true },
+                yoto: { edge: '#B58BFF', grip: '#3A2450', guard: '#7A4FC7', glow: true }, kin: { edge: '#FFE08A', grip: '#2A2D34', guard: GOLD, glow: true } };
 
 function P3(F, a, r, y, yk = .35){ const t = F + a; return { x: Math.cos(t)*r, y: y + Math.sin(t)*r*yk, d: Math.sin(t) }; }
 function drawHuman(ctx, x, y, F, s, team, bob = 0, noSword = false){
@@ -697,7 +852,7 @@ function drawHuman(ctx, x, y, F, s, team, bob = 0, noSword = false){
     ctx.beginPath(); ctx.ellipse(0, -22, 12, 11, 0, 0, Math.PI*2); ctx.fillStyle = o.top; ctx.fill(); stroke();
     ctx.save(); ctx.beginPath(); ctx.ellipse(0, -22, 11, 10, 0, 0, Math.PI*2); ctx.clip();
     if (o.armor) { ctx.strokeStyle = tc; ctx.lineWidth = 2; for (const yy of [-27, -22]) { ctx.beginPath(); ctx.moveTo(-13, yy); ctx.lineTo(13, yy); ctx.stroke(); }
-      if (fz > -.3) { const fx = Math.cos(F)*10, w = 10*Math.max(.2, fz); ctx.fillStyle = IRON_L; ctx.fillRect(fx - w/2, -30, w, 6); } }
+      if (fz > -.3) { const fx = Math.cos(F)*10, w = 10*Math.max(.2, fz); ctx.fillStyle = o.plate; ctx.fillRect(fx - w/2, -30, w, 6); } }
     else if (fz > -.2) { const fx = Math.cos(F)*9, w = 5*Math.max(.25, fz);   // 衿
       ctx.beginPath(); ctx.moveTo(fx - w, -32); ctx.lineTo(fx, -21); ctx.lineTo(fx + w, -32); ctx.strokeStyle = o.collar; ctx.lineWidth = 2.4; ctx.stroke(); }
     ctx.fillStyle = tc; ctx.fillRect(-12, -17, 24, 4);   // 帯は味方の色
@@ -705,7 +860,7 @@ function drawHuman(ctx, x, y, F, s, team, bob = 0, noSword = false){
   }]);
   // 大鎧の袖・狩衣の袖
   if (o.armor || o.sleeve) for (const k of [-1, 1]) { const p = P3(F, k*Math.PI/2, 12.5, -26);
-    const w = 3 + 5*Math.abs(Math.cos(F)), col = o.armor ? IRON : o.top;
+    const w = 3 + 5*Math.abs(Math.cos(F)), col = o.top;
     B.push([p.d + .05, () => { ctx.beginPath(); ctx.rect(p.x - w/2, p.y - 3, w, o.armor ? 11 : 14); ctx.fillStyle = col; ctx.fill(); stroke(2);
       if (o.armor) { ctx.strokeStyle = tc; ctx.lineWidth = 1.5; for (const yy of [1, 4.5]) { ctx.beginPath(); ctx.moveTo(p.x - w/2, p.y + yy); ctx.lineTo(p.x + w/2, p.y + yy); ctx.stroke(); } } }]); }
   // 手と刀
@@ -713,7 +868,7 @@ function drawHuman(ctx, x, y, F, s, team, bob = 0, noSword = false){
   if (!noSword) { const a = F + .35, ex = hr.x + Math.cos(a)*36, ey = hr.y + Math.sin(a)*36*.35 - 21;
     B.push([hr.d - .01, () => {
       ctx.lineCap = 'round';
-      if (bl.glow) { ctx.save(); ctx.shadowColor = '#B58BFF'; ctx.shadowBlur = 10; }
+      if (bl.glow) { ctx.save(); ctx.shadowColor = bl.edge; ctx.shadowBlur = 10; }
       ctx.beginPath(); ctx.moveTo(hr.x, hr.y); ctx.lineTo(ex, ey); ctx.lineWidth = 5.5; ctx.strokeStyle = INK; ctx.stroke();
       ctx.lineWidth = 3; ctx.strokeStyle = bl.edge; ctx.stroke();
       if (bl.glow) ctx.restore();
@@ -755,45 +910,66 @@ function drawHuman(ctx, x, y, F, s, team, bob = 0, noSword = false){
   else { const m = P3(F, 0, HR, HY + 9, .3);
     if (m.d > .15) H.push([2 + m.d, () => { const q = Math.pow(m.d, .7); ctx.beginPath(); ctx.moveTo(m.x - 2.5*q, m.y); ctx.lineTo(m.x + 2.5*q, m.y); ctx.strokeStyle = '#9A5A48'; ctx.lineWidth = 1.6; ctx.stroke(); }]); }
   // 髪型ごとの部品
-  if (s.hair === 'mage' && s.head !== 'kabuto' && s.head !== 'kasa') {   // ちょんまげ：頭頂から前へ
+  if (s.hair === 'mage' && !['kabuto', 'kabuto_kin', 'kasa'].includes(s.head)) {   // ちょんまげ：頭頂から前へ
     H.push([3, () => { const dx = Math.cos(F)*7, dy = Math.sin(F)*2.5;
       ctx.beginPath(); ctx.moveTo(-dx*.3, HY - HR + 1); ctx.lineTo(dx, HY - HR - 3 + dy); ctx.lineCap = 'round'; ctx.lineWidth = 7; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 4; ctx.strokeStyle = hc; ctx.stroke(); }]); }
   if (s.hair === 'pony') { const p = P3(F, Math.PI, HR - 2, HY - 6, .35);
     H.push([p.d < 0 ? -2 : 3.5, () => { const sx = Math.cos(F + Math.PI)*6;
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(p.x + sx*2, p.y + 6, p.x + sx*1.2, p.y + 22); ctx.lineCap = 'round'; ctx.lineWidth = 9; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 6; ctx.strokeStyle = hc; ctx.stroke();
       ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fillStyle = TEAM[team]; ctx.fill(); stroke(1.5); }]); }
-  if (s.hair === 'short' && (s.head === 'none' || s.head === 'hachi')) for (let k = 0; k < 7; k++) { const p = P3(F, k*Math.PI*2/7 + .45, HR - 1, HY - 10, .3);   // ツンツン
+  if (s.hair === 'short' && ['none', 'hachi', 'hachi_aka', 'menpo', 'kitsune'].includes(s.head)) for (let k = 0; k < 7; k++) { const p = P3(F, k*Math.PI*2/7 + .45, HR - 1, HY - 10, .3);   // ツンツン
     H.push([p.d < 0 ? -1.5 : 1.2, () => { const nx = Math.cos(F + k*Math.PI*2/7 + .45)*6;
       ctx.beginPath(); ctx.moveTo(p.x - 4, p.y + 2); ctx.lineTo(p.x + nx, p.y - 7); ctx.lineTo(p.x + 4, p.y + 2); ctx.closePath(); ctx.fillStyle = hc; ctx.fill(); stroke(1.8); }]); }
   // 頭の装備
-  if (s.head === 'hachi') {
-    H.push([3, () => { ctx.save(); ctx.beginPath(); ctx.arc(0, HY, HR + .6, 0, Math.PI*2); ctx.clip(); ctx.fillStyle = '#F4EEDF'; ctx.fillRect(-HR - 2, HY - 9, HR*2 + 4, 4.5); ctx.restore();
+  if (s.head === 'hachi' || s.head === 'hachi_aka') { const band = s.head === 'hachi' ? '#F4EEDF' : '#C8463C';
+    H.push([3, () => { ctx.save(); ctx.beginPath(); ctx.arc(0, HY, HR + .6, 0, Math.PI*2); ctx.clip(); ctx.fillStyle = band; ctx.fillRect(-HR - 2, HY - 9, HR*2 + 4, 4.5); ctx.restore();
       const m = P3(F, 0, HR, HY - 7, .3); if (m.d > 0) { ctx.beginPath(); ctx.arc(m.x, m.y, 2.3, 0, Math.PI*2); ctx.fillStyle = tc; ctx.fill(); } }]);
     const t = P3(F, Math.PI, HR, HY - 7, .3);   // 後ろで結んだ端
     H.push([t.d < 0 ? -2 : 3.2, () => { const sx = Math.cos(F + Math.PI)*9 + 4;
-      for (const dy of [0, 5]) { ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.quadraticCurveTo(t.x + sx, t.y + dy, t.x + sx*1.6, t.y + 4 + dy*1.6); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#F4EEDF'; ctx.stroke(); } }]);
+      for (const dy of [0, 5]) { ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.quadraticCurveTo(t.x + sx, t.y + dy, t.x + sx*1.6, t.y + 4 + dy*1.6); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = band; ctx.stroke(); } }]);
   }
   if (s.head === 'kasa') H.push([4, () => {   // 陣笠：平たい円錐
     ctx.beginPath(); ctx.ellipse(0, HY - 8, HR + 11, 6, 0, 0, Math.PI*2); ctx.fillStyle = '#2A2D34'; ctx.fill(); stroke();
     ctx.beginPath(); ctx.moveTo(-HR - 9, HY - 9); ctx.quadraticCurveTo(0, HY - 28, HR + 9, HY - 9); ctx.closePath(); ctx.fill(); stroke();
     const m = P3(F, 0, HR*.7, HY - 14, .3); if (m.d > -.2) { ctx.beginPath(); ctx.arc(m.x, m.y, 3.2*Math.max(.3, m.d), 0, Math.PI*2); ctx.fillStyle = GOLD; ctx.fill(); } }]);
-  if (s.head === 'kabuto') {
-    H.push([4, () => { ctx.beginPath(); ctx.arc(0, HY - 1, HR + 2.5, Math.PI*1.03, Math.PI*1.97); ctx.closePath(); ctx.fillStyle = IRON; ctx.fill(); stroke();
-      ctx.beginPath(); ctx.ellipse(0, HY - 1, HR + 6, 4, 0, 0, Math.PI*2); ctx.fillStyle = IRON_L; ctx.fill(); stroke(2);
+  if (s.head === 'kabuto' || s.head === 'kabuto_kin') { const kin = s.head === 'kabuto_kin', cs = kin ? 1.5 : 1;   // 金の兜は鍬形が大きい
+    H.push([4, () => { ctx.beginPath(); ctx.arc(0, HY - 1, HR + 2.5, Math.PI*1.03, Math.PI*1.97); ctx.closePath(); ctx.fillStyle = kin ? '#C9A23A' : IRON; ctx.fill(); stroke();
+      ctx.beginPath(); ctx.ellipse(0, HY - 1, HR + 6, 4, 0, 0, Math.PI*2); ctx.fillStyle = kin ? '#F2D27A' : IRON_L; ctx.fill(); stroke(2);
       ctx.strokeStyle = INK; ctx.lineWidth = 1;
       for (let k = 0; k < 8; k++) { const a = F + k*Math.PI/4; if (Math.sin(a) < 0) continue; const xx = Math.cos(a)*(HR + 1);
         ctx.beginPath(); ctx.moveTo(xx*.2, HY - HR - 2); ctx.quadraticCurveTo(xx, HY - HR*.6, xx, HY - 3); ctx.stroke(); } }]);
     const q = P3(F, 0, HR, HY - 12, .3);
     H.push([q.d < 0 ? -3 : 5, () => { const k = Math.max(.25, Math.abs(q.d));
-      ctx.beginPath(); ctx.moveTo(q.x - 9*k, q.y - 14); ctx.quadraticCurveTo(q.x - 2*k, q.y - 2, q.x, q.y); ctx.quadraticCurveTo(q.x + 2*k, q.y - 2, q.x + 9*k, q.y - 14);
+      ctx.beginPath(); ctx.moveTo(q.x - 9*k*cs, q.y - 14*cs); ctx.quadraticCurveTo(q.x - 2*k, q.y - 2, q.x, q.y); ctx.quadraticCurveTo(q.x + 2*k, q.y - 2, q.x + 9*k*cs, q.y - 14*cs);
       ctx.lineWidth = 4.5; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 2.5; ctx.strokeStyle = GOLD; ctx.stroke(); }]);
   }
-  // 旗指物：背中の竿と旗（旗の面は体の前後を向く）
-  if (s.back === 'flag') { const p = P3(F, Math.PI, 9, -28);
+  // 面頬：口元を覆う赤い面
+  if (s.head === 'menpo' && vis > .02) H.push([2.5, () => { ctx.save(); ctx.beginPath(); ctx.arc(0, HY, HR + .5, 0, Math.PI*2); ctx.clip();
+    const cx = Math.cos(F)*HR*(.62 - .3*vis), rx = HR*.85*Math.pow(vis, .55);
+    ctx.beginPath(); ctx.ellipse(cx, HY + 12, rx, 8, 0, 0, Math.PI*2); ctx.fillStyle = '#7A2E2A'; ctx.fill(); stroke(1.8);
+    ctx.strokeStyle = '#F4EEDF'; ctx.lineWidth = 1.2; for (const dx of [-.4, 0, .4]) { ctx.beginPath(); ctx.moveTo(cx + dx*rx, HY + 8); ctx.lineTo(cx + dx*rx, HY + 12); ctx.stroke(); }
+    ctx.restore(); }]);
+  // 狐面：顔の上に白い面（目と頬に朱の隈取り）
+  if (s.head === 'kitsune' && vis > .02) H.push([2.6, () => { ctx.save(); ctx.beginPath(); ctx.arc(0, HY, HR + .3, 0, Math.PI*2); ctx.clip();
+    const cx = Math.cos(F)*HR*(.62 - .3*vis), rx = HR*.84*Math.pow(vis, .55);
+    ctx.beginPath(); ctx.ellipse(cx, HY + 3, rx, HR*.82, 0, 0, Math.PI*2); ctx.fillStyle = '#FAF7F0'; ctx.fill(); stroke(1.6); ctx.restore();
+    for (const k of [-1, 1]) { const e = P3(F, k*.42, HR, HY + 1, .3); if (e.d < .1) continue; const q = Math.pow(e.d, .6);
+      ctx.beginPath(); ctx.moveTo(e.x - 3.5*q*k, e.y + 1.5); ctx.lineTo(e.x + 3.5*q*k, e.y - 2.5); ctx.strokeStyle = '#D23A2E'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.stroke(); }
+    const m = P3(F, 0, HR, HY - 6, .3); if (m.d > .1) { ctx.beginPath(); ctx.arc(m.x, m.y, 1.8*Math.pow(m.d, .6), 0, Math.PI*2); ctx.fillStyle = '#D23A2E'; ctx.fill(); }
+    for (const k of [-1, 1]) { const e = P3(F, k*.55, HR*.85, HY - 14, .3); if (e.d < 0) continue;   // 面の耳
+      ctx.beginPath(); ctx.moveTo(e.x - 3.5, e.y + 2); ctx.lineTo(e.x + Math.cos(F + k*.55)*1.5, e.y - 7); ctx.lineTo(e.x + 3.5, e.y + 2); ctx.closePath(); ctx.fillStyle = '#FAF7F0'; ctx.fill(); stroke(1.5); } }]);
+  // 旗指物：背中の竿と旗（旗の面は体の前後を向く）。金の旗は地が金で紋が味方の色
+  if (s.back === 'flag' || s.back === 'flag_kin') { const p = P3(F, Math.PI, 9, -28), kin = s.back === 'flag_kin';
     H.push([p.d < 0 ? -5 : 6, () => { const top = p.y - 58, w = 16*Math.max(.12, Math.abs(fz)), side = Math.cos(F + Math.PI) >= 0 ? 1 : -1;
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, top); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
-      ctx.beginPath(); ctx.rect(side > 0 ? p.x : p.x - w, top + 2, w, 26); ctx.fillStyle = tc; ctx.fill(); stroke(2);
-      if (w > 6) { ctx.beginPath(); ctx.arc(p.x + side*w/2, top + 15, w*.22, 0, Math.PI*2); ctx.fillStyle = '#F4EEDF'; ctx.fill(); } }]); }
+      ctx.beginPath(); ctx.rect(side > 0 ? p.x : p.x - w, top + 2, w, 26); ctx.fillStyle = kin ? GOLD : tc; ctx.fill(); stroke(2);
+      if (w > 6) { ctx.beginPath(); ctx.arc(p.x + side*w/2, top + 15, w*.22, 0, Math.PI*2); ctx.fillStyle = kin ? tc : '#F4EEDF'; ctx.fill(); } }]); }
+  // 母衣：背中にふくらんだ大きな布
+  if (s.back === 'horo') { const p = P3(F, Math.PI, 13, -38);
+    H.push([p.d < 0 ? -5 : 6, () => { ctx.beginPath(); ctx.ellipse(p.x, p.y - 4, 17, 15, 0, 0, Math.PI*2); ctx.fillStyle = '#6E4A8E'; ctx.fill(); stroke();
+      ctx.save(); ctx.clip(); ctx.strokeStyle = '#D8CBEA'; ctx.lineWidth = 2.5;
+      for (const dx of [-8, 0, 8]) { ctx.beginPath(); ctx.moveTo(p.x + dx + Math.cos(F)*2, p.y - 20); ctx.quadraticCurveTo(p.x + dx*1.3, p.y - 4, p.x + dx + Math.cos(F)*2, p.y + 12); ctx.stroke(); }
+      ctx.restore(); }]); }
 
   ctx.save(); ctx.translate(x, y + bob);
   for (const g of [B, H]) { g.sort((a, b) => a[0] - b[0]); for (const [, fn] of g) fn(); }
@@ -802,8 +978,26 @@ function drawHuman(ctx, x, y, F, s, team, bob = 0, noSword = false){
 
 const HUMAN_K = .9;   // 描いた図形（足元から頭のてっぺんまで約57）をゲームの大きさへ
 const randSkin = () => Object.fromEntries(Object.entries(SKINS).map(([k, d]) => { const ks = Object.keys(d.list); return [k, ks[Math.floor(Math.random()*ks.length)]]; }));
-let mySkin = { hair: 'mage', hairC: '#2A2522', outfit: 'kimono', head: 'none', back: 'none', blade: 'plain' }, foeSkin = randSkin();
+const DEFAULT_SKIN = { hair: 'mage', hairC: '#2A2522', outfit: 'kimono', head: 'none', back: 'none', blade: 'plain' };
+let mySkin = {...DEFAULT_SKIN}, foeSkin = randSkin();
 try { const k = JSON.parse(localStorage.getItem('maai_skin') || 'null'); if (k && Object.keys(SKINS).every(s => SKINS[s].list[k[s]])) mySkin = k; } catch(e) {}
+
+// ================= ガチャ・店・蔵 =================
+// 見た目はガチャ（運）、能力（防具）は店で買う（ためれば必ず手に入る）。お金は試合で稼ぐ小判だけ
+const RARE = [{ n: '並', c: '#7A828C' }, { n: '上', c: '#3E7FC4' }, { n: '極', c: '#D9A21E' }];
+const GACHA = { one: 100, ten: 900, pity: 30, rates: [.70, .25, .05] };   // 天井：30回で必ず極
+const FRAG_GET = [1, 3, 10], FRAG_COST = [5, 15, 40], DAILY_PRICE = [150, 400, 1000];   // だぶりで増える欠片／欠片交換の値段／日替わりの値段（小判）
+const ARMOR_PRICE = { a1: 250, a3: 250, b1: 300, b3: 250, c1: 250, c3: 200 };
+const STARTER_GEAR = { A: 'a2', B: 'b2', C: 'c2' };
+const SKIN_POOL = Object.entries(SKINS).flatMap(([slot, d]) => Object.entries(d.list).filter(([, v]) => v[1] >= 0).map(([key, v]) => ({ slot, key, name: v[0], r: v[1] })));
+let bag = { koban: 500, skins: {}, armor: { a2: 1, b2: 1, c2: 1 }, frag: 0, pity: 0, cleared: 0 };   // 最初に500枚（ガチャ5回分）
+try { const b = JSON.parse(localStorage.getItem('maai_bag') || 'null'); if (b && typeof b.koban === 'number') bag = {...bag, ...b}; } catch(e) {}
+const saveBag = () => { try { localStorage.setItem('maai_bag', JSON.stringify(bag)); } catch(e) {} };
+const ownsSkin = (slot, key) => SKINS[slot].list[key][1] < 0 || !!bag.skins[slot + ':' + key];
+const ownsArmor = k => !!bag.armor[k];
+// 持っていない物を着ていたら（前の版で選んだものなど）、最初の物に戻す
+for (const k in mySkin) if (!ownsSkin(k, mySkin[k])) mySkin[k] = DEFAULT_SKIN[k];
+for (const k of SLOTS) if (!ownsArmor(myGear[k])) myGear[k] = STARTER_GEAR[k];
 // 装備画面の見本：斜め前向きで描く
 function drawPreview(cvs, skin, team){
   if (!cvs) return;
@@ -981,12 +1175,17 @@ card(`<h1>間合い</h1>
     <li><b>回避</b>は一瞬無敵。スティックの方向へ跳ぶ</li>
     <li>攻撃・ガード・回避はすべてスタミナ（足元の黄色いバー）を使う</li>
     <li>試合の前に、次の相手を見てから<b>武器と防具</b>（A部・B部・C部）を選ぶ</li>
+    <li>勝つと<b>小判</b>。見た目は<b>ガチャ</b>、防具は<b>店</b>で手に入る</li>
     <li>ときどき<b>アイテム</b>が落ちてくる。回復・攻撃力UP・速度UP・スタミナ。相手より先に拾え</li>
   </ul>
   <p>${bestLv > 1 ? `これまでの最高：Lv${bestLv}の相手まで到達` : '勝つたびに相手が強くなります'}</p>
+  <div class="coin">小判 <b>${bag.koban}</b>（試合で稼ぐ）</div>
   <button id="b1">装備を選んで勝負</button><br>
+  <div class="row3"><button id="bG">ガチャ</button><button id="bS">店</button><button id="bK">蔵</button></div>
   <button id="b2" class="sub">練習する（体力が減らない）</button>`, () => loadout(1));
+ov.querySelector('.card').classList.add('load');   // 縦に長いので、はみ出したらスクロールできるように
 document.getElementById('b2').onclick = openPractice;
+document.getElementById('bG').onclick = gachaScreen; document.getElementById('bS').onclick = () => shopScreen(); document.getElementById('bK').onclick = kuraScreen;
 }
 addEventListener('keydown', e => { if (e.code === 'Escape') quitPractice(); });   // 練習中は Esc でもやめられる
 title();
