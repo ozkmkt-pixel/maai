@@ -380,9 +380,11 @@ const SFX = (() => {
   let ac = null, out = null, noise = null, muted = false;
   try { muted = localStorage.getItem('maai_mute') === '1'; } catch(e) {}
   function init(){
-    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    if (ac) { if (ac.state !== 'running') { ac.resume(); unlock(); } return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    ac = new AC(); out = ac.createGain(); out.gain.value = muted ? 0 : .7;
+    // iPhone：マナーモード（消音スイッチ）でも鳴るように、音の種類を「再生」にする（iOS 17 以降）
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e) {}
+    ac = new AC(); unlock(); out = ac.createGain(); out.gain.value = muted ? 0 : .7;
     const comp = ac.createDynamicsCompressor(); out.connect(comp); comp.connect(ac.destination);
     noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
     // 録音の mp3 を音のデータにしておく（iPhone の古い Safari でも動くよう、コールバックの形で）
@@ -392,6 +394,8 @@ const SFX = (() => {
     }
   }
   const bufs = {};
+  // iPhone の Safari は、指を離した瞬間などの操作の中で音を1回鳴らすと、それ以降も音が出せるようになる → 無音を一瞬鳴らす
+  function unlock(){ try { ac.resume(); const b = ac.createBuffer(1, 1, 22050), s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.start(0); } catch(e) {} }
   // 録音を鳴らす。vol：音量、rate：再生の速さ（音の高さも変わる。毎回少しずらして単調にしない）。鳴らせなければ false
   function smp(k, vol, pan, rate = 1, at = 0){
     const b = bufs[k]; if (!b) return false;
@@ -455,7 +459,10 @@ const SFX = (() => {
   for (const k in S) api[k] = (...a) => { if (ready() && !sfxMute) try { S[k](...a); } catch(e) { console.warn('SFX', k, e); } };
   return api;
 })();
-addEventListener('pointerdown', () => SFX.init(), true); addEventListener('keydown', () => SFX.init(), true);
+// 音を出せるようにする合図：iPhone は触れた瞬間（pointerdown）ではだめで、指を離した瞬間（touchend・click）が必要
+for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) addEventListener(ev, () => SFX.init(), true);
+// アプリを切り替えて戻ってきたときも、止まった音を戻す
+document.addEventListener('visibilitychange', () => { if (!document.hidden) SFX.init(); });
 
 // ================= 試合 =================
 function mkF(x, y, isAI, color, name, wk, gear){
