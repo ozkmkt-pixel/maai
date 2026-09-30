@@ -246,6 +246,49 @@
   .eqRowT{margin:8px 0 4px;font-size:11px;font-weight:800;color:#9AA3AE;}
   .eqLv{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:800;color:#9AA3AE;} .eqLv b{font-size:17px;color:#F4E3B5;min-width:48px;text-align:center;}
   .eqLv button{padding:4px 16px;font-size:16px;background:#2E3440;}
+  /* v0.27 仕掛けの品 */
+  .shCard.r3{background:linear-gradient(145deg,#4A1C16,#180A08);box-shadow:0 0 16px rgba(224,73,62,.7);}
+  .shBadge.g0{background:#7A828C;color:#FFFFFF;} .shBadge.g1{background:#3E7FC4;color:#FFFFFF;} .shBadge.g2{background:#D9A21E;color:#2A1E08;} .shBadge.g3{background:#E0493E;color:#FFFFFF;}
+  .dropT{margin:10px 0 6px;font-size:13px;font-weight:800;color:#F4E3B5;} .card .dropT{color:#9A5B12;}
+  .shGrid.drops{padding:2px 0 10px;grid-template-columns:repeat(3,1fr);}
+  .eqItem.g{position:relative;}
+  .eqItem .gNew{position:absolute;top:-6px;right:-4px;padding:0 4px;border-radius:5px;background:#E0493E;color:#FFFFFF;font-style:normal;font-size:8px;font-weight:800;line-height:13px;}
+  .eqItem .gLk{position:absolute;top:1px;left:2px;font-style:normal;font-size:10px;}
+  .gDot{display:inline-block;width:7px;height:7px;margin-right:2px;border-radius:50%;vertical-align:1px;}
+  .gDet{margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.28);font-size:11px;line-height:1.8;color:#C9C2B0;}
+  .gDet.gBx{margin:10px 16px 0;}
+  .gHd{display:flex;align-items:center;flex-wrap:wrap;gap:4px;} .gDet .nm{font-size:14px;font-weight:800;color:#F4E3B5;margin-right:4px;}
+  .tag.set{background:color-mix(in srgb,var(--sc) 22%,transparent);color:var(--sc);}
+  .tag.s{background:#2A3140;color:#DCE6F5;} .tag.s.up{background:#E8B23A;color:#2A1E08;animation:gUp .6s ease-out;}
+  @keyframes gUp{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+  .gNone{color:#6E7785;}
+  .gSp{margin-top:4px;padding:3px 8px;border-radius:8px;background:linear-gradient(90deg,rgba(224,73,62,.3),transparent);color:#FFD0C8;}
+  .gSp b{margin-right:8px;color:#FF9B8F;}
+  .gSet{margin-top:4px;color:#8A93A0;} .gSet b{margin-right:6px;color:var(--sc);} .gSet.on{color:#EDE6D6;} .gSet.on b::after{content:' 発動';color:#8FE0A6;}
+  .gActs{display:flex;gap:6px;} .gActs button{flex:1;padding:8px 4px;font-size:12px;line-height:1.2;background:#2E3440;color:#EDE6D6;}
+  .gActs button small{display:block;font-size:9px;color:#C9C2B0;} .gActs button.go{background:linear-gradient(#FFD84A,#C8931E);color:#2A1E08;}
+  .gActs button.lk{flex:0 0 44px;} .gActs button.lk.on{background:#5A4A1E;} .gActs button.arm{background:#8C2A22;}
+  .gActs button:disabled{opacity:.45;}
+  .eqSheetHd b small{font-size:10px;color:#8A93A0;font-weight:800;}
+  .eqVs.boss b{color:var(--bc);} .eqVs.boss small{display:block;font-size:9px;color:#C9C2B0;}
+  .card{max-height:100%;overflow-y:auto;}
+  .dList{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;text-align:left;}
+  .dRow{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:10px;background:#1E222A;border:2px solid var(--rc);animation:dIn .4s ease-out backwards;}
+  @keyframes dIn{0%{opacity:0;transform:translateY(8px) scale(.96)}100%{opacity:1;transform:none}}
+  .dRow canvas{flex:none;width:54px;height:54px;image-rendering:pixelated;}
+  .dInfo{flex:1;min-width:0;font-size:11px;line-height:1.7;color:#C9C2B0;}
+  .dHd{display:flex;align-items:center;flex-wrap:wrap;gap:3px;} .dHd b{margin-right:4px;font-size:13px;color:#F4E3B5;}
+  .dSubs .tag{margin-bottom:2px;}
+  .eqSheet.gs{height:60%;}
+  .gTop{flex:none;max-height:52%;overflow-y:auto;padding:0 14px;}
+  .gTop .gDet{margin-top:0;}
+  .dChips{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08);}
+  .dLbl{margin-right:2px;font-size:10px;font-weight:800;color:#8A93A0;line-height:18px;}
+  .dc{padding:0 6px;border-radius:6px;background:#2A3140;color:#C9C2B0;font-size:10px;font-weight:800;line-height:18px;white-space:nowrap;}
+  .dc b{color:#EDE6D6;} .dc em{margin-left:3px;font-style:normal;}
+  .dc.p{background:#1F4A2C;} .dc.p em{color:#8FE0A6;} .dc.c{background:#4A1F1F;} .dc.c em{color:#FF9B8F;}
+  .kuraSet{margin:10px 12px 4px;font-size:11px;color:#8A93A0;} .kuraSet b{margin-right:8px;font-size:14px;color:var(--sc);}
+  .kuraSet em{margin-left:4px;padding:0 5px;border-radius:5px;background:#8C2A22;color:#FFFFFF;font-style:normal;font-size:9px;}
 </style>
 
 <div id="app">
@@ -314,36 +357,44 @@ const ESC_ST_MUL = 1.5;     // はじかれた怯みから回避で抜けると�
 const parryRearm = f => parryWin(f) + .3;   // 押し直してからこの秒数以内は、はじきが出ない（受付が長いほど長く。連打対策）
 const parryWin = f => f.w.parry + f.m.parry + PARRY_ADD + (f.isAI ? 0 : PARRY_BONUS);
 const parryOpen = f => f.parryOK && G.now - f.guardStart <= parryWin(f);
-// 防具：A部・B部・C部に1つずつ。どれも長所と短所がある（将来はガチャ／ショップで入手する予定）
+// 仕掛け（v0.26 までの「防具」）：からくりの中の部品。眼（A）・ゼンマイ（B）・歯車（C）に1つずつ。どれも長所と短所がある
+// 見た目には出ない（見た目は着せ替え）。キーの A/B/C・a1〜c3 は前の版と同じなので、持ち物・保存はそのまま使える
 //   mods の意味　hp：体力の上限に足す　stMax：スタミナの上限に足す　parry・dashIf：はじき受付・回避の無敵（秒）に足す
 //   dashSt：回避のスタミナに足す　それ以外は倍率（dmgTaken：受けるダメージ、speed：移動、stRegen：スタミナ回復、
 //   guardMul：ガードで減るスタミナ、dashDist：回避の距離、knock：吹き飛び、stunMul：怯みの長さ）
 const ARMOR = {
-  A: { label:'A部', items:{
-    a1: { name:'鉄兜',   pros:['受けるダメ-12%'],          cons:['移動-5%'],           mods:{dmgTaken:.88, speed:.95} },
-    a2: { name:'鉢金',   pros:['はじき受付+0.05秒'],       cons:['体力-10'],           mods:{parry:.05, hp:-10} },
-    a3: { name:'羽根冠', pros:['回避の無敵+0.05秒'],       cons:['受けるダメ+8%'],     mods:{dashIf:.05, dmgTaken:1.08} },
+  A: { label:'眼', items:{
+    a1: { name:'鉄眼',   pros:['受けるダメ-12%'],          cons:['移動-5%'],           mods:{dmgTaken:.88, speed:.95} },
+    a2: { name:'心眼',   pros:['はじき受付+0.05秒'],       cons:['体力-10'],           mods:{parry:.05, hp:-10} },
+    a3: { name:'鷹の眼', pros:['回避の無敵+0.05秒'],       cons:['受けるダメ+8%'],     mods:{dashIf:.05, dmgTaken:1.08} },
   }},
-  B: { label:'B部', items:{
-    b1: { name:'大鎧',   pros:['体力+30'],                 cons:['移動-12%','スタミナ回復-10%'], mods:{hp:30, speed:.88, stRegen:.9} },
-    b2: { name:'鎖帷子', pros:['ガード時のスタミナ減-25%','体力+10'], cons:['回避スタミナ+4'], mods:{guardMul:.75, hp:10, dashSt:4} },
-    b3: { name:'道着',   pros:['スタミナ上限+25','スタミナ回復+15%'], cons:['体力-10'], mods:{stMax:25, stRegen:1.15, hp:-10} },
+  B: { label:'ゼンマイ', items:{
+    b1: { name:'大ゼンマイ', pros:['体力+30'],                 cons:['移動-12%','スタミナ回復-10%'], mods:{hp:30, speed:.88, stRegen:.9} },
+    b2: { name:'鋼ゼンマイ', pros:['ガード時のスタミナ減-25%','体力+10'], cons:['回避スタミナ+4'], mods:{guardMul:.75, hp:10, dashSt:4} },
+    b3: { name:'二重ゼンマイ', pros:['スタミナ上限+25','スタミナ回復+15%'], cons:['体力-10'], mods:{stMax:25, stRegen:1.15, hp:-10} },
   }},
-  C: { label:'C部', items:{
-    c1: { name:'鉄靴',   pros:['吹き飛び半減','怯み-25%'], cons:['移動-7%'],           mods:{knock:.5, stunMul:.75, speed:.93} },
-    c2: { name:'草鞋',   pros:['移動+12%'],                cons:['受けるダメ+5%'],     mods:{speed:1.12, dmgTaken:1.05} },
-    c3: { name:'足袋',   pros:['回避スタミナ-6','回避距離+25%'], cons:['ガード時のスタミナ減+15%'], mods:{dashSt:-6, dashDist:1.25, guardMul:1.15} },
+  C: { label:'歯車', items:{
+    c1: { name:'重歯車', pros:['吹き飛び半減','怯み-25%'], cons:['移動-7%'],           mods:{knock:.5, stunMul:.75, speed:.93} },
+    c2: { name:'早歯車', pros:['移動+12%'],                cons:['受けるダメ+5%'],     mods:{speed:1.12, dmgTaken:1.05} },
+    c3: { name:'跳ね歯車', pros:['回避スタミナ-6','回避距離+25%'], cons:['ガード時のスタミナ減+15%'], mods:{dashSt:-6, dashDist:1.25, guardMul:1.15} },
   }},
 };
 const SLOTS = Object.keys(ARMOR), ADDITIVE = ['hp', 'stMax', 'parry', 'dashIf', 'dashSt'];
 const randomGear = () => Object.fromEntries(SLOTS.map(s => { const ks = Object.keys(ARMOR[s].items); return [s, ks[Math.floor(Math.random()*ks.length)]]; }));
+// v0.27：gear の各部位は、型のキー（'a1' など。練習相手）か、仕掛けの品（{k, r, lv, subs, sp, set}）
+// 型の主効果に、品の副効果・特殊能力（m.sp）・銘を3つそろえた効果（m.set）を重ねる
+const asItem = g => typeof g === 'string' ? { k: g } : g;
+const addMods = (m, mods) => { for (const k in mods) { if (ADDITIVE.includes(k)) m[k] += mods[k]; else m[k] *= mods[k]; } };
 function calcMods(gear){
-  const m = {hp:0, stMax:0, parry:0, dashIf:0, dashSt:0, dmgTaken:1, speed:1, stRegen:1, guardMul:1, dashDist:1, knock:1, stunMul:1};
-  for (const s of SLOTS) { const it = ARMOR[s].items[gear[s]]; if (!it) continue;
-    for (const k in it.mods) { if (ADDITIVE.includes(k)) m[k] += it.mods[k]; else m[k] *= it.mods[k]; } }
+  const m = {hp:0, stMax:0, parry:0, dashIf:0, dashSt:0, dmgTaken:1, speed:1, stRegen:1, guardMul:1, dashDist:1, knock:1, stunMul:1, atk:1, chip:1, sp:{}, set:null}, sets = {};
+  for (const s of SLOTS) { const g = asItem(gear[s]), it = g && ARMOR[s].items[g.k]; if (!it) continue;
+    addMods(m, it.mods);
+    for (const [k, v] of g.subs || []) { const S = SUBS[k]; if (S.u === '%') m[k] *= S.neg ? 1 - v/100 : 1 + v/100; else m[k] += v; }
+    if (g.sp) m.sp[g.sp] = 1;
+    if (g.set) sets[g.set] = (sets[g.set] || 0) + 1; }
+  for (const k in sets) if (sets[k] >= 3 && SETS[k]) { m.set = k; addMods(m, SETS[k].mods); }
   return m;
 }
-const gearNames = g => SLOTS.map(s => ARMOR[s].items[g[s]].name).join('・');
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ov = document.getElementById('overlay');
 const quitBtn = document.getElementById('quit'), sndBtn = document.getElementById('snd');
 const sndLabel = () => SFX.muted ? '🔇' : '🔊';
@@ -473,13 +524,14 @@ function mkF(x, y, isAI, color, name, wk, gear){
 }
 function newMatch(level, eW, eGear, practice){
   eW = eW || WKEYS[Math.floor(Math.random()*WKEYS.length)]; eGear = eGear || randomGear();
-  G = { level, eW, eGear, practice:!!practice, count:{parry:0, taken:0, given:0}, round:1, pw:0, ew:0, now:0, hitstop:0, slowT:0, shake:0, fx:[], texts:[], phase:'intro', phaseT:0 };
+  G = { level, eW, eGear, practice:!!practice, boss: practice ? null : bossForLevel(level), count:{parry:0, taken:0, given:0}, round:1, pw:0, ew:0, now:0, hitstop:0, slowT:0, shake:0, fx:[], texts:[], phase:'intro', phaseT:0 };
   newRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = G.practice ? '練習をやめる' : 'やめる';
 }
 function newRound(){
   AR.r = DUEL_R;   // 乱戦で広げた闘技場を戻す
   G.p = mkF(AR.x, AR.y + 80, false, '#3E8EDE', `あなた（${WEAPONS[myW].name}）`, myW, myGear);
   G.e = mkF(AR.x, AR.y - 80, true, '#E0493E', `${WEAPONS[G.eW].title} Lv${G.level}`, G.eW, G.eGear);
+  if (G.boss) { makeBoss(G.e, G.boss, 1, 1.3); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
   G.ai = {heat:0, seenWind:-1, guardAt:0, releaseAt:0, dashAt:0, attackAt:0, comboLeft:0, strafe:1, strafeT:0, backoff:0};
   G.phase = 'intro'; G.phaseT = 0; G.fx = []; G.texts = []; G.startSnd = 0;
   G.items = []; G.itemT = rnd(6, 9);
@@ -531,8 +583,11 @@ function newMelee(){
   G.p = mkF(...at(Math.PI/2), false, '#3E8EDE', `あなた（${WEAPONS[myW].name}）`, myW, myGear);
   G.fs = [G.p];
   for (let i = 0; i < MELEE_N; i++) {
-    const wk = WKEYS[Math.floor(Math.random()*WKEYS.length)], f = mkF(...at(Math.PI/2 + (i + 1)*Math.PI*2/(MELEE_N + 1)), true, '', WEAPONS[wk].title, wk, randomGear());
+    // 4割の試合で、1体が強敵（名前つきのボス武者）
+    const b = i === 0 && Math.random() < .4 ? pickOne(BOSSES) : null, wk = b ? b.wk : WKEYS[Math.floor(Math.random()*WKEYS.length)];
+    const f = mkF(...at(Math.PI/2 + (i + 1)*Math.PI*2/(MELEE_N + 1)), true, '', WEAPONS[wk].title, wk, aiGear(level, b ? { boss: 1, set: b.set } : {}));
     f.skin = randSkin(); f.team = MELEE_TEAMS[i]; f.ai = newAiMemo(); G.fs.push(f);
+    if (b) { makeBoss(f, b, 2, 1.6); f.wlv = 1; say(`強敵「${b.n}」がいる！`, G.p.x, G.p.y - 70, b.c, 18, 2.6); }
   }
   G.e = G.fs[1];   // 1対1用の処理が参照しても困らないように
   G.zone = {x:AR.x, y:AR.y, r:AR.r, stage:0, t:0, shrinking:false, tick:0};
@@ -582,7 +637,9 @@ function meleeKO(def){
   def.dead = true; def.deadT = 0; def.state = 'dead'; def.guard = false; def.queued = false;
   const end = def === G.p || G.fs.filter(f => !f.dead).length === 1;
   if (seen(def) || end) { SFX.ko(); G.slowT = .5; G.shake = .25; }
-  if (def.lastHit === G.p) G.count.kills++;
+  if (def.lastHit === G.p) { G.count.kills++; if (def.boss) G.bossKill = def.boss; }
+  const kr = def.lastHit;   // 特殊能力「吸魂」：撃破すると体力とスタミナが戻る
+  if (kr && !kr.dead && kr !== def && kr.m.sp.kyukon) { kr.hp = Math.min(kr.maxHp, kr.hp + 20); kr.st = kr.stMax; say('吸魂', kr.x, kr.y - 50, '#8FE0A6', 15, .9); }
   say(def === G.p ? '撃破された' : '撃破', def.x, def.y - 44, '#FFD84A', 22, 1.3);
   // 倒された者は「魂」を落とす（拾うと武器強化）。0.5秒ほど跳ねてから拾える
   if (def !== G.p) G.items.push({x:def.x, y:def.y, type:'up', t:DROP_T - .5, soul:true});
@@ -620,8 +677,15 @@ function meleeEnd(){
   const pay = [['撃破×' + G.count.kills, G.count.kills*15], [rank + '位', [100, 60, 40, 25, 15, 10, 5, 5][rank - 1] || 0], ['はじき×' + Math.min(10, G.count.parry), Math.min(10, G.count.parry)]].filter(x => x[1] > 0);
   const total = pay.reduce((a, x) => a + x[1], 0);
   bag.koban += total; saveBag(); if (win) SFX.win(); else SFX.lose();
+  // 仕掛けの戦利品：1位は2つ、3位までは1つ、撃破1体ごとに3割でもう1つ（2つまで）。強敵を倒せばその銘が必ず
+  const luck = G.level/2 + (win ? 1 : 0), drops = [];
+  for (let i = 0; i < (win ? 2 : rank <= 3 ? 1 : 0); i++) drops.push(makeGear(dropGrade(luck)));
+  for (let i = 0, x = 0; i < G.count.kills && x < 2; i++) if (Math.random() < .3) { drops.push(makeGear(dropGrade(luck))); x++; }
+  if (G.bossKill) drops.unshift(bossDrop(G.bossKill));
+  const got = dropHtml(grantGear(drops), G.bossKill);
   const earn = `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
-  card(`<h2>${win ? '勝ち残り！' : rank + '位'}</h2><p>${n}人の乱戦で ${rank}位（撃破 ${G.count.kills}）</p>${earn}<button id="b1">もう一度</button>`, newMelee);
+  card(`<h2>${win ? '勝ち残り！' : rank + '位'}</h2><p>${n}人の乱戦で ${rank}位（撃破 ${G.count.kills}）</p>${earn}${got}<button id="b1">もう一度</button>`, newMelee);
+  paintThumbs();
   quitBtn.hidden = true;
   ov.querySelector('.card').insertAdjacentHTML('beforeend', '<br><button id="bT" class="sub">タイトルへ</button>');
   document.getElementById('bT').onclick = title;
@@ -633,6 +697,8 @@ function startAttack(f, n){
   const A = f.w.atk[n];
   if (f.st < A.st) { f.stFlash = .35; return false; }
   f.st -= A.st; f.stLast = G.now; f.state = 'windup'; f.atk = n; f.t = 0; f.queued = false; f.guard = false; f.windId++;
+  // 特殊能力「追い風」：回避してから1秒以内に出した攻撃は強い
+  f.oikaze = !!f.m.sp.oikaze && G.now - (f.dashAt ?? -9) < 1;
   if (A.heavy) SFX.charge(f.x);
   return true;
 }
@@ -641,7 +707,7 @@ function startDash(f, o, mx, my, cost = f.dashSt){
   let dx = mx, dy = my;
   if (Math.hypot(dx, dy) < .3) { dx = f.x - o.x; dy = f.y - o.y; }          // スティックなし → 後ろへ
   const l = Math.hypot(dx, dy) || 1;
-  f.dashDir = Math.atan2(dy/l, dx/l); f.st -= cost; f.stLast = G.now;
+  f.dashDir = Math.atan2(dy/l, dx/l); f.st -= cost; f.stLast = G.now; f.dashAt = G.now;
   const esc = f.state === 'stun'; f.state = 'dash'; f.t = 0; f.iframe = f.w.dashIf + f.m.dashIf; f.guard = false; f.stunKind = '';
   if (esc) SFX.escape(f.x); else SFX.dash(f.x);
   return true;
@@ -709,7 +775,9 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   if (G.phase !== 'fight') return;
   const A = att.w.atk[att.atk], dx = def.x - att.x, dy = def.y - att.y, d = Math.hypot(dx, dy);
   // 攻撃力UP中は1.4倍、乱戦の武器強化で★ごとに+15%、防具で増減
-  const dmg = Math.round(A.dmg*(att.buffs.atk > 0 ? 1.4 : 1)*(1 + WLV_DMG*(att.wlv || 0))*def.m.dmgTaken);
+  // v0.27：仕掛けの攻撃力、特殊能力（渾身：最後の段、追い風：回避の直後、不屈：体力3割以下で受けるダメージ減）
+  const sp = att.m.sp, konshin = sp.konshin && att.atk === lastIdx(att), fukutsu = def.m.sp.fukutsu && def.hp < def.maxHp*.3;
+  const dmg = Math.round(A.dmg*(att.buffs.atk > 0 ? 1.4 : 1)*(1 + WLV_DMG*(att.wlv || 0))*def.m.dmgTaken*att.m.atk*(konshin ? 1.25 : 1)*(att.oikaze ? 1.3 : 1)*(fukutsu ? .75 : 1));
   const inArc = Math.abs(angDiff(Math.atan2(dy, dx), att.face)) < A.arc/2 + (d < 36 ? .5 : 0);
   if (d > A.reach + A.lunge*.5 + def.r || !inArc) { if (!quiet && d < 160) say('空振り', att.x, att.y - 30, '#9AA3AE', 13, .6); return; }
   def.lastHit = att;
@@ -718,7 +786,8 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   if (def.guard && def.state === 'idle') {
     if (parryOpen(def)) {           // はじき：攻撃側に大きな隙
       att.state = 'stun'; att.stunKind = 'parry'; att.stunT = .95; att.t = 0; att.queued = false;
-      def.st = Math.min(def.stMax, def.st + 15);
+      def.st = Math.min(def.stMax, def.st + 15 + (def.m.set === 'meikyo' ? 20 : 0));
+      if (def.m.sp.kaeshi) { def.hp = Math.min(def.maxHp, def.hp + 8); say('返し +8', def.x, def.y - 50, '#8FE0A6', 14, .9); }
       att.kx -= nx*160; att.ky -= ny*160;
       spark(hx, hy, '#FFFFFF', 22, 320); spark(hx, hy, '#FFE08A', 10, 200);
       say('はじき！', hx, hy - 26, '#FFE08A', 26, 1.1); SFX.parry(hx);
@@ -726,7 +795,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
       G.hitstop = .12; G.slowT = .45; G.shake = .18;
       return;
     }
-    def.st -= dmg*1.8*def.w.guardMul*def.m.guardMul; if (!G.practice) def.hp -= dmg*.1; def.stLast = G.now;   // 普通のガード：スタミナが削れる
+    def.st -= dmg*1.8*def.w.guardMul*def.m.guardMul*att.m.chip; if (!G.practice) def.hp -= dmg*.1; def.stLast = G.now;   // 普通のガード：スタミナが削れる
     def.kx += nx*140*def.m.knock; def.ky += ny*140*def.m.knock;
     spark(hx, hy, '#9CCBFF', 8, 180); say('ガード', def.x, def.y - 30, '#9CCBFF', 13, .5); if (def.st > 0) SFX.guard(hx);
     G.hitstop = .04;
@@ -762,7 +831,7 @@ function ko(loser){
 
 // ================= AI =================
 function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：その相手（乱戦では一番近い相手）、ai：そのAIの覚え書き
-  const L = G.level, now = G.now;
+  const L = e.lv || G.level, now = G.now;   // e.lv：強敵（ボス）は強さが上
   const pf = ai.prof || {};   // 自動テスト用：人間に近い反応の操作に差し替えられる
   // v0.12 で全体に弱くした（反応が遅く、はじき・ガードが減り、攻めも控えめ）
   const react = pf.react ?? Math.max(.18, .40 - .022*(L-1));
@@ -919,10 +988,14 @@ function endRound(){
     const total = pay.reduce((a, x) => a + x[1], 0);
     if (win) bag.cleared = Math.max(bag.cleared, G.level);
     bag.koban += total; saveBag(); if (win) SFX.win(); else SFX.lose();
+    // 仕掛けの戦利品：勝てば1つ（強敵ならその銘の極以上）、負けても1本取っていれば3割で1つ。練習ではなし
+    const drops = G.practice ? [] : win ? [G.boss ? bossDrop(G.boss) : makeGear(dropGrade(G.level/2))] : G.pw && Math.random() < .3 ? [makeGear(dropGrade(0))] : [];
+    const got = dropHtml(grantGear(drops), win && G.boss);
     const earn = `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
-    card(win ? `<h2>勝利</h2><p>${G.e.name} を ${G.pw}-${G.ew} で倒しました。<br>次の相手は少し強くなります。</p>${earn}<button id="b1">次の相手（Lv${lv}）を見る</button>`
-             : `<h2>敗北</h2><p>${G.e.name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p>${earn}<button id="b1">装備を見直す</button>`,
+    card(win ? `<h2>勝利</h2><p>${G.e.name} を ${G.pw}-${G.ew} で倒しました。<br>次の相手は少し強くなります。</p>${earn}${got}<button id="b1">次の相手（Lv${lv}）を見る</button>`
+             : `<h2>敗北</h2><p>${G.e.name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p>${earn}${got}<button id="b1">装備を見直す</button>`,
          () => loadout(lv, eW, eGear));
+    paintThumbs();
     quitBtn.hidden = true;
     ov.querySelector('.card').insertAdjacentHTML('beforeend', '<br><button id="bT" class="sub">タイトルへ（ガチャ・店）</button>');
     document.getElementById('bT').onclick = title;
@@ -931,11 +1004,21 @@ function endRound(){
   G.round++; newRound();
 }
 function card(html, fn){ ov.innerHTML = `<div class="card">${html}</div>`; ov.hidden = false; document.getElementById('b1').onclick = fn; }
+const paintThumbs = () => ov.querySelectorAll('canvas[data-th]').forEach(c => { const [k, key] = c.dataset.th.split('|'); eqThumb(c, k, key); });
+// 手に入れた仕掛けの札（結果画面・箱）。品位の色の枠、下に銘と特殊能力
+const gearCard = (it, i = 0) => shCard(it.s, it.k, gearName(it), it.r, { i, sub: (SETS[it.set] ? SETS[it.set].n : '') + (it.sp ? '・' + SPECIALS[it.sp].n : ''),
+  badge: it.full ? '小判に' : RARE[it.r].n, badgeCls: it.full ? '' : 'g' + it.r });
+// v0.27.1：手に入れたその場で、品位・副効果・特殊能力・銘が分かるように1つ1行で
+const dropRow = (it, i) => `<div class="dRow" style="--rc:${RARE[it.r].c};animation-delay:${i*120}ms"><canvas data-th="${it.s}|${it.k}" width="108" height="108"></canvas>
+  <div class="dInfo"><div class="dHd">${rareTag(it.r)}<b>${gearName(it)}</b>${SETS[it.set] ? `<span class="tag set" style="--sc:${SETS[it.set].c}">銘 ${SETS[it.set].n}</span>` : ''}${it.full ? '<span class="tag n">いっぱい→小判</span>' : ''}</div>
+  <div class="dSubs">${it.subs.map(([k, v]) => `<span class="tag s">${subTxt(k, v)}</span>`).join('')}</div>
+  ${it.sp ? `<div class="gSp"><b>${SPECIALS[it.sp].n}</b>${SPECIALS[it.sp].d}</div>` : ''}</div></div>`;
+const dropHtml = (list, boss) => list.length ? `<div class="dropT">${boss ? `強敵「${boss.n}」の銘を手に入れた！` : '仕掛けを手に入れた'}</div><div class="dList">${list.map(dropRow).join('')}</div>` : '';
 
 // 装備画面：次の相手を見てから、武器と防具を選ぶ
 function statsOf(wk, gear, bonus = 0){   // bonus：プレイヤーだけのはじき受付の上乗せ
   const w = WEAPONS[wk], m = calcMods(gear);
-  return { hp: 100 + m.hp, st: 100 + m.stMax, speed: Math.round(w.speed*m.speed), taken: Math.round(m.dmgTaken*100),
+  return { atk: Math.round(m.atk*100), hp: 100 + m.hp, st: 100 + m.stMax, speed: Math.round(w.speed*m.speed), taken: Math.round(m.dmgTaken*100),
            parry: (w.parry + m.parry + PARRY_ADD + bonus).toFixed(2), dodge: (w.dashIf + m.dashIf).toFixed(2), dashSt: Math.max(6, w.dashSt + m.dashSt),
            dashDist: Math.round(m.dashDist*100), guard: Math.round(w.guardMul*m.guardMul*100), stRegen: Math.round(m.stRegen*100),
            knock: Math.round(m.knock*100), stun: Math.round(m.stunMul*100) };
@@ -943,17 +1026,56 @@ function statsOf(wk, gear, bonus = 0){   // bonus：プレイヤーだけのは�
 // ================= 装備画面（v0.19） =================
 // 自キャラを真ん中に大きく出し、まわりに装備の枠（サムネイル）を並べる。枠を押すと下から一覧が出てくる
 // 左の列＝能力（武器・防具）、右の列＝見た目の部品、下の小さな枠＝そのほかの見た目。相手の能力は出さない
-const ARMOR_ICON = {   // 防具には絵がないので、枠に出すアイコンを描いておく
-  a1: ['...KKKK...', '..KLLLLK..', '.KLLLLLMK.', 'KLLLLLLMMK', 'KLMMMMMMMK', 'KKKKKKKKKK', 'KMK....KMK', 'KMK....KMK', '.K......K.'],
-  a2: ['..........', 'KKKKKKKKKK', 'KRRKLLLKRK', 'KRRKLMMKRK', 'KKKKKKKKKK', '......KRRK', '.......KRK', '........K.'],
-  a3: ['....KK....', '...KWWK...', '..KWWWK...', '..KWWK....', '.KKWKKKKK.', 'KYYYYYYYYK', 'KYRYYYYRYK', 'KYYYYYYYYK', '.KKKKKKKK.'],
-  b1: ['KKKK..KKKK', 'KLLMKKMLLK', 'KMMKRRKMMK', '.KKRRRRKK.', '..KRLLRK..', '..KRRRRK..', '..KLLLLK..', '..KRRRRK..', '..KKKKKK..'],
-  b2: ['.KKK..KKK.', 'KMMMKKMMMK', 'KMLMLMLMLK', 'KLMLMLMLMK', '.KMLMLMLK.', '.KLMLMLMK.', '.KMLMLMLK.', '.KKKKKKKK.'],
-  b3: ['.KKK..KKK.', 'KWWWKKWWWK', 'KWWWWKWWWK', '.KWWWKWWK.', '.KWWWWWWK.', '.KkkkkkkK.', '.KWWWWWWK.', '.KKKKKKKK.'],
-  c1: ['..KKKK....', '..KLLK....', '..KLMK....', '..KLMK....', '..KLMKKK..', '.KLLMMMMK.', 'KLLMMMMMMK', 'KKKKKKKKKK'],
-  c2: ['...K..K...', '..KyK.KyK.', '..KyKKKyK.', '..KyyyyyK.', 'KKKKKKKKKK', 'KYyYyYyYYK', 'KyYyYyYyyK', 'KKKKKKKKKK'],
-  c3: ['..KKKK....', '..KWWK....', '..KWWK....', '..KWWK....', '..KWWKKKK.', '.KWWWWKWWK', 'KWWWWWKWWK', 'KKKKKKKKKK'],
-};
+// 仕掛けの絵（v0.26）：36×36 のドットを式で打つ。t＝時間（秒）で回る。アイコン（t=0）と装備画面の透視で共通
+//   眼＝レンズ（絞りの羽根が回る）、ゼンマイ＝渦巻きのばね、歯車＝かみ合う歯車
+const PART_COL = { a1: ['#BCBCBC', '#7C7C7C', '#8CD8F8'], a2: ['#BCBCBC', '#7C7C7C', '#F83800'], a3: ['#FCE08C', '#D8A000', '#F8B800'],
+                   b1: ['#FCE08C', '#D8A000'], b2: ['#FCFCFC', '#9C9C9C'], b3: ['#F8B878', '#C07030'],
+                   c1: ['#9C9C9C', '#585858'], c2: ['#FCE08C', '#D8A000'], c3: ['#A4E4FC', '#3C8CC8'] };
+const partCv = document.createElement('canvas'); partCv.width = partCv.height = 36;
+function drawPart(key, t){
+  const x = partCv.getContext('2d'), N = 36, c = PART_COL[key], M = new Array(N*N).fill(null);
+  const put = (px, py, col) => { if (px >= 0 && py >= 0 && px < N && py < N) M[py*N + px] = col; };
+  // 歯車：中心 (gx, gy)、半径 R、歯の数 n、回転 rot
+  const gear = (gx, gy, R, n, rot, lt, dk) => { for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+    const dx = X + .5 - gx, dy = y + .5 - gy, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+    const tooth = Math.cos(n*(a - rot)) > .15, body = r < R - 2.2 || (r < R && tooth);
+    if (!body || r < R*.22) continue;
+    const spoke = r < R - 4.5 && r > R*.38 && Math.abs(Math.sin(3*(a - rot))) > .45;   // 輪の中を抜く（スポーク3本）
+    if (spoke) continue;
+    put(X, y, (dx*-.6 + dy*-.8)/r > .2 ? lt : dk); } };
+  const k = key[0], v = +key[1];
+  if (k === 'a') {   // 眼：金属の枠、絞りの羽根（回る）、瞳、光
+    const rot = t*1.2, pulse = .5 + .5*Math.sin(t*4);
+    for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+      const dx = X + .5 - 18, dy = y + .5 - 18, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+      if (r < 16.5 && r >= 13) put(X, y, (dx + dy < 0) ? c[0] : c[1]);                                  // 枠
+      else if (r < 13 && r >= 5.5) put(X, y, Math.cos(6*(a - rot) + r*.35) > 0 ? c[2] : shadeOf(c[2]));   // 絞りの羽根
+      else if (r < 5.5) put(X, y, r < 2.2 + pulse*1.2 ? '#FCFCFC' : '#000000');                         // 瞳（中の光が脈打つ）
+    }
+    if (v === 2) for (let i = 0; i < 4; i++) { const a = i*Math.PI/2 + t*.6; put(Math.round(18 + Math.cos(a)*9.5), Math.round(18 + Math.sin(a)*9.5), '#FCE08C'); }   // 心眼：まわりに光の点
+    if (v === 3) { put(7, 7, '#FCFCFC'); put(8, 7, '#FCFCFC'); put(7, 8, '#FCFCFC'); }   // 鷹の眼：鋭い照り
+  } else if (k === 'b') {   // ゼンマイ：渦巻き（巻き上げながらゆっくり回る）、外の枠、止め金
+    const spring = (sx, sy, R, pitch, w, rot) => { for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+      const dx = X + .5 - sx, dy = y + .5 - sy, r = Math.hypot(dx, dy); if (r > R || r < 1.5) continue;
+      const a = Math.atan2(dy, dx), u = r/pitch - (a - rot)/(Math.PI*2), f = u - Math.round(u);
+      if (Math.abs(f) < w) put(X, y, f > 0 ? c[0] : c[1]); } };
+    if (v === 3) { spring(11, 18, 9.5, 2.6, .24, t*1.6); spring(25, 18, 9.5, 2.6, .24, -t*1.6); }   // 二重：ふたつが逆に回る
+    else spring(18, 18, 15, v === 1 ? 4.2 : 3.2, v === 1 ? .3 : .22, t*(v === 1 ? .8 : 1.3));       // 大：太く大きい、鋼：細かく巻く
+    for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) { const r = Math.hypot(X + .5 - 18, y + .5 - 18); if (v !== 3 && r < 17.5 && r >= 16.3) put(X, y, '#585858'); }
+    put(18, 1, '#FCFCFC'); put(18, 2, '#FCFCFC');
+  } else {   // 歯車：大小ふたつがかみ合って回る（重＝重く遅い、早＝速い、跳ね＝上下に跳ねる）
+    const sp = v === 1 ? .6 : v === 2 ? 3.2 : 1.4, hop = v === 3 ? Math.round(Math.abs(Math.sin(t*5))*-3) : 0;
+    gear(14, 20 + hop, v === 1 ? 13 : 11, v === 1 ? 10 : 8, t*sp, c[0], c[1]);
+    gear(v === 1 ? 29 : 28, 8 + hop, 7, 6, -t*sp*(v === 1 ? 10/6 : 8/6) + .26, c[0], c[1]);
+  }
+  // 1ドットの黒い縁（ほかのドット絵とそろえる）
+  x.clearRect(0, 0, N, N);
+  for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+    if (M[y*N + X]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => { const u = X + a, w = y + b; return u >= 0 && w >= 0 && u < N && w < N && M[w*N + u]; })) { x.fillStyle = '#000000'; x.fillRect(X, y, 1, 1); } }
+  for (let i = 0; i < N*N; i++) if (M[i]) { x.fillStyle = M[i]; x.fillRect(i % N, Math.floor(i/N), 1, 1); }
+  return partCv;
+}
 const EQ_SKIN_SLOTS = ['head', 'bodyP', 'armP', 'legP'];            // 右の列
 const EQ_CHIP_SLOTS = ['back', 'blade', 'hair', 'hairC', 'outfit'];  // キャラの下の小さな枠
 // 見た目のサムネイル：その部品だけを大きく描く（[描く部品, 注目する位置［前・右・上］, 大きさ]）。背中の物は全身を後ろから
@@ -962,7 +1084,7 @@ const THUMB_FOCUS = { head: [{ head: [0, 0, 18.5] }, [0, 0, 18.5], 6], hair: [{ 
                       armP: [{ handL: [0, 0, 8.5] }, [0, 0, 8.5], 8], legP: [{ footL: [0, 0, 0] }, [0, 0, 1], 9], back: [null, [0, 0, 11], 3] };
 const armorKind = k => !!ARMOR[k];
 // 能力の一覧：[表示名, statsOf のキー, 大きいほど良いか, 単位]
-const STAT_ROWS = [['体力', 'hp', 1], ['スタミナ', 'st', 1], ['スタミナ回復', 'stRegen', 1, '%'], ['速さ', 'speed', 1], ['受けるダメージ', 'taken', 0, '%'], ['はじき受付', 'parry', 1, '秒'],
+const STAT_ROWS = [['攻撃力', 'atk', 1, '%'], ['体力', 'hp', 1], ['スタミナ', 'st', 1], ['スタミナ回復', 'stRegen', 1, '%'], ['速さ', 'speed', 1], ['受けるダメージ', 'taken', 0, '%'], ['はじき受付', 'parry', 1, '秒'],
   ['回避の無敵', 'dodge', 1, '秒'], ['回避のスタミナ', 'dashSt', 0], ['回避の距離', 'dashDist', 1, '%'], ['ガードの消費', 'guard', 0, '%'], ['吹き飛び', 'knock', 0, '%'], ['怯みの長さ', 'stun', 0, '%']];
 function drawWeaponIcon(x, wk, S, bladeKey = mySkin.blade){   // 武器のアイコン：斜めに置いた刀・大剣・短剣・槍（刃の色は見た目の「刃」）
   const px = Math.max(2, Math.round(S/32)), [n, back] = { katana: [15, 3], great: [17, 5], dagger: [9, 2], spear: [22, 5] }[wk], a = -Math.PI/4, um = (n - back)/2;   // 長さ（ドット）と握りから後ろの長さ
@@ -972,8 +1094,8 @@ function eqThumb(cvs, kind, key){
   const x = cvs.getContext('2d'), S = cvs.width; x.clearRect(0, 0, S, S); x.imageSmoothingEnabled = false;
   if (kind === 'w') return drawWeaponIcon(x, key, S);
   if (kind === 'blade') return drawWeaponIcon(x, myW, S, key);
-  if (armorKind(kind)) { const img = mspr(ARMOR_ICON[key], 'armoricon', mechPal(DEFAULT_SKIN, 'blue'), false, false), k = Math.floor(S*.7/Math.max(img.width, img.height));
-    x.drawImage(img, Math.round((S - img.width*k)/2), Math.round((S - img.height*k)/2), img.width*k, img.height*k); return; }
+  if (armorKind(kind)) { const img = drawPart(key, 0), k = Math.max(1, Math.floor(S*.78/36));
+    x.drawImage(img, Math.round((S - 36*k)/2), Math.round((S - 36*k)/2), 36*k, 36*k); return; }
   // 飾りは形の違う頭にはつかないので、いつもの頭で見せる
   const skin = { ...mySkin, ...(kind === 'back' ? {} : { back: 'none' }), ...(kind === 'hair' && HEADP[mySkin.head] ? { head: 'none' } : {}), [kind]: key }, [parts, foc, pz] = THUMB_FOCUS[kind], px = Math.max(1, Math.round(pz*S/112));
   const F = kind === 'back' ? -Math.PI/2 + .5 : kind === 'blade' || kind === 'legP' ? .3 : Math.PI/2 - .55;
@@ -981,15 +1103,43 @@ function eqThumb(cvs, kind, key){
   const sx = (foc[0]*cf + foc[1]*cr)*px, sy = ((foc[0]*sf + foc[1]*sr)*.5 - foc[2])*px;
   drawMech(x, S/2 - sx, S/2 - sy, F, skin, 'blue', parts || MECH_BASE(), { px, sword: kind === 'back' ? [5, 6, 6] : null });
 }
+// 透視：透けたキャラの中で、選んでいる仕掛けが動く。眼は頭、ゼンマイは胴、歯車は足もと。ほかの2つの仕掛けも薄く見せる
+function drawXray(cx, slot, key, P, t){
+  const px = 9, at = pos => ({ x: 200, y: 410 - pos[2]*px });
+  const spot = { A: at(P.head), B: at(P.body), C: { x: 200, y: 392 } };
+  // 青写真の格子と、上から下へ走る走査線
+  cx.save(); cx.globalAlpha = .18; cx.strokeStyle = '#3CBCFC'; cx.lineWidth = 1;
+  for (let g = 40; g < 400; g += 24) { cx.beginPath(); cx.moveTo(g, 120); cx.lineTo(g, 470); cx.stroke(); }
+  for (let g = 120; g < 470; g += 24) { cx.beginPath(); cx.moveTo(40, g); cx.lineTo(360, g); cx.stroke(); }
+  const sy = 120 + ((t*120) % 350); cx.globalAlpha = .5; cx.fillStyle = '#A4E4FC'; cx.fillRect(40, sy, 320, 2); cx.restore();
+  cx.imageSmoothingEnabled = false;
+  for (const s of SLOTS) {
+    const on = s === slot, k = on ? key : myGear[s].k, q = spot[s], z = on ? 3 : 1.5, img = drawPart(k, on ? t : t*.3);
+    cx.save(); cx.globalAlpha = on ? 1 : .35;
+    if (on) { const gl = cx.createRadialGradient(q.x, q.y, 4, q.x, q.y, 80); gl.addColorStop(0, 'rgba(164,228,252,.45)'); gl.addColorStop(1, 'rgba(164,228,252,0)');
+      cx.fillStyle = gl; cx.fillRect(q.x - 80, q.y - 80, 160, 160); }
+    cx.drawImage(img, Math.round(q.x - 18*z), Math.round(q.y - 18*z), 36*z, 36*z);
+    if (on) {   // 名札
+      cx.setLineDash([6, 5]); cx.strokeStyle = 'rgba(164,228,252,.8)'; cx.lineWidth = 2;
+      cx.beginPath(); cx.arc(q.x, q.y, 18*z + 10, 0, Math.PI*2); cx.stroke(); cx.setLineDash([]);
+      cx.font = '900 22px "M PLUS Rounded 1c", sans-serif'; cx.textAlign = 'center'; cx.fillStyle = '#A4E4FC'; cx.lineWidth = 5; cx.strokeStyle = '#0F1115'; const ny = s === 'C' ? q.y - 18*z - 20 : q.y + 18*z + 34; cx.strokeText(ARMOR[s].items[k].name, q.x, ny);
+      cx.fillText(ARMOR[s].items[k].name, q.x, ny); }
+    cx.restore();
+  }
+  cx.font = '900 18px "M PLUS Rounded 1c", sans-serif'; cx.textAlign = 'left'; cx.fillStyle = 'rgba(164,228,252,.85)'; cx.fillText('透視', 44, 140);
+}
 // practice が true なら練習の準備：練習相手の強さ・武器・防具もここで決める（「練習相手」の枠から）
 function loadout(level, eW, eGear, practice){
   if (!eGear) foeSkin = randSkin();   // 新しい相手は見た目も新しく
-  eW = eW || WKEYS[Math.floor(Math.random()*WKEYS.length)]; eGear = eGear || randomGear();
+  const boss = practice ? null : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
+  eW = boss ? boss.wk : eW || WKEYS[Math.floor(Math.random()*WKEYS.length)];
+  eGear = eGear || (practice ? randomGear() : aiGear(level, boss ? { boss: 1, set: boss.set } : {}));
+  let scrapArm = false, lastUp = null;   // 仕掛け：分解の確かめ中、直前の強化で伸びた副効果
   let F = Math.PI/2 - .55, showDet = false, sheet = null, sel = null, base = null;   // base：一覧を開いたときの武器・防具（能力の差を出す元）   // F：キャラの向き（なぞると回る）、sheet：開いている一覧、sel：一覧で選んでいる物
-  const save = () => { try { localStorage.setItem('maai_weapon', myW); localStorage.setItem('maai_gear', JSON.stringify(myGear)); localStorage.setItem('maai_skin', JSON.stringify(mySkin));
+  const save = () => { saveBag(); try { localStorage.setItem('maai_weapon', myW); localStorage.setItem('maai_skin', JSON.stringify(mySkin));
     if (practice) localStorage.setItem('maai_practice', JSON.stringify({level, eW, eGear})); } catch(e) {} };
   const rc = r => r >= 0 ? RARE[r].c : '#5E5140';
-  const slotBtn = (kind, key, label, small) => `<button class="eqSlot${small ? ' sm' : ''}${sheet === kind ? ' on' : ''}" data-slot="${kind}" style="--rc:${rc(SKINS[kind] ? SKINS[kind].list[key][1] : -1)}">
+  const slotBtn = (kind, key, label, small, r) => `<button class="eqSlot${small ? ' sm' : ''}${sheet === kind ? ' on' : ''}" data-slot="${kind}" style="--rc:${rc(r ?? (SKINS[kind] ? SKINS[kind].list[key][1] : -1))}">
     <canvas data-th="${kind}|${key}" width="${small ? 96 : 128}" height="${small ? 96 : 128}"></canvas><i>${label}</i></button>`;
   const itemBtn = (kind, key, name, own, r, cur, attr = 'data-pick') => `<button class="eqItem${key === cur ? ' cur' : ''}${own ? '' : ' lock'}${key === sel ? ' sel' : ''}" ${attr}="${key}" style="--rc:${rc(r)}">
     <canvas data-th="${kind}|${key}" width="112" height="112"></canvas><span>${own ? '' : '🔒'}${name}</span></button>`;
@@ -1002,6 +1152,7 @@ function loadout(level, eW, eGear, practice){
         ${SLOTS.map(s => `<div class="eqRowT">${ARMOR[s].label}</div><div class="eqGrid">${Object.entries(ARMOR[s].items).map(([k, it]) => itemBtn(s, k, it.name, true, -1, eGear[s], `data-fa="${s}" data-k`)).join('')}</div>`).join('')}
       </div></div>`;
     }
+    if (armorKind(sheet)) return armorSheet();
     let title, items, cur, det;
     if (sheet === 'w') { title = '武器'; cur = myW; items = WKEYS.map(k => [k, WEAPONS[k].name, true, -1]); }
     else if (armorKind(sheet)) { title = ARMOR[sheet].label; cur = myGear[sheet]; items = Object.entries(ARMOR[sheet].items).map(([k, it]) => [k, it.name, ownsArmor(k), -1]); }
@@ -1011,26 +1162,58 @@ function loadout(level, eW, eGear, practice){
     let stHtml = '';
     if (sheet === 'w' || armorKind(sheet)) {
       const now = statsOf(sheet === 'w' ? k : myW, armorKind(sheet) ? {...myGear, [sheet]: k} : myGear, PARRY_BONUS), was = statsOf(base.w, base.gear, PARRY_BONUS);
-      stHtml = `<div class="eqStGrid">${STAT_ROWS.map(([n, key, up, u = '']) => { const d = +now[key] - +was[key], ch = Math.abs(d) > 1e-6;
-        return `<div class="eqSt${ch ? ' ch' : ''}"><span>${n}</span><b>${now[key]}${u}</b>${ch ? `<em class="${(d > 0) === !!up ? 'p' : 'c'}">${d > 0 ? '+' : ''}${Number.isInteger(d) ? d : d.toFixed(2)}</em>` : ''}</div>`; }).join('')}</div>`;
+      stHtml = statGrid(now, was);
     }
-    if (sheet === 'w') det = `<span class="nm">${WEAPONS[k].name}</span>${WEAPONS[k].desc}`;
+    if (sheet === 'w') det = `<span class="nm">${WEAPONS[k].name}</span>${WEAPONS[k].desc}${diffChips(statsOf(k, myGear, PARRY_BONUS), statsOf(base.w, base.gear, PARRY_BONUS))}`;
     else if (armorKind(sheet)) { const it = ARMOR[sheet].items[k]; det = `<span class="nm">${it.name}</span>${chips(it.pros, it.cons)}${row[2] ? '' : `<span class="tag n">店で${ARMOR_PRICE[k]}枚</span>`}`; }
     else det = `<span class="nm">${row[3] >= 0 ? rareTag(row[3]) : ''}${row[1]}</span><span class="tag n">見た目だけ</span>${row[2] ? '' : '<span class="tag n">ガチャ・店で手に入る</span>'}`;
     return `<div class="eqSheet"><div class="eqSheetHd"><b>${title}</b><button id="shX" aria-label="閉じる">✕</button></div>
       <div class="eqScroll eqSheetBody"><div class="eqGrid">${items.map(([key, name, own, r]) => itemBtn(sheet, key, name, own, r, cur)).join('')}</div>${stHtml}</div>
       <div class="eqDetail">${det}</div></div>`;
   }
+  // 能力の一覧（一覧を開いたときの装備と比べた差つき）
+  const statGrid = (now, was) => `<div class="eqStGrid">${STAT_ROWS.map(([n, key, up, u = '']) => { const d = +now[key] - +was[key], ch = Math.abs(d) > 1e-6;
+    return `<div class="eqSt${ch ? ' ch' : ''}"><span>${n}</span><b>${now[key]}${u}</b>${ch ? `<em class="${(d > 0) === !!up ? 'p' : 'c'}">${d > 0 ? '+' : ''}${Number.isInteger(d) ? d : d.toFixed(2)}</em>` : ''}</div>`; }).join('')}</div>`;
+  // 仕掛けの一覧（v0.27）：持っている品を並べる。押すと中身を見る → 装備・強化・鍵・分解
+  const gearBtn = g => `<button class="eqItem g${g.id === bag.eq[sheet] ? ' cur' : ''}${g.id === sel ? ' sel' : ''}" data-gear="${g.id}" style="--rc:${RARE[g.r].c}">
+    ${g.isNew ? '<em class="gNew">NEW</em>' : ''}${g.lock ? '<em class="gLk">🔒</em>' : ''}<canvas data-th="${g.s}|${g.k}" width="112" height="112"></canvas>
+    <span>${SETS[g.set] ? `<i class="gDot" style="background:${SETS[g.set].c}"></i>` : ''}${ARMOR[g.s].items[g.k].name}${g.lv ? '+' + g.lv : ''}</span></button>`;
+  // 変わる能力だけを小さな札で（装備中と比べる）。変化がなければ主な能力をそのまま出す
+  const diffChips = (now, was) => {
+    const ch = STAT_ROWS.filter(([, key]) => Math.abs(+now[key] - +was[key]) > 1e-6);
+    const rows = ch.length ? ch : STAT_ROWS.filter(([, key]) => ['atk', 'hp', 'st', 'speed', 'parry'].includes(key));
+    return `<div class="dChips">${ch.length ? '<span class="dLbl">装備すると</span>' : '<span class="dLbl">今の能力</span>'}${rows.map(([n, key, up, u = '']) => { const d = +now[key] - +was[key];
+      return `<span class="dc${ch.length ? ((d > 0) === !!up ? ' p' : ' c') : ''}">${n} <b>${now[key]}${u}</b>${ch.length ? `<em>${d > 0 ? '+' : ''}${Number.isInteger(d) ? d : d.toFixed(2)}</em>` : ''}</span>`; }).join('')}</div>`;
+  };
+  function armorSheet(){
+    const eq = bag.eq[sheet], list = bag.gear.filter(g => g.s === sheet).sort((a, b) => (b.id === eq) - (a.id === eq) || b.r - a.r || b.lv - a.lv || b.id - a.id);
+    const it = gearById(sel) || myGear[sheet], A = ARMOR[sheet].items[it.k], S = SETS[it.set], own = !!it.id;
+    const cnt = setCount({...myGear, [sheet]: it}), cost = enhCost(it), maxed = it.lv >= MAX_LV[it.r];
+    const now = statsOf(myW, {...myGear, [sheet]: it}, PARRY_BONUS), was = statsOf(myW, myGear, PARRY_BONUS);   // 比べる相手は今装備している品
+    const det = `<div class="gDet"><div class="gHd"><span class="nm">${rareTag(it.r)}${gearName(it)}</span>${S ? `<span class="tag set" style="--sc:${S.c}">銘 ${S.n}</span>` : ''}</div>
+      <div>${tagChips(A.pros, A.cons)}</div>
+      <div class="gSubs">${it.subs.length ? it.subs.map(([k, v]) => `<span class="tag s${k === lastUp ? ' up' : ''}">${subTxt(k, v)}</span>`).join('') : '<span class="gNone">副効果なし</span>'}</div>
+      ${it.sp ? `<div class="gSp"><b>${SPECIALS[it.sp].n}</b>${SPECIALS[it.sp].d}</div>` : ''}
+      ${S ? `<div class="gSet${cnt[it.set] >= 3 ? ' on' : ''}" style="--sc:${S.c}"><b>銘「${S.n}」${Math.min(3, cnt[it.set] || 0)}/3</b>3つそろえると：${S.d}</div>` : ''}${diffChips(now, was)}</div>`;
+    const acts = !own ? '' : `<div class="gActs">${it.id === eq ? '<button disabled>装備中</button>' : '<button id="gEq" class="go">装備する</button>'}
+      <button id="gUp" ${maxed || bag.koban < cost ? 'disabled' : ''}>${maxed ? '強化 最大' : `強化 +${it.lv + 1}<small>小判 ${cost}</small>`}</button>
+      <button id="gLock" class="lk${it.lock ? ' on' : ''}" aria-label="鍵">${it.lock ? '🔒' : '🔓'}</button>
+      <button id="gScrap" class="${scrapArm ? 'arm' : ''}" ${it.lock || it.id === eq ? 'disabled' : ''}>${scrapArm ? '本当に？' : `分解<small>+${scrapVal(it)}枚</small>`}</button></div>`;
+    return `<div class="eqSheet gs"><div class="eqSheetHd"><b>${ARMOR[sheet].label}<small>　${list.length}個／全部で ${bag.gear.length}/${GEAR_CAP}</small></b><button id="shX" aria-label="閉じる">✕</button></div>
+      <div class="gTop">${det}</div>
+      <div class="eqScroll eqSheetBody"><div class="eqGrid">${list.map(gearBtn).join('')}</div><div class="eqRowT">全部の能力</div>${statGrid(now, was)}</div>
+      ${acts ? `<div class="eqDetail">${acts}</div>` : ''}</div>`;
+  }
   function render(){
     const oldBody = ov.querySelector('.eqSheetBody'), keep = oldBody ? oldBody.scrollTop : 0;
     const st = statsOf(myW, myGear, PARRY_BONUS);
     const bars = [['体力', st.hp, 140], ['スタミナ', st.st, 130], ['速さ', st.speed, 170], ['はじき', st.parry, .7]];
-    const det = [['スタミナ回復', st.stRegen + '%'], ['受けるダメージ', st.taken + '%'], ['回避の無敵', st.dodge + '秒'], ['回避のスタミナ', st.dashSt], ['回避の距離', st.dashDist + '%'],
+    const det = [['攻撃力', st.atk + '%'], ['スタミナ回復', st.stRegen + '%'], ['受けるダメージ', st.taken + '%'], ['回避の無敵', st.dodge + '秒'], ['回避のスタミナ', st.dashSt], ['回避の距離', st.dashDist + '%'],
                  ['ガードで減るスタミナ', st.guard + '%'], ['吹き飛び', st.knock + '%'], ['怯みの長さ', st.stun + '%']];
     ov.innerHTML = `<div class="eq${sheet ? ' open' : ''}"><div class="eqBody eqScroll">
       <div class="eqTop"><button class="eqBack" id="back" aria-label="タイトルへ戻る">‹</button><b>${practice ? '練習の準備' : '装備'}</b><span class="coin">小判 <b>${bag.koban}</b></span></div>
       <div class="eqStage">
-        <div class="eqCol">${slotBtn('w', myW, '武器')}${SLOTS.map(s => slotBtn(s, myGear[s], ARMOR[s].label)).join('')}</div>
+        <div class="eqCol">${slotBtn('w', myW, '武器')}${SLOTS.map(s => slotBtn(s, myGear[s].k, ARMOR[s].label + (myGear[s].lv ? ' +' + myGear[s].lv : ''), false, myGear[s].r)).join('')}</div>
         <div class="eqMid"><canvas id="eqChar" width="400" height="520"></canvas><button id="skRand" class="eqDice" aria-label="見た目をランダムに">🎲</button></div>
         <div class="eqCol">${EQ_SKIN_SLOTS.map(s => slotBtn(s, mySkin[s], SKINS[s].name)).join('')}</div>
       </div>
@@ -1040,13 +1223,23 @@ function loadout(level, eW, eGear, practice){
         <button id="stDet" class="eqLink">${showDet ? '閉じる' : '詳細 ▾'}</button></div>
       <div class="eqFoot">${practice
         ? `<button id="foeBtn" class="eqVs btn">練習相手<b>${WEAPONS[eW].title} Lv${level} ›</b></button>`
+        : boss ? `<div class="eqVs boss" style="--bc:${boss.c}">強敵<b>${boss.n}（${WEAPONS[eW].name}） Lv${level}</b><small>倒すと銘「${SETS[boss.set].n}」の仕掛け</small></div>`
         : `<div class="eqVs">次の相手<b>${WEAPONS[eW].title} Lv${level}</b></div>`}
         <button id="go" class="eqGo">${practice ? '練習' : '勝負'}</button></div>
       </div>${sheet ? sheetHtml() : ''}</div>`;
     ov.hidden = false;
     const nb = ov.querySelector('.eqSheetBody'); if (nb) nb.scrollTop = keep;
     ov.querySelectorAll('canvas[data-th]').forEach(c => { const [k, key] = c.dataset.th.split('|'); eqThumb(c, k, key); });
-    ov.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { sheet = sheet === b.dataset.slot ? null : b.dataset.slot; sel = null; base = { w: myW, gear: {...myGear} }; render(); });
+    ov.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { sheet = sheet === b.dataset.slot ? null : b.dataset.slot; sel = null; scrapArm = false; lastUp = null; base = { w: myW, gear: {...myGear} }; render(); });
+    // 仕掛けの一覧の操作
+    ov.querySelectorAll('[data-gear]').forEach(b => b.onclick = () => { sel = +b.dataset.gear; const g = gearById(sel); if (g.isNew) { g.isNew = false; saveBag(); } scrapArm = false; lastUp = null; render(); });
+    const gSel = () => gearById(sel) || gearById(bag.eq[sheet]), on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+    on('gEq', () => { const g = gSel(); bag.eq[sheet] = g.id; syncGear(); save(); SFX.pickup(); render(); });
+    on('gUp', () => { const g = gSel(), c = enhCost(g); if (bag.koban < c || g.lv >= MAX_LV[g.r]) return; bag.koban -= c; lastUp = enhance(g); saveBag(); SFX.coin(); render(); });
+    on('gLock', () => { const g = gSel(); g.lock = !g.lock; saveBag(); render(); });
+    on('gScrap', () => { const g = gSel(); if (g.lock || g.id === bag.eq[sheet]) return;
+      if (!scrapArm) { scrapArm = true; return render(); }
+      bag.gear = bag.gear.filter(x => x !== g); bag.koban += scrapVal(g); sel = null; scrapArm = false; saveBag(); SFX.coin(); render(); });
     const x = document.getElementById('shX'); if (x) x.onclick = () => { sheet = null; render(); };
     ov.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { const key = b.dataset.pick; sel = key;
       if (sheet === 'w') myW = key; else if (armorKind(sheet)) { if (ownsArmor(key)) myGear = {...myGear, [sheet]: key}; } else if (ownsSkin(sheet, key)) mySkin = {...mySkin, [sheet]: key};
@@ -1072,7 +1265,10 @@ function loadout(level, eW, eGear, practice){
       const g = cx.createRadialGradient(200, 412, 10, 200, 412, 150); g.addColorStop(0, 'rgba(232,178,58,.35)'); g.addColorStop(1, 'rgba(232,178,58,0)');
       cx.fillStyle = g; cx.fillRect(0, 280, 400, 240);
       cx.strokeStyle = 'rgba(62,142,222,.8)'; cx.lineWidth = 4; cx.beginPath(); cx.ellipse(200, 416, 92, 27, 0, 0, Math.PI*2); cx.stroke();
+      const xr = armorKind(sheet) ? sheet : null;   // 透視：仕掛けの一覧を開いている間
+      if (xr) { cx.save(); cx.globalAlpha = .26; }
       drawMech(cx, 200, 410, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW });   // 武器は体の外側で上へ立てて、形が体に重ならないように（長い武器ほど高く）
+      if (xr) { cx.restore(); drawXray(cx, xr, (gearById(sel) || myGear[xr]).k, P, t); }
       requestAnimationFrame(tick); };
     tick();
   }
@@ -1149,12 +1345,12 @@ function dailyItems(){
   return pick;
 }
 function shopScreen(tab = 'armor'){
-  const tabs = [['armor', '防具'], ['frag', '欠片交換'], ['daily', '日替わり']];
+  const tabs = [['armor', '仕掛け'], ['frag', '欠片交換'], ['daily', '日替わり']];
   let body = '', list = [];
-  if (tab === 'armor') body = `<p class="shNote top">防具は能力が変わる。買えばずっと使える</p>` + SLOTS.map(s => `<div class="shSec">${ARMOR[s].label}</div>` + Object.entries(ARMOR[s].items).map(([k, it]) => `
-    <div class="shRow"><div class="shIcon"><canvas data-th="${s}|${k}" width="96" height="96"></canvas></div>
-      <div class="shInfo"><b>${it.name}</b><div>${tagChips(it.pros, it.cons)}</div></div>
-      ${ownsArmor(k) ? '<span class="shOwn">所持</span>' : `<button class="shBuy" data-buy="${k}" ${bag.koban < ARMOR_PRICE[k] ? 'disabled' : ''}>${ARMOR_PRICE[k]}<small>枚</small></button>`}</div>`).join('')).join('');
+  if (tab === 'armor') body = `<p class="shNote top">仕掛けの箱：上以上が1つ出る。型・副効果・銘はランダム。試合に勝っても手に入る</p>` + SLOTS.map(s => `
+    <div class="shRow"><div class="shIcon"><canvas data-th="${s}|${Object.keys(ARMOR[s].items)[(Date.now()/1000|0) % 3]}" width="96" height="96"></canvas></div>
+      <div class="shInfo"><b>${ARMOR[s].label}の箱</b><div>${[3, 2, 1].map(r => `<span class="tag" style="background:${RARE[r].c}33;color:${RARE[r].c}">${RARE[r].n} ${BOX.w[r]}%</span>`).join('')}</div></div>
+      <button class="shBuy" data-box="${s}" ${bag.koban < BOX.price ? 'disabled' : ''}>${BOX.price}<small>枚</small></button></div>`).join('');
   else {
     const frag = tab === 'frag';
     list = frag ? SKIN_POOL.filter(it => !ownsSkin(it.slot, it.key)).sort((a, b) => b.r - a.r) : dailyItems();
@@ -1166,21 +1362,45 @@ function shopScreen(tab = 'armor'){
   }
   screen('店', `<div class="shTabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}</div>${body}`);
   ov.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => shopScreen(b.dataset.tab));
-  ov.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy; if (bag.koban < ARMOR_PRICE[k]) return;
-    bag.koban -= ARMOR_PRICE[k]; bag.armor[k] = 1; saveBag(); SFX.coin(); shopScreen(tab); });
+  ov.querySelectorAll('[data-box]').forEach(b => b.onclick = () => openBox(b.dataset.box));
   ov.querySelectorAll('[data-sk2]').forEach(b => b.onclick = () => { const it = list[+b.dataset.sk2], price = tab === 'frag' ? FRAG_COST[it.r] : DAILY_PRICE[it.r];
     if (tab === 'frag') { if (bag.frag < price) return; bag.frag -= price; } else { if (bag.koban < price) return; bag.koban -= price; }
     bag.skins[it.slot + ':' + it.key] = 1; saveBag(); SFX.coin(); shopScreen(tab); });
   document.getElementById('back').onclick = title;
 }
+// 仕掛けの箱（店）：開けると1つ出る
+const BOX = { price: 300, w: [0, 70, 26, 4] };   // [並, 上, 極, 伝]（%）
+function openBox(s){
+  if (bag.koban < BOX.price) return;
+  bag.koban -= BOX.price;
+  let x = Math.random()*100, r = 0; for (let i = 0; i < 4; i++) { x -= BOX.w[i]; if (x < 0) { r = i; break; } }
+  const it = grantGear([makeGear(r, { s })])[0];
+  SFX.rattle();
+  screen(r >= 2 ? RARE[r].n + 'が出た！' : '箱を開けた', `<div class="gcRes one">${gearCard(it)}</div>${gearInfo(it)}
+    <div class="gcBtns"><button id="again" class="gcBtn ten" ${bag.koban < BOX.price ? 'disabled' : ''}>もう1つ<small>小判 ${BOX.price}</small></button>
+      <button id="wear" class="gcBtn sub2">装備へ</button></div>`, r >= 2 ? 'kiwami2' : '');
+  SFX.reveal(Math.min(2, r));
+  document.getElementById('again').onclick = () => openBox(s);
+  document.getElementById('wear').onclick = () => loadout(1);
+  document.getElementById('back').onclick = () => shopScreen('armor');
+}
+// 品の中身（箱の結果など）：主効果・副効果・特殊能力・銘
+function gearInfo(it){
+  const A = ARMOR[it.s].items[it.k], S = SETS[it.set];
+  return `<div class="gDet gBx"><div>${tagChips(A.pros, A.cons)}</div><div class="gSubs">${it.subs.map(([k, v]) => `<span class="tag s">${subTxt(k, v)}</span>`).join('')}</div>
+    ${it.sp ? `<div class="gSp"><b>${SPECIALS[it.sp].n}</b>${SPECIALS[it.sp].d}</div>` : ''}${S ? `<div class="gSet" style="--sc:${S.c}"><b>銘「${S.n}」</b>3つそろえると：${S.d}</div>` : ''}</div>`;
+}
 // 蔵：集めた見た目と防具。持っていない物は黒い影と「？？？」（等級の色の枠だけ見える）
 function kuraScreen(){
-  const nSkin = SKIN_POOL.filter(it => ownsSkin(it.slot, it.key)).length, nArmor = SLOTS.flatMap(s => Object.keys(ARMOR[s].items)).filter(ownsArmor).length;
+  // 仕掛けは「銘の図鑑」：銘ごとに眼・ゼンマイ・歯車の3枠。持っている中でいちばん良い品を見せる
+  const best = (set, s) => bag.gear.filter(g => g.set === set && g.s === s).sort((a, b) => b.r - a.r || b.lv - a.lv)[0];
+  const nSkin = SKIN_POOL.filter(it => ownsSkin(it.slot, it.key)).length, nArmor = Object.keys(SETS).reduce((a, k) => a + SLOTS.filter(s => best(k, s)).length, 0);
   const meter = (label, a, b) => `<div><span>${label}</span><b>${a}<small> / ${b}</small></b><em><i style="width:${a/b*100}%"></i></em></div>`;
-  screen('蔵', `<div class="kuraTop">${meter('見た目', nSkin, SKIN_POOL.length)}${meter('防具', nArmor, 9)}</div>
+  screen('蔵', `<div class="kuraTop">${meter('見た目', nSkin, SKIN_POOL.length)}${meter('銘の図鑑', nArmor, Object.keys(SETS).length*3)}</div>
+    <div class="shSec">銘の図鑑（同じ銘を3つそろえると効果）</div>${Object.entries(SETS).map(([k, S]) => `<div class="kuraSet" style="--sc:${S.c}"><b>${S.n}${S.boss ? '<em>強敵</em>' : ''}</b><small>${S.d}</small></div>
+      <div class="shGrid">${SLOTS.map(s => { const g = best(k, s); return g ? gearCard(g) : shCard(s, Object.keys(ARMOR[s].items)[0], ARMOR[s].label, -1, { dim: true }); }).join('')}</div>`).join('')}
     ${Object.entries(SKINS).map(([slot, d]) => `<div class="shSec">${d.name}</div><div class="shGrid k5">${Object.entries(d.list).filter(([, v]) => v[1] >= 0)
-      .map(([key, v]) => shCard(slot, key, v[0], v[1], { dim: !ownsSkin(slot, key) })).join('')}</div>`).join('')}
-    <div class="shSec">防具</div><div class="shGrid k5">${SLOTS.flatMap(s => Object.entries(ARMOR[s].items).map(([k, it]) => shCard(s, k, it.name, -1, { dim: !ownsArmor(k) }))).join('')}</div>`);
+      .map(([key, v]) => shCard(slot, key, v[0], v[1], { dim: !ownsSkin(slot, key) })).join('')}</div>`).join('')}`);
   document.getElementById('back').onclick = title;
 }
 function openPractice(){
@@ -1602,7 +1822,7 @@ try { const k = { ...DEFAULT_SKIN, ...JSON.parse(localStorage.getItem('maai_skin
 
 // ================= ガチャ・店・蔵 =================
 // 見た目はガチャ（運）、能力（防具）は店で買う（ためれば必ず手に入る）。お金は試合で稼ぐ小判だけ
-const RARE = [{ n: '並', c: '#7A828C' }, { n: '上', c: '#3E7FC4' }, { n: '極', c: '#D9A21E' }];
+const RARE = [{ n: '並', c: '#7A828C' }, { n: '上', c: '#3E7FC4' }, { n: '極', c: '#D9A21E' }, { n: '伝', c: '#E0493E' }];   // 伝は仕掛けだけ
 const GACHA = { one: 100, ten: 900, pity: 30, rates: [.70, .25, .05] };   // 天井：30回で必ず極
 const FRAG_GET = [1, 3, 10], FRAG_COST = [5, 15, 40], DAILY_PRICE = [150, 400, 1000];   // だぶりで増える欠片／欠片交換の値段／日替わりの値段（小判）
 const ARMOR_PRICE = { a1: 250, a3: 250, b1: 300, b3: 250, c1: 250, c3: 200 };
@@ -1618,6 +1838,111 @@ const ownsArmor = k => UNLOCK_ALL || !!bag.armor[k];
 // 持っていない物を着ていたら（前の版で選んだものなど）、最初の物に戻す
 for (const k in mySkin) if (!ownsSkin(k, mySkin[k])) mySkin[k] = DEFAULT_SKIN[k];
 for (const k of SLOTS) if (!ownsArmor(myGear[k])) myGear[k] = STARTER_GEAR[k];
+
+// ================= 仕掛けの品（v0.27：原神の聖遺物のように、1つずつ中身が違う） =================
+// 品 = { id, s：部位, k：型（a1〜c3。主効果は ARMOR の表）, r：品位（0並 1上 2極 3伝）, lv：強化, subs：[[副効果, 値]], sp：特殊能力, set：銘, lock }
+// 数字は控えめ（読み合いの芯を数値で押し流さない）。周回の目当ては特殊能力と、銘を3つそろえること
+// 副効果：lo〜hi の間でランダム。u が % なら掛け算（neg：減るほうが良い）、それ以外は足し算
+const SUBS = {
+  hp:       { n: '体力',         u: '',   lo: 4,   hi: 8 },
+  stMax:    { n: 'スタミナ',     u: '',   lo: 4,   hi: 8 },
+  stRegen:  { n: 'スタミナ回復', u: '%',  lo: 3,   hi: 6 },
+  speed:    { n: '速さ',         u: '%',  lo: 2,   hi: 4 },
+  atk:      { n: '攻撃力',       u: '%',  lo: 2,   hi: 5 },
+  dmgTaken: { n: '受けるダメ',   u: '%',  lo: 2,   hi: 4, neg: 1 },
+  guardMul: { n: 'ガードの消費', u: '%',  lo: 3,   hi: 6, neg: 1 },
+  stunMul:  { n: '怯み',         u: '%',  lo: 4,   hi: 8, neg: 1 },
+  parry:    { n: 'はじき受付',   u: '秒', lo: .01, hi: .02, dec: 2 },
+  dashIf:   { n: '回避の無敵',   u: '秒', lo: .01, hi: .02, dec: 2 },
+};
+const SUB_KEYS = Object.keys(SUBS);
+// 特殊能力：極にときどき、伝には必ず1つ。数字より戦い方が変わるもの
+const SPECIALS = {
+  kaeshi:  { n: '返し', d: 'はじき成功で体力+8' },
+  oikaze:  { n: '追い風', d: '回避してから1秒以内の攻撃+30%' },
+  konshin: { n: '渾身', d: '最後の段の攻撃+25%' },
+  fukutsu: { n: '不屈', d: '体力3割以下で受けるダメ-25%' },
+  kyukon:  { n: '吸魂', d: '撃破すると体力+20・スタミナ全回復（乱戦）' },
+};
+const SP_KEYS = Object.keys(SPECIALS);
+// 銘：同じ銘を3部位（眼・ゼンマイ・歯車）そろえると効果。boss の銘は強敵を倒したときだけ落ちる
+const SETS = {
+  hayate:    { n: '疾風', c: '#7FE0C0', d: '速さ+8%・回避のスタミナ-4', mods: { speed: 1.08, dashSt: -4 } },
+  kongo:     { n: '金剛', c: '#D9B98F', d: '体力+20・吹き飛び-30%', mods: { hp: 20, knock: .7 } },
+  meikyo:    { n: '明鏡', c: '#A4E4FC', d: 'はじき受付+0.03秒・はじき成功でスタミナ+20', mods: { parry: .03 } },
+  onimaru:   { n: '鬼丸', c: '#FF7A5A', boss: 1, d: '攻撃力+12%・ガードの上から削るスタミナ+30%', mods: { atk: 1.12, chip: 1.3 } },
+  tsukikage: { n: '月影', c: '#C9B8FF', boss: 1, d: '回避の無敵+0.04秒・回避のスタミナ-3', mods: { dashIf: .04, dashSt: -3 } },
+  raiden:    { n: '雷電', c: '#FFE14A', boss: 1, d: 'スタミナ回復+20%・速さ+5%', mods: { stRegen: 1.2, speed: 1.05 } },
+};
+const NORMAL_SETS = Object.keys(SETS).filter(k => !SETS[k].boss);
+const START_SUBS = [1, 2, 2, 3], MAX_LV = [2, 3, 4, 5], SCRAP = [10, 30, 80, 200], GEAR_CAP = 80;
+const pickOne = a => a[Math.floor(Math.random()*a.length)];
+const rollSub = k => { const S = SUBS[k], v = S.lo + Math.random()*(S.hi - S.lo); return S.dec ? Math.round(v*100)/100 : Math.round(v); };
+const subTxt = (k, v) => { const S = SUBS[k]; return `${S.n}${S.neg ? '-' : '+'}${S.dec ? v.toFixed(2) : v}${S.u}`; };
+function addSub(it){ const k = pickOne(SUB_KEYS.filter(k => !it.subs.some(x => x[0] === k))); it.subs.push([k, rollSub(k)]); return k; }
+// 強化1回：副効果が4つ未満なら1つ増え、4つなら今ある1つが伸びる（どれが伸びるかは運）。伸びた副効果のキーを返す
+function enhance(it){
+  it.lv++;
+  if (it.subs.length < 4) return addSub(it);
+  const x = pickOne(it.subs), S = SUBS[x[0]]; x[1] = S.dec ? Math.round((x[1] + rollSub(x[0]))*100)/100 : x[1] + rollSub(x[0]); return x[0];
+}
+function makeGear(r, o = {}){   // o.s：部位、o.set：銘（指定がなければランダム）
+  const s = o.s || pickOne(SLOTS), it = { s, k: pickOne(Object.keys(ARMOR[s].items)), r, lv: 0, subs: [], sp: null, set: o.set || pickOne(NORMAL_SETS), lock: false };
+  for (let i = 0; i < START_SUBS[r]; i++) addSub(it);
+  if (r === 3 || (r === 2 && Math.random() < .3)) it.sp = pickOne(SP_KEYS);
+  return it;
+}
+const enhCost = it => Math.round((30 + it.lv*30)*(1 + it.r*.3)/10)*10;   // 伝を最大まで：約850枚
+const scrapVal = it => SCRAP[it.r] + it.lv*10;
+const gearName = it => ARMOR[it.s].items[it.k].name + (it.lv ? ' +' + it.lv : '');
+// 落ちる品位：luck が大きいほど良い物が出やすい。重みは [並, 上, 極, 伝]
+function dropGrade(luck = 0){
+  const w3 = 1 + luck*1.5, w2 = 9 + luck*4, w1 = 30 + luck*3, w = [Math.max(10, 100 - w1 - w2 - w3), w1, w2, w3];
+  let x = Math.random()*w.reduce((a, b) => a + b, 0);
+  for (let r = 0; r < 4; r++) { x -= w[r]; if (x < 0) return r; } return 0;
+}
+// AIの仕掛け：強い相手ほど良い物を着ている（o.boss：自分の銘を3つ、極以上）
+function aiGear(level, o = {}){
+  return Object.fromEntries(SLOTS.map(s => {
+    const r = o.boss ? (Math.random() < .3 ? 3 : 2) : clamp(Math.floor(Math.random()*(level/2 + 1)), 0, 3);
+    const it = makeGear(r, { s, set: o.set }), n = Math.floor(Math.random()*(MAX_LV[r]*Math.min(1, level/6) + 1));
+    for (let i = 0; i < n; i++) enhance(it);
+    return [s, it]; }));
+}
+// 手に入れた品を持ち物へ。いっぱいなら小判にする
+function grantGear(list){
+  for (const it of list) { if (bag.gear.length >= GEAR_CAP) { it.full = true; bag.koban += scrapVal(it); } else { it.id = ++bag.nid; it.isNew = true; bag.gear.push(it); } }
+  saveBag(); return list;
+}
+const gearById = id => bag.gear.find(g => g.id === id);
+function syncGear(){   // 装備している品（bag.eq の id）→ myGear。なくなっていたら、その部位のいちばん良い物
+  for (const s of SLOTS) { let g = gearById(bag.eq[s]);
+    if (!g || g.s !== s) { g = bag.gear.filter(x => x.s === s).sort((a, b) => b.r - a.r || b.lv - a.lv)[0]; bag.eq[s] = g ? g.id : null; }
+    myGear[s] = g || { s, k: STARTER_GEAR[s], r: 0, lv: 0, subs: [], sp: null, set: null }; }
+}
+// 前の版の持ち物（型ごとに持っているかどうか）を品に置き換える：最初からの型は並、買った型は上
+if (!Array.isArray(bag.gear)) {
+  bag.gear = []; bag.nid = 0; bag.eq = {};
+  for (const s of SLOTS) for (const k of Object.keys(ARMOR[s].items)) if (bag.armor[k]) {
+    const it = makeGear(STARTER_GEAR[s] === k ? 0 : 1, { s }); it.k = k; it.id = ++bag.nid; bag.gear.push(it);
+    if (myGear[s] === k) bag.eq[s] = it.id; }
+  saveBag();
+}
+bag.eq = bag.eq || {};
+syncGear();
+const setCount = gear => { const c = {}; for (const s of SLOTS) { const g = asItem(gear[s]); if (g && g.set) c[g.set] = (c[g.set] || 0) + 1; } return c; };
+// ---- 強敵（ボス武者）：名前つき。倒すと、その武者だけの銘の仕掛けが落ちる ----
+// 1対1：Lv3の倍数で出る。乱戦：4割の試合で1体まざる
+const BOSSES = [
+  { n: '鬼丸', wk: 'great', set: 'onimaru', c: '#FF7A5A' },
+  { n: '月影', wk: 'dagger', set: 'tsukikage', c: '#C9B8FF' },
+  { n: '雷電', wk: 'spear', set: 'raiden', c: '#FFE14A' },
+];
+const bossForLevel = lv => lv % 3 === 0 ? BOSSES[(lv/3 - 1) % BOSSES.length] : null;
+function makeBoss(f, b, lvUp, hpMul){   // AIの武者を強敵にする
+  f.boss = b; f.lv = Math.min(9, G.level + lvUp); f.maxHp = f.hp = Math.round(f.maxHp*hpMul); f.name = b.n;
+}
+const bossDrop = b => makeGear(Math.random() < .3 ? 3 : 2, { set: b.set });   // 強敵の落とし物：その銘、極以上
 // 装備画面の見本：斜め前向きで描く
 function drawPreview(cvs, skin, team){
   if (!cvs) return;
@@ -1694,6 +2019,8 @@ function drawF(f){
   ctx.globalAlpha = f.iframe > 0 ? .55 : 1;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.1, f.r*.55, 0, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = TEAM[f.team]; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.3, f.r*.65, 0, 0, Math.PI*2); ctx.stroke();   // 敵味方の輪
+  if (f.boss) { ctx.save(); ctx.strokeStyle = f.boss.c; ctx.lineWidth = 3; ctx.globalAlpha *= .55 + .35*Math.sin(G.now*6);   // 強敵：足もとで脈打つ輪
+    ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.9, f.r*.95, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   // 強化中は足元に色の輪（残り2秒で点滅）
   let ring = 0;
   for (const k of ['atk', 'spd', 'st']) { const b = f.buffs[k]; if (b <= 0 || (b < 2 && Math.floor(b*8) % 2)) continue;
@@ -1752,6 +2079,9 @@ function drawF(f){
   if (G.melee && f.isAI) {   // 乱戦：頭の上に体力（チームの色）
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(f.x - 16, f.y - 62, 32, 4);
     ctx.fillStyle = TEAM[f.team]; ctx.fillRect(f.x - 16, f.y - 62, 32*Math.max(0, f.hp)/f.maxHp, 4); }
+  if (f.boss) {   // 強敵の名前（頭の上）
+    ctx.font = '13px "Dela Gothic One", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#15181D';
+    const ny = G.melee ? f.y - 80 : f.y - 64; ctx.strokeText(f.boss.n, f.x, ny); ctx.fillStyle = f.boss.c; ctx.fillText(f.boss.n, f.x, ny); }
   if (G.melee && !f.dead && f.wlv > 0) {   // 武器強化の★（頭の上）
     ctx.font = '11px "Dela Gothic One", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#15181D';
     const s = '★'.repeat(f.wlv), sy = f.isAI ? f.y - 66 : f.y - 58;
@@ -1874,8 +2204,11 @@ function helpScreen(){
     ['ガード', '早めのガードは受け止めるだけ。スタミナが削れ、なくなるとガードブレイク'],
     ['回避', '一瞬だけ無敵。スティックの方向へ跳ぶ'],
     ['スタミナ', '攻撃・ガード・回避で減る。足元の黄色いバー'],
-    ['装備', '武器と防具（A部・B部・C部）で能力が変わる。見た目は能力に関係しない'],
-    ['小判', '勝つともらえる。見た目はガチャ、防具は店で手に入る'],
+    ['装備', '武器と仕掛け（眼・ゼンマイ・歯車＝からくりの中の部品）で能力が変わる。見た目の着せ替えは能力に関係しない'],
+    ['仕掛け', '1つずつ中身が違う。品位（並・上・極・<b>伝</b>）、ランダムな副効果、極・伝には<b>特殊能力</b>。小判で強化すると副効果が増えたり伸びたりする。いらない物は分解して小判に（鍵をかければ守れる）'],
+    ['銘', '仕掛けには銘がある。同じ銘を眼・ゼンマイ・歯車の3つそろえると、銘の効果がつく'],
+    ['強敵', '名前つきのボス武者。1対1ではLv3・6・9…、乱戦ではときどき混ざる。倒すと、その武者だけの銘の仕掛けが手に入る'],
+    ['小判', '勝つともらえる。見た目はガチャ、仕掛けは試合の戦利品と店の箱で手に入る'],
     ['アイテム', 'ときどき落ちてくる。回復・攻撃力UP・速度UP・スタミナ。相手より先に拾う'],
     ['乱戦', '8人で最後の1人まで。画面は自分を追い、画面の外の相手は端の矢印で分かる。紫の<b>結界</b>がだんだん縮み、外にいると体力が減る（白い点線が次の輪）。倒した相手が落とす<b>刃</b>を拾うと武器強化（★1つで攻撃力+15%、★3まで）']];
   screen('遊び方', `<div class="hpList">${rows.map(([h, t], i) => `<div class="hpRow" style="animation-delay:${i*40}ms"><b>${h}</b><p>${t}</p></div>`).join('')}
