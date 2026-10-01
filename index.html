@@ -271,6 +271,7 @@
   .gActs button:disabled{opacity:.45;}
   .eqSheetHd b small{font-size:10px;color:#8A93A0;font-weight:800;}
   .eqVs.boss b{color:var(--bc);} .eqVs.boss small{display:block;font-size:9px;color:#C9C2B0;}
+  .eqVs small.per{display:block;font-size:9px;color:#C9C2B0;} .eqVs small.per::first-line{color:var(--pc);}
   .card{max-height:100%;overflow-y:auto;}
   .dList{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;text-align:left;}
   .dRow{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:10px;background:#1E222A;border:2px solid var(--rc);animation:dIn .4s ease-out backwards;}
@@ -357,6 +358,11 @@ const ESC_ST_MUL = 1.5;     // はじかれた怯みから回避で抜けると�
 const parryRearm = f => parryWin(f) + .3;   // 押し直してからこの秒数以内は、はじきが出ない（受付が長いほど長く。連打対策）
 const parryWin = f => f.w.parry + f.m.parry + PARRY_ADD + (f.isAI ? 0 : PARRY_BONUS);
 const parryOpen = f => f.parryOK && G.now - f.guardStart <= parryWin(f);
+// v0.28 投げ：攻撃 ＞ 投げ ＞ ガード（はじきも）＞ 攻撃 の三すくみ。出は速いが届くのはすぐ近くだけ。空振りの隙は大きい
+// 相手が構えている・立っている・攻撃の戻りなら掴める。ため・攻撃中の相手には掴めず、投げの出かかりに斬られると「カウンター」
+// v0.28.1：出かかりに lunge だけ前へ踏み込む（届く距離は中心どうしで reach＋体2つ分＋lunge＝約70、短剣と同じくらい）
+// v0.29：掴んだら anim 秒かけて相手を頭の上へ持ち上げ、背中側へ叩きつける（背負い投げ）。叩きつけた瞬間にダメージと衝撃の輪
+const THROW = { anim: .42, lift: 38, st: 14, wind: .16, reach: 20, lunge: 20, arc: 1.7, dmg: 12, stun: .7, knock: 380, rec: .28, whiff: .55 };
 // 仕掛け（v0.26 までの「防具」）：からくりの中の部品。眼（A）・ゼンマイ（B）・歯車（C）に1つずつ。どれも長所と短所がある
 // 見た目には出ない（見た目は着せ替え）。キーの A/B/C・a1〜c3 は前の版と同じなので、持ち物・保存はそのまま使える
 //   mods の意味　hp：体力の上限に足す　stMax：スタミナの上限に足す　parry・dashIf：はじき受付・回避の無敵（秒）に足す
@@ -528,9 +534,10 @@ function newMatch(level, eW, eGear, practice){
   newRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = G.practice ? '練習をやめる' : 'やめる';
 }
 function newRound(){
-  AR.r = DUEL_R;   // 乱戦で広げた闘技場を戻す
+  AR.r = DUEL_R; G.terrain = null;   // 乱戦で広げた闘技場を戻す
   G.p = mkF(AR.x, AR.y + 80, false, '#3E8EDE', `あなた（${WEAPONS[myW].name}）`, myW, myGear);
   G.e = mkF(AR.x, AR.y - 80, true, '#E0493E', `${WEAPONS[G.eW].title} Lv${G.level}`, G.eW, G.eGear);
+  G.e.per = G.boss ? BOSS_PER[G.boss.set] : foePer;
   if (G.boss) { makeBoss(G.e, G.boss, 1, 1.3); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
   G.ai = {heat:0, seenWind:-1, guardAt:0, releaseAt:0, dashAt:0, attackAt:0, comboLeft:0, strafe:1, strafeT:0, backoff:0};
   G.phase = 'intro'; G.phaseT = 0; G.fx = []; G.texts = []; G.startSnd = 0;
@@ -543,7 +550,8 @@ function spawnItem(){
     const z = G.zone, c = z ? (z.tr != null ? {x:z.tx, y:z.ty, r:z.tr} : z) : AR;
     const a = rnd(0, Math.PI*2), r = Math.sqrt(Math.random())*Math.max(8, Math.min(c.r, AR.r) - 22);
     x = c.x + Math.cos(a)*r; y = c.y + Math.sin(a)*r;
-    if ((G.fs || [G.p, G.e]).every(f => f.dead || Math.hypot(x - f.x, y - f.y) > 55)) break;
+    const onT = G.terrain && [...G.terrain.pits, ...G.terrain.pillars].some(c => Math.hypot(x - c.x, y - c.y) < c.r + 14);
+    if (!onT && (G.fs || [G.p, G.e]).every(f => f.dead || Math.hypot(x - f.x, y - f.y) > 55)) break;
   }
   const type = G.melee && Math.random() < .3 ? 'up' : IKEYS[Math.floor(Math.random()*IKEYS.length)];
   G.items.push({x, y, type, t:0});
@@ -586,11 +594,12 @@ function newMelee(){
     // 4割の試合で、1体が強敵（名前つきのボス武者）
     const b = i === 0 && Math.random() < .4 ? pickOne(BOSSES) : null, wk = b ? b.wk : WKEYS[Math.floor(Math.random()*WKEYS.length)];
     const f = mkF(...at(Math.PI/2 + (i + 1)*Math.PI*2/(MELEE_N + 1)), true, '', WEAPONS[wk].title, wk, aiGear(level, b ? { boss: 1, set: b.set } : {}));
-    f.skin = randSkin(); f.team = MELEE_TEAMS[i]; f.ai = newAiMemo(); G.fs.push(f);
+    f.skin = randSkin(); f.team = MELEE_TEAMS[i]; f.ai = newAiMemo(); f.per = b ? BOSS_PER[b.set] : pickOne(PER_KEYS); G.fs.push(f);
     if (b) { makeBoss(f, b, 2, 1.6); f.wlv = 1; say(`強敵「${b.n}」がいる！`, G.p.x, G.p.y - 70, b.c, 18, 2.6); }
   }
   G.e = G.fs[1];   // 1対1用の処理が参照しても困らないように
   G.zone = {x:AR.x, y:AR.y, r:AR.r, stage:0, t:0, shrinking:false, tick:0};
+  G.terrain = makeTerrain();
   G.cam = {x:G.p.x, y:G.p.y};
   zoneNext();
   ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = 'やめる';
@@ -625,12 +634,46 @@ function updateZone(dt, alive){
     if (f.hp <= 0) { f.hp = 0; ko(f); }
   }
 }
+// ---- 地形（v0.28、乱戦だけ）：崖（穴）・草むら・柱。毎試合ランダムに置く ----
+// 崖：歩いて・回避では落ちないが、強く吹き飛ばされて入ると落ちて退場。草むら：中にいると、近く（70）以外からは見えない
+// 柱：通れない。間に柱があると攻撃も投げも届かない（盾にできる）
+function makeTerrain(){
+  const T = { pits: [], bushes: [], pillars: [] }, all = [];
+  const spawns = Array.from({length: MELEE_N + 1}, (_, i) => { const a = Math.PI/2 + i*Math.PI*2/(MELEE_N + 1); return [AR.x + Math.cos(a)*230, AR.y + Math.sin(a)*230]; });
+  const place = (list, n, r0, r1, maxR) => { for (let k = 0, tries = 0; k < n && tries < 400; tries++) {
+    const a = rnd(0, Math.PI*2), rr = Math.sqrt(Math.random())*maxR, x = AR.x + Math.cos(a)*rr, y = AR.y + Math.sin(a)*rr, r = rnd(r0, r1);
+    if (spawns.some(([sx, sy]) => Math.hypot(sx - x, sy - y) < r + 45)) continue;
+    if (all.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 34)) continue;
+    const o = {x, y, r}; list.push(o); all.push(o); k++; } };
+  place(T.pits, 3, 26, 38, 250); place(T.pillars, 5, 12, 16, 280); place(T.bushes, 5, 34, 46, 280);
+  return T;
+}
+const inBush = f => !!(G.terrain && G.terrain.bushes.some(b => Math.hypot(f.x - b.x, f.y - b.y) < b.r - 4));
+// f が viewer から見えるか：草むらの中でも、近い・攻撃や投げの最中・斬られた直後なら見える
+const visibleTo = (f, viewer) => !G.terrain || f === viewer || !inBush(f) || Math.hypot(f.x - viewer.x, f.y - viewer.y) < 70 || ['windup', 'active', 'throw'].includes(f.state) || f.flash > 0;
+// att と def の間に柱があるか
+const blocked = (att, def) => !!(G.terrain && G.terrain.pillars.some(c => {
+  const vx = def.x - att.x, vy = def.y - att.y, L2 = vx*vx + vy*vy || 1, k = clamp(((c.x - att.x)*vx + (c.y - att.y)*vy)/L2, 0, 1);
+  return Math.hypot(att.x + vx*k - c.x, att.y + vy*k - c.y) < c.r - 2; }));
+// 地形との当たり：柱は押し戻す。崖は強く吹き飛ばされていれば落ちる、そうでなければ縁で止まる
+function terrainStep(f){
+  const T = G.terrain; if (!T || f.dead || f.state === 'held') return;   // 宙に持ち上げられている間は地形に触れない
+  for (const c of T.pillars) { const dx = f.x - c.x, dy = f.y - c.y, d = Math.hypot(dx, dy) || 1, m = c.r + f.r*.8; if (d < m) { f.x = c.x + dx/d*m; f.y = c.y + dy/d*m; } }
+  for (const c of T.pits) { const dx = f.x - c.x, dy = f.y - c.y, d = Math.hypot(dx, dy) || 1;
+    if (d >= c.r + 2) continue;
+    if (Math.hypot(f.kx, f.ky) > 110 && G.phase === 'fight') { f.fell = c; f.hp = 0; f.x = c.x + dx/d*Math.min(d, c.r*.5); f.y = c.y + dy/d*Math.min(d, c.r*.5);
+      say('落下！', f.x, f.y - 30, '#FF9F43', 22, 1.2); ko(f); return; }
+    f.x = c.x + dx/d*(c.r + 2); f.y = c.y + dy/d*(c.r + 2); }
+}
 const outZone = (f, pad = 0) => G.zone && Math.hypot(f.x - G.zone.x, f.y - G.zone.y) > G.zone.r - pad;
 // 狙う相手：一番近い生きている相手。今の相手がそこそこ近ければ乗り換えない（ころころ変わらないように）
 function pickTarget(f, alive){
-  let best = null, bd = 1e9;
-  for (const o of alive) { if (o === f) continue; const d = Math.hypot(o.x - f.x, o.y - f.y); if (d < bd) { bd = d; best = o; } }
-  if (f.tgt && f.tgt !== f && !f.tgt.dead && Math.hypot(f.tgt.x - f.x, f.tgt.y - f.y) < bd*1.3 + 10) return f.tgt;
+  let best = null, bd = 1e9; const V = f.isAI && (PERSONA[f.per] || {}).vulture;
+  const score = o => { const d = Math.hypot(o.x - f.x, o.y - f.y); if (!V) return d;
+    const busy = o.tgt && o.tgt !== f && ['windup', 'active', 'stun', 'recover'].includes(o.state);
+    return d*(.45 + .55*o.hp/o.maxHp)*(busy ? .6 : 1); };
+  for (const o of alive) { if (o === f || !visibleTo(o, f)) continue; const d = score(o); if (d < bd) { bd = d; best = o; } }
+  if (f.tgt && f.tgt !== f && !f.tgt.dead && visibleTo(f.tgt, f) && score(f.tgt) < bd*1.3 + 10) return f.tgt;
   return best;
 }
 function meleeKO(def){
@@ -642,7 +685,9 @@ function meleeKO(def){
   if (kr && !kr.dead && kr !== def && kr.m.sp.kyukon) { kr.hp = Math.min(kr.maxHp, kr.hp + 20); kr.st = kr.stMax; say('吸魂', kr.x, kr.y - 50, '#8FE0A6', 15, .9); }
   say(def === G.p ? '撃破された' : '撃破', def.x, def.y - 44, '#FFD84A', 22, 1.3);
   // 倒された者は「魂」を落とす（拾うと武器強化）。0.5秒ほど跳ねてから拾える
-  if (def !== G.p) G.items.push({x:def.x, y:def.y, type:'up', t:DROP_T - .5, soul:true});
+  let sx = def.x, sy = def.y;
+  if (def.fell) { const c = def.fell, a = Math.atan2(def.y - c.y, def.x - c.x); sx = c.x + Math.cos(a)*(c.r + 20); sy = c.y + Math.sin(a)*(c.r + 20); }
+  if (def !== G.p) G.items.push({x:sx, y:sy, type:'up', t:DROP_T - .5, soul:true});
   const left = G.fs.filter(f => !f.dead);
   if (def === G.p || (left.length === 1 && left[0] === G.p)) {
     G.meleeRank = def === G.p ? left.length + 1 : 1; G.phase = 'ko'; G.phaseT = 0;
@@ -661,7 +706,8 @@ function updateMelee(dt){
   // 画面の外の者の動きでは、ヒットストップ・揺れ・スロー・音を出さない（遠くの斬り合いで自分の手が止まらないように）
   const offscreen = (f, fn) => { const v = seen(f), s = [G.hitstop, G.shake, G.slowT]; sfxMute = !v; fn(); sfxMute = false; if (!v) [G.hitstop, G.shake, G.slowT] = s; };
   for (const f of alive) if (f.isAI && f.tgt) offscreen(f, () => control(f, f.tgt, aiThink(dt, f, f.tgt, f.ai), dt));
-  for (const f of alive) offscreen(f, () => stepF(f, f.tgt || f, dt));
+    else if (f.isAI) { const z = G.zone, dz = Math.hypot(z.x - f.x, z.y - f.y) || 1; control(f, f, {mx: dz > 30 ? (z.x - f.x)/dz*.6 : 0, my: dz > 30 ? (z.y - f.y)/dz*.6 : 0}, dt); }
+  for (const f of alive) offscreen(f, () => { stepF(f, f.tgt || f, dt); terrainStep(f); });
   updateItems(dt);
   updateZone(dt, alive);
   // 体の重なりを押し戻す（全員の組み合わせ）
@@ -702,6 +748,60 @@ function startAttack(f, n){
   if (A.heavy) SFX.charge(f.x);
   return true;
 }
+function startThrow(f){
+  if (f.st < THROW.st) { f.stFlash = .35; return false; }
+  f.st -= THROW.st; f.stLast = G.now; f.state = 'throw'; f.t = 0; f.thr = null; f.guard = false; f.queued = false; f.thrId = (f.thrId || 0) + 1;
+  // v0.29.1 はじき投げ：はじかれてよろめいている相手が前（115以内）にいれば、そこまで大きく踏み込んで掴む
+  f.thrLunge = THROW.lunge; f.thrReach = THROW.reach;
+  for (const d of (G.melee ? G.fs : [G.p, G.e])) {
+    if (d === f || d.dead || d.state !== 'stun' || d.stunKind !== 'parry') continue;
+    const dd = Math.hypot(d.x - f.x, d.y - f.y);
+    if (dd < 115 && Math.abs(angDiff(Math.atan2(d.y - f.y, d.x - f.x), f.face)) < 1.2 && !blocked(f, d)) { f.thrLunge = Math.max(THROW.lunge, dd - f.r - d.r - 6); f.thrReach = THROW.reach + 8; f.face = Math.atan2(d.y - f.y, d.x - f.x); break; }
+  }
+  return true;
+}
+// 投げの判定：届く所にいる一番近い相手を掴む
+function resolveThrow(att, o){
+  const cands = G.melee ? G.fs.filter(d => d !== att && !d.dead) : [o];
+  let def = null, bd = 1e9;
+  for (const d of cands) { const dx = d.x - att.x, dy = d.y - att.y, dd = Math.hypot(dx, dy);
+    if (dd < (att.thrReach ?? THROW.reach) + att.r + d.r && Math.abs(angDiff(Math.atan2(dy, dx), att.face)) < THROW.arc/2 && dd < bd && !blocked(att, d)) { bd = dd; def = d; } }
+  const fail = () => { att.thr = 'miss'; if (seen(att)) say('投げ空振り', att.x, att.y - 30, '#9AA3AE', 13, .6); };
+  const pStun = def && def.state === 'stun' && def.stunKind === 'parry';   // はじかれてよろめいている相手も掴める
+  if (!def || def.iframe > 0 || !(['idle', 'recover', 'dash'].includes(def.state) || pStun) || G.phase !== 'fight') return fail();
+  def.pThrow = pStun;
+  def.lastHit = att;
+  const dx = def.x - att.x, dy = def.y - att.y, d = Math.hypot(dx, dy) || 1, hx = (att.x + def.x)/2, hy = (att.y + def.y)/2;
+  // 掴んだ：ふたりとも動きが止まり、白い火花。ここから持ち上げる（掴まれている間は、ふたりとも横やりを受けない）
+  att.thr = 'hold'; att.holdT = 0; att.held = def; att.holdA = Math.atan2(dy, dx); att.holdR = clamp(d, 30, 38); att.face = att.holdA; att.kx = att.ky = 0; att.iframe = THROW.anim;
+  def.state = 'held'; def.heldBy = att; def.guard = false; def.queued = false; def.kx = def.ky = 0; def.iframe = THROW.anim + .05; def.wasGuard = def.guard || def.guardStart > G.now - .5;
+  spark(hx, hy, '#FFFFFF', 10, 160); say('掴んだ', hx, hy - 30, '#7FE0C0', 15, .6);
+  G.hitstop = .07; SFX.poke(hx);
+}
+// 持ち上げて背中側へ回す（上に弧を描く）。終わったら叩きつけ
+function holdStep(f, dt){
+  const d = f.held; f.holdT += dt;
+  if (!d || d.dead || d.state !== 'held') { f.thr = 'hit'; f.t = THROW.wind; f.held = null; return; }
+  const k = Math.min(1, f.holdT/THROW.anim), e = k*k*(3 - 2*k), a = f.holdA + Math.PI*e;
+  d.x = f.x + Math.cos(a)*f.holdR; d.y = f.y + Math.sin(a)*f.holdR; d.z = Math.sin(k*Math.PI)*THROW.lift + (1 - k)*4;
+  d.face = f.holdA + Math.PI + k*Math.PI*2.2; f.face = f.holdA + (k > .5 ? Math.PI*(k - .5)*.6 : 0);
+  if (k >= 1) slam(f, d);
+}
+function slam(att, def){
+  att.thr = 'hit'; att.t = THROW.wind; att.held = null; def.heldBy = null; def.z = 0;
+  const dm = Math.round(THROW.dmg*att.m.atk*def.m.dmgTaken*(1 + WLV_DMG*(att.wlv || 0))*(def.pThrow ? 1.25 : 1));
+  if (!G.practice) def.hp -= dm;
+  def.state = 'stun'; def.stunKind = 'thrown'; def.stunT = THROW.stun; def.t = 0; def.flash = .14; def.iframe = 0;
+  const a = Math.atan2(def.y - att.y, def.x - att.x);   // 叩きつけた向き（投げた側の背中側）へ少し滑る。崖のそばなら落ちる
+  def.kx = Math.cos(a)*THROW.knock*.55*def.m.knock; def.ky = Math.sin(a)*THROW.knock*.55*def.m.knock;
+  if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
+  spark(def.x, def.y + 6, '#C9B48A', 22, 260); spark(def.x, def.y, '#FFFFFF', 8, 200);
+  (G.rings = G.rings || []).push({x: def.x, y: def.y + 8, life: .4, max: .4});
+  say(`${def.pThrow ? 'はじき投げ！' : '投げ！'} ${dm}`, def.x, def.y - 40, def.pThrow ? '#FFE08A' : '#7FE0C0', 24, 1.1); def.pThrow = false;
+  if (seen(def)) { G.hitstop = .13; G.shake = .32; G.slowT = .2; }
+  SFX.guardBreak(def.x);
+  if (def.hp <= 0) { def.hp = 0; ko(def); }
+}
 function startDash(f, o, mx, my, cost = f.dashSt){
   if (f.st < cost) { f.stFlash = .35; return false; }
   let dx = mx, dy = my;
@@ -719,6 +819,7 @@ function control(f, o, inp, dt){
     if (inp.guard && !f.guard) { f.guard = true; f.parryOK = G.now - f.guardStart > parryRearm(f); f.guardStart = G.now; }
     if (!inp.guard) f.guard = false;
     if (inp.attack) { startAttack(f, 0); inp.attack = false; }
+    else if (inp.throw) { startThrow(f); }
     else if (inp.dash) { startDash(f, o, inp.mx, inp.my); }
     if (f.state === 'idle') {
       const sp = (f.guard ? f.w.speed*.44 : f.w.speed)*f.m.speed*(f.buffs.spd > 0 ? 1.35 : 1), l = Math.hypot(inp.mx, inp.my);
@@ -729,7 +830,7 @@ function control(f, o, inp, dt){
   } else if (f.state === 'stun' && f.stunKind === 'parry' && inp.dash) {   // はじかれた怯みの間だけ、回避で抜けられる（スタミナ多め）
     if (startDash(f, o, inp.mx, inp.my, Math.round(f.dashSt*ESC_ST_MUL))) { say('緊急回避', f.x, f.y - 36, '#8FE3FF', 15, .7); }
   }
-  inp.attack = false; inp.dash = false;
+  inp.attack = false; inp.dash = false; inp.throw = false;
 }
 
 function stepF(f, o, dt){
@@ -745,7 +846,16 @@ function stepF(f, o, dt){
   f.trail.push({x:f.x, y:f.y}); if (f.trail.length > 6) f.trail.shift();
 
   if (f.state === 'idle') f.face = toO;
-  else if (f.state === 'windup') {
+  else if (f.state === 'throw' && f.thr === 'hold') holdStep(f, dt);
+  else if (f.state === 'held') {   // 掴まれている：投げた側が倒れた・やめたら、その場に落ちる
+    const h = f.heldBy; if (!h || h.dead || h.state !== 'throw' || h.thr !== 'hold') { f.state = 'stun'; f.stunKind = 'thrown'; f.stunT = .35; f.t = 0; f.z = 0; f.heldBy = null; }
+  }
+  else if (f.state === 'throw') {   // 投げ：出かかりで掴む → 掴めば短く、空振りなら長く隙
+    if (!f.thr) { f.face += clamp(angDiff(toO, f.face), -6*dt, 6*dt); f.x += Math.cos(f.face)*(f.thrLunge ?? THROW.lunge)/THROW.wind*dt; f.y += Math.sin(f.face)*(f.thrLunge ?? THROW.lunge)/THROW.wind*dt; }
+    f.t += dt;
+    if (!f.thr && f.t >= THROW.wind) resolveThrow(f, o);
+    if (f.thr && f.t >= THROW.wind + (f.thr === 'hit' ? THROW.rec : THROW.whiff)) { f.state = 'idle'; f.t = 0; }
+  } else if (f.state === 'windup') {
     f.face += clamp(angDiff(toO, f.face), -4.5*dt, 4.5*dt);   // ため中は向きがゆっくりしか変わらない → 横に回り込めばかわせる
     f.t += dt;
     if (f.t >= f.w.atk[f.atk].wind) { f.state = 'active'; f.t = 0; SFX.swing(f.w.atk[f.atk].heavy, f.w.atk[f.atk].arc < 1, f.x);
@@ -780,6 +890,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   const dmg = Math.round(A.dmg*(att.buffs.atk > 0 ? 1.4 : 1)*(1 + WLV_DMG*(att.wlv || 0))*def.m.dmgTaken*att.m.atk*(konshin ? 1.25 : 1)*(att.oikaze ? 1.3 : 1)*(fukutsu ? .75 : 1));
   const inArc = Math.abs(angDiff(Math.atan2(dy, dx), att.face)) < A.arc/2 + (d < 36 ? .5 : 0);
   if (d > A.reach + A.lunge*.5 + def.r || !inArc) { if (!quiet && d < 160) say('空振り', att.x, att.y - 30, '#9AA3AE', 13, .6); return; }
+  if (blocked(att, def)) { if (seen(att) && (att === G.p || def === G.p)) { say('柱', att.x + dx*.5, att.y + dy*.5 - 20, '#C9C2B0', 13, .5); SFX.guard(att.x); } return; }
   def.lastHit = att;
   const hx = (att.x+def.x)/2, hy = (att.y+def.y)/2, nx = dx/(d||1), ny = dy/(d||1);
   if (def.iframe > 0) { say('回避！', def.x, def.y - 32, '#8FE3FF', 16); return; }
@@ -811,6 +922,8 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
     if (def.hp <= 0) { def.hp = 0; ko(def); }
     return;
   }
+  const counter = def.state === 'throw' && !def.thr;   // 投げの出かかりを斬った
+  if (counter) { const ex = Math.round(dmg*.3); if (!G.practice) def.hp -= ex; say('カウンター', def.x, def.y - 52, '#FFB347', 16, .9); }
   if (!G.practice) def.hp -= dmg;   // 練習では体力が減らない
   def.flash = .12; if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
   def.kx += nx*(A.heavy ? 330 : 170)*def.m.knock; def.ky += ny*(A.heavy ? 330 : 170)*def.m.knock;
@@ -830,17 +943,34 @@ function ko(loser){
 }
 
 // ================= AI =================
+// v0.28 性格：数値の掛け率（agg 攻め、parry はじき、block ガード、thr 投げ、keep 間合いの外で待つ、dodge 回避）と癖
+//   hitrun：斬ったらすぐ離れる、vulture：弱った相手・戦っている相手を狙う（乱戦）、hide：体力が減ると草むらに隠れる（乱戦）
+const PERSONA = {
+  tosshin: { n: '猪突',     c: '#FF8A5A', d: 'どんどん攻めてくる。守りは甘い',             agg: 1.7, parry: .6,  block: .7,  thr: .6,  keep: 0,  dodge: .7 },
+  shincho: { n: '慎重',     c: '#9CCBFF', d: '間合いの外で様子を見る。ガードが固い（投げが効く）', agg: .6, parry: 1.1, block: 1.5, thr: .7,  keep: 1,  dodge: 1, hide: 1 },
+  kaeshi:  { n: '返し狙い', c: '#FFE08A', d: 'はじきを狙ってくる（投げが効く）',          agg: .7,  parry: 2,   block: 1,   thr: .5,  keep: .5, dodge: .8 },
+  nage:    { n: '投げ好き', c: '#7FE0C0', d: 'ガードを見ると投げてくる（攻めれば勝てる）', agg: .9,  parry: .8,  block: .9,  thr: 3,   keep: 0,  dodge: 1 },
+  nigeru:  { n: '逃げ回り', c: '#C9B8FF', d: '斬ったらすぐ離れる。回避が多い',            agg: .9,  parry: .8,  block: .8,  thr: .4,  keep: .7, dodge: 1.8, hitrun: 1, hide: 1 },
+  gyofu:   { n: '漁夫',     c: '#B8E07A', d: '弱った相手・戦っている相手を狙う。隠れる',   agg: 1,   parry: 1,   block: 1,   thr: .8,  keep: .3, dodge: 1, vulture: 1, hide: 1 },
+};
+const PER_KEYS = Object.keys(PERSONA), BOSS_PER = { onimaru: 'tosshin', tsukikage: 'nigeru', raiden: 'shincho' };
+let foePer = 'tosshin';   // 1対1の次の相手の性格（loadout で決める）
 function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：その相手（乱戦では一番近い相手）、ai：そのAIの覚え書き
   const L = e.lv || G.level, now = G.now;   // e.lv：強敵（ボス）は強さが上
   const pf = ai.prof || {};   // 自動テスト用：人間に近い反応の操作に差し替えられる
   // v0.12 で全体に弱くした（反応が遅く、はじき・ガードが減り、攻めも控えめ）
   const react = pf.react ?? Math.max(.18, .40 - .022*(L-1));
-  const parryRate = pf.parryRate ?? Math.min(.40, .04 + .04*(L-1));
-  const blockRate = pf.blockRate ?? .32;
-  const aggression = pf.aggression ?? .5 + .12*L;
-  const inp = {mx:0, my:0, guard:false, attack:false, dash:false};
+  const parryRate0 = pf.parryRate ?? Math.min(.40, .04 + .04*(L-1));
+  const blockRate0 = pf.blockRate ?? .32;
+  const aggression0 = pf.aggression ?? .5 + .12*L;
+  const inp = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false};
   ai.heat = Math.max(0, ai.heat - dt*.8);
   const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), ux = dx/(d||1), uy = dy/(d||1);
+  // 性格の掛け率。相手（プレイヤー）に何度も投げられると、ガードを固めるのをやめて手を出すようになる
+  const Pe = PERSONA[e.per] || PERSONA.tosshin;
+  if (p.state === 'throw' && p.thrId !== ai.seenThr) { ai.seenThr = p.thrId; if (d < 90) ai.thrHeat = (ai.thrHeat || 0) + 1; }
+  ai.thrHeat = Math.max(0, (ai.thrHeat || 0) - dt*.12);
+  const parryRate = Math.min(.55, parryRate0*Pe.parry), blockRate = Math.min(.6, blockRate0*Pe.block/(1 + ai.thrHeat*.5)), aggression = aggression0*Pe.agg*(1 + ai.thrHeat*.25);
   const atkD = e.w.atk[0].reach + 16, pD = p.w.atk[0].reach + p.w.atk[0].lunge*.5 + 30;   // 自分の攻撃が届く距離／相手の攻撃が届く距離
   const dashSt = e.dashSt;
 
@@ -854,19 +984,19 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
       if (d < A.reach + 70 && e.st >= escCost && Math.random() < (pf.escRate ?? Math.min(.5, .12 + .038*L))) ai.dashAt = Math.max(canAt, hitAt - rnd(.02, .12));
     } else if (d < A.reach + 70) {
       const r = Math.random(), pr = holding ? 0 : parryRate + Math.min(.2, ai.heat*.04);   // 攻めが単調だと読まれる
-      if (A.heavy && r < (pf.heavyDodge ?? .45) && e.st >= dashSt)  ai.dashAt = Math.max(canAt, hitAt - rnd(.02, .12));
+      if (A.heavy && r < Math.min(.85, (pf.heavyDodge ?? .45)*Pe.dodge) && e.st >= dashSt)  ai.dashAt = Math.max(canAt, hitAt - rnd(.02, .12));
       else if (r < pr)                           ai.guardAt = Math.max(canAt, hitAt - rnd(.03, parryWin(e) - .03));
       else if (r < pr + blockRate)               ai.guardAt = holding ? now : canAt;   // 構えたままなら、そのまま受ける
-      else if (r < pr + blockRate + .12 && e.st >= dashSt) ai.dashAt = canAt;
+      else if (r < pr + blockRate + .12*Pe.dodge && e.st >= dashSt) ai.dashAt = canAt;
       else if (e.state === 'idle' && d < atkD && e.st > 20 && !A.heavy) ai.attackAt = canAt;   // 相打ち狙い
       ai.releaseAt = hitAt + .12;
     }
   }
   // 出の速い相手（短剣など）は見てからでは間に合わない → 間合いに入られたら先に構えることがある
-  if (!ai.guardAt && e.state === 'idle' && p.state === 'idle' && d < pD && (p.w.atk[0].wind < .15 || pf.preguard) && Math.random() < dt*(.8 + .15*L)) {
+  if (!ai.guardAt && e.state === 'idle' && p.state === 'idle' && d < pD && (p.w.atk[0].wind < .15 || pf.preguard || Pe.keep >= 1) && Math.random() < dt*(.8 + .15*L)/(1 + ai.thrHeat)) {
     ai.guardAt = now; ai.releaseAt = now + rnd(.3, .7);
   }
-  let guarding = ai.guardAt && now >= ai.guardAt && now < ai.releaseAt;
+  let guarding = !!(ai.guardAt && now >= ai.guardAt && now < ai.releaseAt);
   if (ai.guardAt && now >= ai.releaseAt) ai.guardAt = 0;
   if (ai.dashAt && now >= ai.dashAt) {
     if (ai.dashIn) { inp.mx = ux; inp.my = uy; ai.attackAt = now + .2; ai.comboLeft = Math.min(1, lastIdx(e)); }
@@ -876,7 +1006,11 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
 
   // 隙を見つけたら攻める
   const maxC = lastIdx(e);
-  const openP = p.state === 'stun' || (p.state === 'recover' && p.t < p.w.atk[p.atk].rec*.6) || (p.state === 'dash' && p.t > .16);
+  if (p.state === 'stun' && p.stunKind === 'parry') { if (!ai.ptDecided) { ai.ptDecided = true; ai.ptThrow = Math.random() < Math.min(.8, .3*Pe.thr); } }
+  else { ai.ptDecided = false; ai.ptThrow = false; }
+  if (ai.ptThrow && e.state === 'idle' && d < 112 && e.st >= THROW.st) { inp.throw = true; ai.ptThrow = false; ai.attackAt = 0; }
+  else if (ai.ptThrow && (d >= 112 || e.st < THROW.st)) ai.ptThrow = false;   // 届かない・スタミナが足りないなら、いつもどおり斬りに行く
+  const openP = !ai.ptThrow && !inp.throw && ( p.state === 'stun' || (p.state === 'recover' && p.t < p.w.atk[p.atk].rec*.6) || (p.state === 'dash' && p.t > .16) || (p.state === 'throw' && p.thr === 'miss'));
   if (openP && e.state === 'idle' && d < atkD + 23 && !ai.attackAt) { ai.attackAt = now + react*.8; ai.comboLeft = p.state === 'stun' && p.stunT > .8 ? maxC : Math.min(1, maxC); }
   // リーチで負けているときは、相手の空振りを見て回避で懐へ飛び込む
   else if (openP && e.state === 'idle' && d >= atkD + 23 && d < atkD + 90 && pD > atkD + 10 && e.st >= dashSt + 25 && !ai.dashAt && Math.random() < .6)
@@ -886,7 +1020,7 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
     ai.strafeT -= dt; if (ai.strafeT <= 0) { ai.strafe *= -1; ai.strafeT = rnd(.6, 1.6); }
     if (e.st < 25) { inp.mx = -ux + -uy*ai.strafe*.5; inp.my = -uy + ux*ai.strafe*.5; }
     else if (d > atkD + 16) { inp.mx = ux; inp.my = uy; }
-    else { const want = d < e.w.near ? -.6 : .15; inp.mx = ux*want - uy*ai.strafe*.8; inp.my = uy*want + ux*ai.strafe*.8; }
+    else { const want = d < e.w.near ? -.6 : Pe.keep && d < atkD - 4 ? -.4*Pe.keep : .15; inp.mx = ux*want - uy*ai.strafe*.8; inp.my = uy*want + ux*ai.strafe*.8; }
     if (!ai.attackAt && d < atkD && e.st > 30 && Math.random() < dt*aggression) {
       ai.attackAt = now; const r = Math.random(); ai.comboLeft = Math.min(maxC, r < .25 ? 0 : r < .6 ? 1 : 2);
     }
@@ -910,6 +1044,24 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
       }
     }
   }
+  // 逃げ回り：連続攻撃を振り終えたら、すぐ回避で離れる
+  if (e.state === 'recover') ai.wasAtk = true;
+  else if (e.state === 'idle' && ai.wasAtk) { ai.wasAtk = false; if (Pe.hitrun && e.st >= dashSt && d < atkD + 20 && Math.random() < .75) { ai.dashAt = now + .05; ai.dashIn = false; } }
+  // 投げ：相手がガードを構えたまま近くにいたら、近づいて投げる
+  ai.pGuardT = p.guard && p.state === 'idle' ? (ai.pGuardT || 0) + dt : 0;
+  const thrD = THROW.reach + THROW.lunge + e.r + p.r - 6;
+  if (!ai.throwGo && e.state === 'idle' && !ai.attackAt && e.st > THROW.st + 10 && ((ai.pGuardT > .2 && d < thrD + 45) || (p.state === 'idle' && d < thrD + 5)) && Math.random() < dt*(.5 + .1*L)*Pe.thr*(ai.pGuardT > .2 ? 4 : 1))
+    { ai.throwGo = true; ai.throwT = now; }
+  if (ai.throwGo) {
+    guarding = false;
+    if (e.state === 'idle') { if (d > thrD) { inp.mx = ux; inp.my = uy; } else { inp.throw = true; ai.throwGo = false; } }
+    if (now - ai.throwT > 1) ai.throwGo = false;
+  }
+  // 草むらに隠れる（乱戦）：体力が減ったら、近くの草むらへ
+  if (G.terrain && Pe.hide && e.state === 'idle' && e.hp < e.maxHp*.45 && d > 110 && !inBush(e)) {
+    const b = G.terrain.bushes.map(b => [b, Math.hypot(b.x - e.x, b.y - e.y)]).filter(([b, dd]) => dd < 220 && !(G.zone && Math.hypot(b.x - G.zone.x, b.y - G.zone.y) > G.zone.r - 10)).sort((a, c) => a[1] - c[1])[0];
+    if (b) { inp.mx = (b[0].x - e.x)/b[1]; inp.my = (b[0].y - e.y)/b[1]; }
+  }
   if (ai.attackAt && now >= ai.attackAt && e.state === 'idle') { inp.attack = true; ai.attackAt = 0; }
   if (ai.attackAt && now - ai.attackAt > .6) ai.attackAt = 0;
   // 連続攻撃の続き（わざと止めてフェイントにすることもある）
@@ -919,8 +1071,8 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
 }
 
 // ================= 入力 =================
-const BTN = { atk:{x:296, y:556, r:38, label:'攻撃'}, grd:{x:214, y:588, r:30, label:'ガード'}, dash:{x:300, y:470, r:28, label:'回避'} };
-const P = {mx:0, my:0, guard:false, attack:false, dash:false};
+const BTN = { atk:{x:296, y:556, r:38, label:'攻撃'}, grd:{x:214, y:588, r:30, label:'ガード'}, dash:{x:300, y:470, r:28, label:'回避'}, thr:{x:220, y:508, r:25, label:'投げ'} };
+const P = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false};
 const touches = new Map(); let stick = null; const keys = {};
 function toLogical(e){ const r = cv.getBoundingClientRect(); return {x:(e.clientX - r.left)/scale, y:(e.clientY - r.top)/scale}; }
 function btnAt(x, y){ for (const k in BTN) { const b = BTN[k]; if (Math.hypot(x-b.x, y-b.y) < b.r + 10) return k; } return null; }
@@ -930,7 +1082,7 @@ appEl.addEventListener('pointerdown', e => {
   if (e.target !== cv && e.target !== appEl) return;   // 装備画面などのボタンはそのまま
   e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(err) {}
   const q = toLogical(e), b = btnAt(q.x, q.y);
-  if (b) { touches.set(e.pointerId, {role:b}); if (b === 'atk') P.attack = true; if (b === 'dash') P.dash = true; }
+  if (b) { touches.set(e.pointerId, {role:b}); if (b === 'atk') P.attack = true; if (b === 'dash') P.dash = true; if (b === 'thr') P.throw = true; }
   else if (q.x < W*0.6 && q.y > 300) { stick = {id:e.pointerId, ox:q.x, oy:q.y, x:q.x, y:q.y}; touches.set(e.pointerId, {role:'stick'}); }
   syncGuard();
 });
@@ -941,7 +1093,7 @@ const up = e => { touches.delete(e.pointerId); if (stick && e.pointerId === stic
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 function syncGuard(){ P.guardTouch = [...touches.values()].some(t => t.role === 'grd'); }
 addEventListener('keydown', e => { if (e.repeat) return; keys[e.code] = true;
-  if (e.code === 'KeyJ') P.attack = true; if (e.code === 'KeyL' || e.code === 'Space') { P.dash = true; e.preventDefault(); } });
+  if (e.code === 'KeyJ') P.attack = true; if (e.code === 'KeyU') P.throw = true; if (e.code === 'KeyL' || e.code === 'Space') { P.dash = true; e.preventDefault(); } });
 addEventListener('keyup', e => { keys[e.code] = false; });
 function readPlayer(){
   let mx = 0, my = 0;
@@ -960,9 +1112,10 @@ function update(rdt){
   if (G.hitstop > 0) { G.hitstop -= rdt; return; }
   let dt = rdt; if (G.slowT > 0) { G.slowT -= rdt; dt *= .3; }
   for (const f of G.fx) { f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= .9; f.vy *= .9; f.life -= dt; } G.fx = G.fx.filter(f => f.life > 0);
+  if (G.rings) { for (const r of G.rings) r.life -= dt; G.rings = G.rings.filter(r => r.life > 0); }
   G.phaseT += rdt;
   // 戦っていない間（開始前・一本の後・結果画面）に押した攻撃・回避は捨てる（残っていると「始め」の直後に勝手に出る）
-  if (G.phase !== 'fight') { P.attack = false; P.dash = false; }
+  if (G.phase !== 'fight') { P.attack = false; P.dash = false; P.throw = false; }
   if (G.phase === 'over') return;   // 勝負がついたら止める（結果画面の裏で戦い続けないように）
   if (G.phase === 'intro') { if (G.phaseT > 1.2) { G.phase = 'fight'; } if (!G.startSnd && G.phaseT > .6) { G.startSnd = 1; SFX.start(); } return; }
   if (G.melee) return updateMelee(dt);
@@ -1130,7 +1283,7 @@ function drawXray(cx, slot, key, P, t){
 }
 // practice が true なら練習の準備：練習相手の強さ・武器・防具もここで決める（「練習相手」の枠から）
 function loadout(level, eW, eGear, practice){
-  if (!eGear) foeSkin = randSkin();   // 新しい相手は見た目も新しく
+  if (!eGear) { foeSkin = randSkin(); foePer = pickOne(PER_KEYS); }   // 新しい相手は見た目と性格も新しく
   const boss = practice ? null : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
   eW = boss ? boss.wk : eW || WKEYS[Math.floor(Math.random()*WKEYS.length)];
   eGear = eGear || (practice ? randomGear() : aiGear(level, boss ? { boss: 1, set: boss.set } : {}));
@@ -1223,8 +1376,8 @@ function loadout(level, eW, eGear, practice){
         <button id="stDet" class="eqLink">${showDet ? '閉じる' : '詳細 ▾'}</button></div>
       <div class="eqFoot">${practice
         ? `<button id="foeBtn" class="eqVs btn">練習相手<b>${WEAPONS[eW].title} Lv${level} ›</b></button>`
-        : boss ? `<div class="eqVs boss" style="--bc:${boss.c}">強敵<b>${boss.n}（${WEAPONS[eW].name}） Lv${level}</b><small>倒すと銘「${SETS[boss.set].n}」の仕掛け</small></div>`
-        : `<div class="eqVs">次の相手<b>${WEAPONS[eW].title} Lv${level}</b></div>`}
+        : boss ? `<div class="eqVs boss" style="--bc:${boss.c}">強敵<b>${boss.n}（${WEAPONS[eW].name}） Lv${level}</b><small>倒すと銘「${SETS[boss.set].n}」の仕掛け・性格「${PERSONA[BOSS_PER[boss.set]].n}」</small></div>`
+        : `<div class="eqVs">次の相手<b>${WEAPONS[eW].title} Lv${level}</b><small class="per" style="--pc:${PERSONA[foePer].c}">性格「${PERSONA[foePer].n}」${PERSONA[foePer].d}</small></div>`}
         <button id="go" class="eqGo">${practice ? '練習' : '勝負'}</button></div>
       </div>${sheet ? sheetHtml() : ''}</div>`;
     ov.hidden = false;
@@ -1424,13 +1577,21 @@ function draw(){
   ctx.lineWidth = 6; ctx.strokeStyle = '#5A4A33'; ctx.stroke();
   ctx.strokeStyle = 'rgba(90,74,51,.25)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(AR.x, AR.y, 40, 0, Math.PI*2); ctx.stroke();
   if (G.melee) drawGround();
+  if (G.terrain) for (const c of G.terrain.pits) drawPit(c);
   if (G.zone) drawZone(G.zone);
-  const fs =(G.fs || [G.p, G.e]).slice().sort((a,b) => a.y - b.y);
+  const fs = (G.fs || [G.p, G.e]).filter(f => f === G.p || f.dead || visibleTo(f, G.p)).sort((a,b) => a.y - b.y);
   for (const it of G.items) drawItem(it);
   for (const f of fs) drawTele(f);
-  for (const f of fs) drawF(f);
+  const draws = fs.map(f => [f.y + (f.z ? 40 : 0), () => { const hb = G.terrain && !f.dead && inBush(f), z = f.z || 0; if (hb) ctx.globalAlpha = .6;
+    if (z) { ctx.fillStyle = `rgba(0,0,0,${.3 - z*.004})`; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*(1.1 - z*.01), f.r*.55*(1.1 - z*.01), 0, 0, Math.PI*2); ctx.fill(); f.y -= z; }
+    drawF(f); if (z) f.y += z; ctx.globalAlpha = 1; }]);
+  if (G.terrain) for (const c of G.terrain.pillars) draws.push([c.y + 4, () => drawPillar(c)]);
+  for (const [, fn] of draws.sort((a, b) => a[0] - b[0])) fn();
+  if (G.terrain) for (const b of G.terrain.bushes) drawBush(b);
   if (G.melee) { if (!G.p.dead) for (const f of G.fs) if (f.isAI && !f.dead && f.tgt === G.p) drawParryCue(G.p, f); }   // 乱戦：自分を狙っている相手の分だけ
   else drawParryCue(G.p, G.e);
+  for (const r of G.rings || []) { const k = 1 - r.life/r.max, R = 10 + 46*k;   // 叩きつけの衝撃の輪
+    ctx.globalAlpha = r.life/r.max; ctx.strokeStyle = '#F4E3B5'; ctx.lineWidth = 4*(1 - k) + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, R, R*.5, 0, 0, Math.PI*2); ctx.stroke(); }
   for (const f of G.fx) { ctx.globalAlpha = Math.max(0, f.life*2.5); ctx.fillStyle = f.c; ctx.fillRect(f.x-2, f.y-2, 4, 4); }
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
@@ -1456,11 +1617,38 @@ function drawGround(){
   for (const r of [110, 190, 270]) { ctx.beginPath(); ctx.arc(AR.x, AR.y, r, 0, Math.PI*2); ctx.stroke(); }
   for (const [x, y, s, d] of PEBBLES) { ctx.fillStyle = d ? 'rgba(90,74,51,.35)' : 'rgba(255,245,220,.28)'; ctx.fillRect(AR.x + x, AR.y + y, s, s); }
 }
+// 崖：暗い穴と、縁の石
+function drawPit(c){
+  const g = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, c.r);
+  g.addColorStop(0, '#05060A'); g.addColorStop(.7, '#120E0A'); g.addColorStop(1, '#3A2E20');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#6B5638'; ctx.lineWidth = 4; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,159,67,.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 5]); ctx.beginPath(); ctx.arc(c.x, c.y, c.r + 5, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+}
+// 柱：石の円柱（下の影＋高さのある胴＋上の面）
+function drawPillar(c){
+  const h = 30;
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(c.x + 3, c.y + 3, c.r + 3, (c.r + 3)*.55, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#7C7468'; ctx.fillRect(c.x - c.r, c.y - h, c.r*2, h);
+  ctx.fillStyle = '#5C554B'; ctx.fillRect(c.x + c.r*.3, c.y - h, c.r*.7, h);
+  ctx.fillStyle = '#7C7468'; ctx.beginPath(); ctx.ellipse(c.x, c.y, c.r, c.r*.55, 0, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = '#A89F90'; ctx.beginPath(); ctx.ellipse(c.x, c.y - h, c.r, c.r*.55, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#15181D'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+// 草むら：人の上にかぶさる。自分が中にいる草むらは薄く（自分が見えるように）
+function drawBush(b){
+  const mine = !G.p.dead && Math.hypot(G.p.x - b.x, G.p.y - b.y) < b.r - 4;
+  ctx.save(); ctx.globalAlpha = mine ? .4 : .88;
+  for (let i = 0; i < 9; i++) { const a = i*2.4 + b.x*.01, rr = i ? b.r*.55 : 0, x = b.x + Math.cos(a)*rr, y = b.y + Math.sin(a)*rr*.7, r = i ? b.r*.5 : b.r*.62;
+    ctx.fillStyle = i % 3 === 0 ? '#3E7A3A' : i % 3 === 1 ? '#4E9446' : '#5DA852'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); }
+  ctx.fillStyle = 'rgba(180,230,140,.35)'; for (let i = 0; i < 6; i++) { const a = i*1.9 + b.y*.01; ctx.fillRect(b.x + Math.cos(a)*b.r*.6, b.y + Math.sin(a)*b.r*.45, 3, 3); }
+  ctx.restore();
+}
 // 画面の外にいる相手：画面の端に色の矢印（近いほど大きく濃く）
 function drawOffscreen(){
   const x0 = 10, x1 = W - 10, y0 = 86, y1 = 420, cx = AR.x, cy = AR.y;
   for (const f of G.fs) {
-    if (!f.isAI || f.dead) continue;
+    if (!f.isAI || f.dead || !visibleTo(f, G.p)) continue;   // 草むらに隠れている相手は矢印も出さない
     const sx = f.x - G.cam.x + cx, sy = f.y - G.cam.y + cy;
     if (sx > x0 - 12 && sx < x1 + 12 && sy > y0 - 30 && sy < y1 + 12) continue;
     const dx = sx - cx, dy = sy - cy, k = Math.min((dx > 0 ? x1 - cx : x0 - cx)/(dx || 1e-6), (dy > 0 ? y1 - cy : y0 - cy)/(dy || 1e-6));
@@ -1534,6 +1722,13 @@ function drawParryCue(me, att){
   ctx.restore();
 }
 function drawTele(f){
+  if (f.state === 'throw' && !f.thr) {   // 投げの予兆：すぐ前に緑の「掴み」の弧
+    const k = f.t/THROW.wind, R = (f.thrReach ?? THROW.reach) + f.r + 6 + (f.thrLunge ?? THROW.lunge)*(1 - Math.min(1, k));
+    ctx.save(); if (G.melee && f !== G.p && f.tgt !== G.p) ctx.globalAlpha = .35;
+    ctx.fillStyle = `rgba(127,224,192,${.18 + .3*k})`; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.arc(f.x, f.y, R, f.face - THROW.arc/2, f.face + THROW.arc/2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#7FE0C0'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(f.x, f.y, R, f.face - THROW.arc/2, f.face + THROW.arc/2); ctx.stroke(); ctx.restore();
+    return;
+  }
   // 攻撃の予兆：ため中は攻撃範囲が赤く満ちていく。3段目は橙で脈打つ
   if (f.state !== 'windup') return;
   const A = f.w.atk[f.atk], k = f.t / A.wind, R = A.reach + A.lunge*.5 + 8;
@@ -1973,6 +2168,11 @@ function pose(f){
   } else if (f.state === 'dash') {                                               // 回避：跳ぶ向きへ傾いて小さく跳ねる
     const k = Math.min(1, f.t/.26), fwd = Math.cos(f.dashDir)*(Math.cos(f.face) < 0 ? -1 : 1) >= 0 ? 1 : -1;
     rot = .38*fwd*(1 - k); sx = 1.08 - .08*k; sy = .93 + .07*k; bob = -7*Math.sin(Math.PI*Math.min(1, f.t/.2));
+  } else if (f.state === 'throw' && f.thr === 'hold') {                          // 持ち上げ：後ろへ反る
+    rot = -.3*Math.sin(Math.min(1, f.holdT/THROW.anim)*Math.PI); sy = 1.06; sx = .96;
+  } else if (f.state === 'held') { rot = Math.sin(G.now*30)*.2;
+  } else if (f.state === 'throw') {                                              // 投げ：前へ乗り出して掴む
+    const k = Math.min(1, f.t/THROW.wind); rot = .26*k; sx = 1.05; sy = .97;
   } else if (f.state === 'stun') {                                               // 怯み：ぐらぐら
     rot = Math.sin(G.now*22)*.09 - .08; sy = .95;
   }
@@ -1998,6 +2198,11 @@ function mechPose(f){
   else if (f.state === 'windup') { const k = ez(Math.min(1, f.t/A.wind)); add('body', -1*k, 0, 0); add('head', -2*k, 0, -.5*k); add('handL', 2*k, 0, 2*k); }
   else if (f.state === 'active') { add('body', 1.5, 0, 0); add('head', 2.5, 0, 0); add('handL', -1, 0, 0); }
   else if (f.state === 'recover') { const q = 1 - ez(Math.min(1, f.t/A.rec)); add('body', 1.5*q, 0, 0); add('head', 2.5*q, 0, 0); }
+  else if (f.state === 'throw' && f.thr === 'hold') { const q = Math.sin(Math.min(1, f.holdT/THROW.anim)*Math.PI); add('handL', 2, 0, 4 + 6*q); add('body', -1.5*q, 0, .5*q); add('head', -2.5*q, 0, 1); }
+  else if (f.state === 'throw') { const k = Math.min(1, f.t/THROW.wind); add('handL', 6*k, 2, 2*k); add('body', 1.2*k, 0, 0); add('head', 1.8*k, 0, 0); }
+  else if (f.state === 'held') { add('handL', 0, -4, 3); add('footL', -3, -2, 4); add('footR', 3, 2, 4); add('head', 0, 0, 1); }
+  else if (f.state === 'stun' && f.stunKind === 'thrown') {   // 叩きつけられて倒れている（起き上がりかけで少し戻る）
+    const q = Math.max(0, 1 - f.t/f.stunT*1.3); add('head', -6*q, 0, -14*q); add('body', -3*q, 0, -7*q); add('handL', -2*q, -3*q, -6*q); add('footL', 3*q, 0, 0); add('footR', 4*q, 1, 0); }
   else if (f.state === 'dash') {   // 回避：部品がばらけて、跳ぶ向きの後ろへ流れる
     const q = Math.min(1, f.t/.26), sp = Math.sin(q*Math.PI)*3, rel = f.dashDir - f.face, bf = -Math.cos(rel), bs = -Math.sin(rel);
     for (const [n, m] of [['head', .5], ['handL', 1], ['footL', 1.6], ['footR', 1.6], ['body', .2]]) add(n, bf*sp*m, bs*sp*m, 0);
@@ -2012,13 +2217,13 @@ function drawBody(f, x, y, white, weapon){
   drawMech(ctx, x, y + 11, f.face, f.skin, f.team, mechPose(f), { px: MECH_PX, white, weapon });
 }
 function drawF(f){
-  if (f.dead) { drawBody(f, f.x, f.y, false, null); return; }   // 乱戦で倒された者：散らばった部品だけ
+  if (f.dead) { if (!f.fell) drawBody(f, f.x, f.y, false, null); return; }   // 乱戦で倒された者：散らばった部品だけ（崖に落ちた者は消える）
   const A = f.w.atk[f.atk], Wp = f.w;
   // 回避中の残像
   if (f.state === 'dash') for (let i=0;i<f.trail.length;i++){ const t = f.trail[i]; ctx.globalAlpha = i/f.trail.length*.35; drawBody(f, t.x, t.y, false, null); }
   ctx.globalAlpha = f.iframe > 0 ? .55 : 1;
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.1, f.r*.55, 0, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = TEAM[f.team]; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.3, f.r*.65, 0, 0, Math.PI*2); ctx.stroke();   // 敵味方の輪
+  if (!f.z) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.1, f.r*.55, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = TEAM[f.team]; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.3, f.r*.65, 0, 0, Math.PI*2); ctx.stroke(); }   // 敵味方の輪（宙に浮いている間は出さない）
   if (f.boss) { ctx.save(); ctx.strokeStyle = f.boss.c; ctx.lineWidth = 3; ctx.globalAlpha *= .55 + .35*Math.sin(G.now*6);   // 強敵：足もとで脈打つ輪
     ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.9, f.r*.95, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   // 強化中は足元に色の輪（残り2秒で点滅）
@@ -2076,6 +2281,9 @@ function drawF(f){
   // スタミナ
   const bw = 36; ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(f.x - bw/2, f.y + f.r + 7, bw, 5);
   ctx.fillStyle = f.stFlash > 0 ? '#FF5A4E' : (f.st < 25 ? '#E8893A' : '#E8D25A'); ctx.fillRect(f.x - bw/2, f.y + f.r + 7, bw*f.st/f.stMax, 5);
+  if (G.melee && f.isAI && PERSONA[f.per]) {   // 乱戦：足もとに性格
+    ctx.font = '800 9px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(21,24,29,.8)';
+    ctx.strokeText(PERSONA[f.per].n, f.x, f.y + f.r + 22); ctx.fillStyle = PERSONA[f.per].c; ctx.fillText(PERSONA[f.per].n, f.x, f.y + f.r + 22); }
   if (G.melee && f.isAI) {   // 乱戦：頭の上に体力（チームの色）
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(f.x - 16, f.y - 62, 32, 4);
     ctx.fillStyle = TEAM[f.team]; ctx.fillRect(f.x - 16, f.y - 62, 32*Math.max(0, f.hp)/f.maxHp, 4); }
@@ -2127,6 +2335,7 @@ function drawHUD(){
   buffIcons0(G.p, 54, 1); buffIcons0(G.e, W - 54, -1);
   ctx.textAlign = 'center'; ctx.fillStyle = '#8A93A0'; ctx.font = '800 11px "M PLUS Rounded 1c", sans-serif';
   ctx.fillText(G.practice ? `練習　はじき${G.count.parry}　被弾${G.count.taken}　命中${G.count.given}` : '先に2本取った方が勝ち', W/2, 66);
+  const Pe = PERSONA[G.e.per]; if (Pe && !G.practice) { ctx.textAlign = 'right'; ctx.fillStyle = Pe.c; ctx.font = '800 11px "M PLUS Rounded 1c", sans-serif'; ctx.fillText(Pe.n, W - 46, 66); }
 }
 function drawControls(){
   const y0 = 430;
@@ -2141,13 +2350,13 @@ function drawControls(){
   if (!stick) { ctx.font = '800 11px "M PLUS Rounded 1c", sans-serif'; ctx.fillStyle = '#8A93A0'; ctx.fillText('移動', sx, sy + 62); }
   // 右：ボタン
   const held = k => [...touches.values()].some(t => t.role === k) || (k === 'grd' && keys.KeyK);
-  const col = {atk:'#C8463C', grd:'#3E7FC4', dash:'#5B6573'};
+  const col = {atk:'#C8463C', grd:'#3E7FC4', dash:'#5B6573', thr:'#2E8A6A'};
   for (const k in BTN) { const b = BTN[k], on = held(k);
     ctx.fillStyle = col[k]; ctx.globalAlpha = on ? 1 : .85; ctx.beginPath(); ctx.arc(b.x, b.y + (on ? 2 : 0), b.r, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = '#F4EEDF'; ctx.font = `${k === 'atk' ? 17 : 13}px "Dela Gothic One", sans-serif`; ctx.fillText(b.label, b.x, b.y + (k === 'atk' ? 6 : 5) + (on ? 2 : 0)); }
   ctx.font = '800 10px "M PLUS Rounded 1c", sans-serif'; ctx.fillStyle = '#6E7785';
-  ctx.fillText('キーボード：WASD移動 / J攻撃 / Kガード / Space回避', W/2, H - 10);
+  ctx.fillText('キーボード：WASD移動 / J攻撃 / Kガード / U投げ / Space回避', W/2, H - 10);
 }
 
 let last = performance.now();
@@ -2202,6 +2411,8 @@ function helpScreen(){
     ['はじき', '相手の攻撃が当たる直前にガード。自分のまわりの輪が<b>金色</b>（「今」）のときに押す。連打はきかない'],
     ['緊急回避', 'はじかれてよろめいている間も、回避だけはできる（スタミナを多く使う）'],
     ['ガード', '早めのガードは受け止めるだけ。スタミナが削れ、なくなるとガードブレイク'],
+    ['投げ', 'すぐ近くの相手を掴んで投げる。<b>ガード（はじきも）に勝ち、攻撃に負ける</b>。空振りすると隙が大きい。攻撃＞投げ＞ガード＞攻撃の三すくみ。<b>はじいた直後</b>は少し離れていても飛び込んで投げられる（はじき投げ、ダメージ1.25倍）'],
+    ['性格', '相手には性格がある（猪突・慎重・返し狙い・投げ好き・逃げ回り・漁夫）。癖を読んで戦う。何度も投げると、相手はガードを固めるのをやめる'],
     ['回避', '一瞬だけ無敵。スティックの方向へ跳ぶ'],
     ['スタミナ', '攻撃・ガード・回避で減る。足元の黄色いバー'],
     ['装備', '武器と仕掛け（眼・ゼンマイ・歯車＝からくりの中の部品）で能力が変わる。見た目の着せ替えは能力に関係しない'],
@@ -2210,9 +2421,10 @@ function helpScreen(){
     ['強敵', '名前つきのボス武者。1対1ではLv3・6・9…、乱戦ではときどき混ざる。倒すと、その武者だけの銘の仕掛けが手に入る'],
     ['小判', '勝つともらえる。見た目はガチャ、仕掛けは試合の戦利品と店の箱で手に入る'],
     ['アイテム', 'ときどき落ちてくる。回復・攻撃力UP・速度UP・スタミナ。相手より先に拾う'],
-    ['乱戦', '8人で最後の1人まで。画面は自分を追い、画面の外の相手は端の矢印で分かる。紫の<b>結界</b>がだんだん縮み、外にいると体力が減る（白い点線が次の輪）。倒した相手が落とす<b>刃</b>を拾うと武器強化（★1つで攻撃力+15%、★3まで）']];
+    ['乱戦', '8人で最後の1人まで。画面は自分を追い、画面の外の相手は端の矢印で分かる。紫の<b>結界</b>がだんだん縮み、外にいると体力が減る（白い点線が次の輪）。倒した相手が落とす<b>刃</b>を拾うと武器強化（★1つで攻撃力+15%、★3まで）'],
+    ['地形', '乱戦には<b>崖</b>（強く吹き飛ばされると落ちて退場）、<b>草むら</b>（中にいると近くからしか見えない）、<b>柱</b>（通れない。柱をはさむと攻撃も投げも届かない）']];
   screen('遊び方', `<div class="hpList">${rows.map(([h, t], i) => `<div class="hpRow" style="animation-delay:${i*40}ms"><b>${h}</b><p>${t}</p></div>`).join('')}
-    <div class="hpKeys">キーボード：WASD 移動 ／ J 攻撃 ／ K ガード ／ Space 回避</div></div>`);
+    <div class="hpKeys">キーボード：WASD 移動 ／ J 攻撃 ／ K ガード ／ U 投げ ／ Space 回避</div></div>`);
   document.getElementById('back').onclick = title;
 }
 addEventListener('keydown', e => { if (e.code === 'Escape') quitPractice(); });   // 練習中は Esc でもやめられる
