@@ -404,7 +404,7 @@ function calcMods(gear){
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ov = document.getElementById('overlay');
 const quitBtn = document.getElementById('quit'), sndBtn = document.getElementById('snd');
 const sndLabel = () => SFX.muted ? '🔇' : '🔊';
-sndBtn.onclick = () => { SFX.toggle(); sndBtn.textContent = sndLabel(); };
+sndBtn.onclick = () => { SFX.toggle(); BGM.sync(); sndBtn.textContent = sndLabel(); };
 quitBtn.onclick = () => {   // 練習は準備画面へ。勝負の途中でやめるときは確かめてからタイトルへ（小判はもらえない）
   if (!G) return; if (G.practice) return quitPractice();
   if (confirm('勝負をやめてタイトルに戻りますか？（この勝負の小判はもらえません）')) { G = null; quitBtn.hidden = true; title(); } };
@@ -520,6 +520,36 @@ const SFX = (() => {
 for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) addEventListener(ev, () => SFX.init(), true);
 // アプリを切り替えて戻ってきたときも、止まった音を戻す
 document.addEventListener('visibilitychange', () => { if (!document.hidden) SFX.init(); });
+// ================= BGM（v0.30） =================
+// 場面ごとの曲：タイトル＝「剣の舞」（t.tam／OpenTracks）、装備＝「和風でアップテンポ 戦闘時に使えるBGM」、1対1＝「真剣勝負」、乱戦＝「疾風雷電」（3FreeBGM）
+// 1曲4〜5MB と大きいので、ページに埋め込まず、横に置いた mp3 をその場面に入ったときに読み込む
+// <audio> は1つを使い回す（iPhone は、指で触れたときに一度鳴らした <audio> でないと、あとから鳴らせないため）
+// 場面が変わったら、今の曲を小さくしてから次の曲へ（iPhone は音量を変えられないので、すぐ切り替わる）。オン／オフは効果音と同じ
+const BGM_TRACKS = { title: ['bgm_title.mp3', .5], loadout: ['bgm_loadout.mp3', .42], duel: ['bgm_duel.mp3', .45], melee: ['bgm_melee.mp3', .42] };
+const BGM = (() => {
+  const a = new Audio(); a.loop = true; a.preload = 'auto';
+  let want = null, cur = null, ok = false, fadeT = null;
+  const setVol = v => { try { a.volume = clamp(v, 0, 1); } catch(e) {} };
+  function fade(to, ms, done){
+    clearInterval(fadeT); const from = a.volume, t0 = performance.now();
+    fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0)/ms); setVol(from + (to - from)*k); if (k >= 1) { clearInterval(fadeT); if (done) done(); } }, 30);
+  }
+  function start(){
+    if (!ok || SFX.muted || !want || document.hidden) return;
+    if (cur === want && !a.paused) return;
+    const go = () => { if (cur !== want) { a.src = BGM_TRACKS[want][0]; cur = want; } setVol(0); const pr = a.play(); if (pr) pr.catch(() => {}); fade(BGM_TRACKS[want][1], 700); };
+    if (!a.paused && cur !== want) fade(0, 350, () => { a.pause(); go(); }); else go();
+  }
+  return {
+    play(k){ want = k; start(); },
+    unlock(){ if (!ok) ok = true; if (a.paused) start(); },   // 指を離したとき・キーを押したとき（iPhone はこのときでないと鳴らせない）
+    sync(){ if (SFX.muted) fade(0, 200, () => a.pause()); else start(); },
+    pause(){ clearInterval(fadeT); a.pause(); },
+    get state(){ return { want, cur, playing: !a.paused, vol: +a.volume.toFixed(2), t: +a.currentTime.toFixed(1) }; },   // 確認用
+  };
+})();
+for (const ev of ['pointerup', 'touchend', 'click', 'keydown']) addEventListener(ev, () => BGM.unlock(), true);
+document.addEventListener('visibilitychange', () => { if (document.hidden) BGM.pause(); else BGM.unlock(); });
 
 // ================= 試合 =================
 function mkF(x, y, isAI, color, name, wk, gear){
@@ -531,7 +561,7 @@ function mkF(x, y, isAI, color, name, wk, gear){
 function newMatch(level, eW, eGear, practice){
   eW = eW || WKEYS[Math.floor(Math.random()*WKEYS.length)]; eGear = eGear || randomGear();
   G = { level, eW, eGear, practice:!!practice, boss: practice ? null : bossForLevel(level), count:{parry:0, taken:0, given:0}, round:1, pw:0, ew:0, now:0, hitstop:0, slowT:0, shake:0, fx:[], texts:[], phase:'intro', phaseT:0 };
-  newRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = G.practice ? '練習をやめる' : 'やめる';
+  newRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = G.practice ? '練習をやめる' : 'やめる'; BGM.play('duel');
 }
 function newRound(){
   AR.r = DUEL_R; G.terrain = null;   // 乱戦で広げた闘技場を戻す
@@ -602,7 +632,7 @@ function newMelee(){
   G.terrain = makeTerrain();
   G.cam = {x:G.p.x, y:G.p.y};
   zoneNext();
-  ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = 'やめる';
+  ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = 'やめる'; BGM.play('melee');
 }
 // ---- 結界（安全地帯）：時間がたつと縮む。外にいると体力が減り続ける ----
 // 各段：wait 秒待って（次の輪が見える）、shrink 秒かけて r まで縮む。外のダメージ dps は段が進むほど増える
@@ -931,7 +961,11 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   say(String(dmg), def.x + rnd(-8,8), def.y - 34, A.heavy ? '#FF9F43' : '#FFFFFF', A.heavy ? 24 : 18);
   G.hitstop = A.heavy ? .13 : .05; G.shake = A.heavy ? .22 : .08; SFX.hit(A.heavy, hx, att.wk);
   const armor = (def.state === 'windup' || def.state === 'active') && def.w.atk[def.atk].heavy;   // 最後の段は怯まない
-  if (!armor) { def.state = 'stun'; def.stunKind = 'hit'; def.stunT = (A.heavy ? .55 : .18)*def.m.stunMul; def.t = 0; def.guard = false; def.queued = false; }
+  // v0.29.2：はじかれてよろめいている相手を斬っても、よろめきは続く（緊急回避で抜けることはできる）
+  //   斬られるたびに、よろめきは斬った側の次の段が当たるまで（＋0.12秒）のびる。最後の段を受けたら普通の怯みに戻る
+  const stunNew = (A.heavy ? .55 : .18)*def.m.stunMul, keepParry = def.state === 'stun' && def.stunKind === 'parry', nextA = att.w.atk[att.atk + 1];
+  if (keepParry) def.stunT = def.t + Math.max(def.stunT - def.t, stunNew, nextA ? A.act + A.rec*.25 + nextA.wind + .12 : 0);
+  if (!armor && !keepParry) { def.state = 'stun'; def.stunKind = 'hit'; def.stunT = stunNew; def.t = 0; def.guard = false; def.queued = false; }
   if (def.hp <= 0) { def.hp = 0; ko(def); }
 }
 
@@ -1283,6 +1317,7 @@ function drawXray(cx, slot, key, P, t){
 }
 // practice が true なら練習の準備：練習相手の強さ・武器・防具もここで決める（「練習相手」の枠から）
 function loadout(level, eW, eGear, practice){
+  BGM.play('loadout');
   if (!eGear) { foeSkin = randSkin(); foePer = pickOne(PER_KEYS); }   // 新しい相手は見た目と性格も新しく
   const boss = practice ? null : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
   eW = boss ? boss.wk : eW || WKEYS[Math.floor(Math.random()*WKEYS.length)];
@@ -2370,7 +2405,7 @@ resize();
 const GAME_NAME = '間合い', GAME_SUB = 'からくり武者の読み合い';
 document.title = GAME_NAME;
 function title(){
-  G = null; quitBtn.hidden = true;
+  G = null; quitBtn.hidden = true; BGM.play('title');
   ov.innerHTML = `<div class="eq tt"><div class="eqBody eqScroll">
     <div class="eqTop ttTop"><span class="coin">到達 <b>Lv${bestLv}</b></span><span class="ttSp"></span>${wallet()}</div>
     <div class="ttHero"><div class="gcRays"></div><canvas id="ttCv" width="400" height="260"></canvas></div>
@@ -2379,7 +2414,7 @@ function title(){
       <button id="b1" class="ttGo">勝負<small>装備を選んで戦う</small></button>
       <div class="ttGrid"><button id="bG">ガチャ</button><button id="bS">店</button><button id="bK">蔵</button><button id="b2">練習</button></div>
       <button id="bR" class="ttMelee">乱戦<small>縮む結界の中、8人で最後の1人まで（試作）</small></button>
-      <div class="ttSub"><button id="bH">遊び方</button><button id="bM">効果音 ${SFX.muted ? 'オフ' : 'オン'}</button></div>
+      <div class="ttSub"><button id="bH">遊び方</button><button id="bM">音 ${SFX.muted ? 'オフ' : 'オン'}</button></div>
     </div></div></div>`;
   ov.hidden = false;
   document.getElementById('b1').onclick = () => loadout(1);
@@ -2387,7 +2422,7 @@ function title(){
   document.getElementById('bG').onclick = gachaScreen; document.getElementById('bS').onclick = () => shopScreen(); document.getElementById('bK').onclick = kuraScreen;
   document.getElementById('bH').onclick = helpScreen;
   document.getElementById('bR').onclick = newMelee;
-  document.getElementById('bM').onclick = e => { SFX.toggle(); e.target.textContent = `効果音 ${SFX.muted ? 'オフ' : 'オン'}`; SFX.coin(); };
+  document.getElementById('bM').onclick = e => { SFX.toggle(); BGM.sync(); e.target.textContent = `音 ${SFX.muted ? 'オフ' : 'オン'}`; SFX.coin(); };
   // 舞台：自分（青）と相手（赤）が向かい合って浮いている
   const cvs = document.getElementById('ttCv'), x = cvs.getContext('2d'), foe = randSkin(), foeW = WKEYS[Math.floor(Math.random()*WKEYS.length)];
   const tick = () => {
@@ -2424,7 +2459,8 @@ function helpScreen(){
     ['乱戦', '8人で最後の1人まで。画面は自分を追い、画面の外の相手は端の矢印で分かる。紫の<b>結界</b>がだんだん縮み、外にいると体力が減る（白い点線が次の輪）。倒した相手が落とす<b>刃</b>を拾うと武器強化（★1つで攻撃力+15%、★3まで）'],
     ['地形', '乱戦には<b>崖</b>（強く吹き飛ばされると落ちて退場）、<b>草むら</b>（中にいると近くからしか見えない）、<b>柱</b>（通れない。柱をはさむと攻撃も投げも届かない）']];
   screen('遊び方', `<div class="hpList">${rows.map(([h, t], i) => `<div class="hpRow" style="animation-delay:${i*40}ms"><b>${h}</b><p>${t}</p></div>`).join('')}
-    <div class="hpKeys">キーボード：WASD 移動 ／ J 攻撃 ／ K ガード ／ U 投げ ／ Space 回避</div></div>`);
+    <div class="hpKeys">キーボード：WASD 移動 ／ J 攻撃 ／ K ガード ／ U 投げ ／ Space 回避</div>
+    <div class="hpKeys">音楽：「剣の舞」t.tam（OpenTracks）／「和風でアップテンポ 戦闘時に使えるBGM」「真剣勝負」「疾風雷電」3FreeBGM<br>効果音：効果音ラボ</div></div>`);
   document.getElementById('back').onclick = title;
 }
 addEventListener('keydown', e => { if (e.code === 'Escape') quitPractice(); });   // 練習中は Esc でもやめられる
