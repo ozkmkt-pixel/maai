@@ -288,6 +288,12 @@
   .dc{padding:0 6px;border-radius:6px;background:#2A3140;color:#C9C2B0;font-size:10px;font-weight:800;line-height:18px;white-space:nowrap;}
   .dc b{color:#EDE6D6;} .dc em{margin-left:3px;font-style:normal;}
   .dc.p{background:#1F4A2C;} .dc.p em{color:#8FE0A6;} .dc.c{background:#4A1F1F;} .dc.c em{color:#FF9B8F;}
+  .eqCol.five{gap:6px;} .eqCol.five .eqSlot{width:60px;height:60px;}
+  .eq.open .eqCol.five{gap:3px;} .eq.open .eqCol.five .eqSlot{width:48px;height:48px;}
+  .eq.open.tall .eqBody{height:42%;} .eq.open.tall .eqCol{gap:3px;} .eq.open.tall .eqCol .eqSlot{width:38px;height:38px;} .eq.open.tall .eqStage{grid-template-columns:40px 1fr 40px;padding-top:2px;}
+  .tag.sp{background:#4A1F1F;color:#FF9B8F;}
+  .wTabs{flex:1;display:flex;gap:6px;min-width:0;} .wTabs button{flex:none;width:auto;min-width:76px;margin:0;padding:6px 14px;border-radius:9px;background:#2E3440;color:#9AA3AE;font-size:13px;white-space:nowrap;}
+  .wTabs button.on{background:#F4E3B5;color:#2A1E08;}
   .kuraSet{margin:10px 12px 4px;font-size:11px;color:#8A93A0;} .kuraSet b{margin-right:8px;font-size:14px;color:var(--sc);}
   .kuraSet em{margin-left:4px;padding:0 5px;border-radius:5px;background:#8C2A22;color:#FFFFFF;font-style:normal;font-size:9px;}
 </style>
@@ -566,9 +572,10 @@ function newMatch(level, eW, eGear, practice){
 function newRound(){
   AR.r = DUEL_R; G.terrain = null;   // 乱戦で広げた闘技場を戻す
   G.p = mkF(AR.x, AR.y + 80, false, '#3E8EDE', `あなた（${WEAPONS[myW].name}）`, myW, myGear);
+  G.p.heart = myHeart(); G.p.ougi = G.pOugi || 0; G.mikiriT = 0; G.p.orb = myOrb();   // 奥義ゲージは次の1本に持ち越す
   G.e = mkF(AR.x, AR.y - 80, true, '#E0493E', `${WEAPONS[G.eW].title} Lv${G.level}`, G.eW, G.eGear);
   G.e.per = G.boss ? BOSS_PER[G.boss.set] : foePer;
-  if (G.boss) { makeBoss(G.e, G.boss, 1, 1.3); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
+  if (G.boss) { makeBoss(G.e, G.boss, 0, 1.15); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
   G.ai = {heat:0, seenWind:-1, guardAt:0, releaseAt:0, dashAt:0, attackAt:0, comboLeft:0, strafe:1, strafeT:0, backoff:0};
   G.phase = 'intro'; G.phaseT = 0; G.fx = []; G.texts = []; G.startSnd = 0;
   G.items = []; G.itemT = rnd(6, 9);
@@ -619,13 +626,14 @@ function newMelee(){
   AR.r = MELEE_R;
   const at = a => [AR.x + Math.cos(a)*230, AR.y + Math.sin(a)*230];
   G.p = mkF(...at(Math.PI/2), false, '#3E8EDE', `あなた（${WEAPONS[myW].name}）`, myW, myGear);
+  G.p.heart = myHeart(); G.p.ougi = 0; G.p.orb = myOrb();
   G.fs = [G.p];
   for (let i = 0; i < MELEE_N; i++) {
     // 4割の試合で、1体が強敵（名前つきのボス武者）
     const b = i === 0 && Math.random() < .4 ? pickOne(BOSSES) : null, wk = b ? b.wk : WKEYS[Math.floor(Math.random()*WKEYS.length)];
     const f = mkF(...at(Math.PI/2 + (i + 1)*Math.PI*2/(MELEE_N + 1)), true, '', WEAPONS[wk].title, wk, aiGear(level, b ? { boss: 1, set: b.set } : {}));
     f.skin = randSkin(); f.team = MELEE_TEAMS[i]; f.ai = newAiMemo(); f.per = b ? BOSS_PER[b.set] : pickOne(PER_KEYS); G.fs.push(f);
-    if (b) { makeBoss(f, b, 2, 1.6); f.wlv = 1; say(`強敵「${b.n}」がいる！`, G.p.x, G.p.y - 70, b.c, 18, 2.6); }
+    if (b) { makeBoss(f, b, 1, 1.35); f.wlv = 1; say(`強敵「${b.n}」がいる！`, G.p.x, G.p.y - 70, b.c, 18, 2.6); }
   }
   G.e = G.fs[1];   // 1対1用の処理が参照しても困らないように
   G.zone = {x:AR.x, y:AR.y, r:AR.r, stage:0, t:0, shrinking:false, tick:0};
@@ -735,9 +743,10 @@ function updateMelee(dt){
   control(G.p, G.p.tgt || G.p, readPlayer(), dt);
   // 画面の外の者の動きでは、ヒットストップ・揺れ・スロー・音を出さない（遠くの斬り合いで自分の手が止まらないように）
   const offscreen = (f, fn) => { const v = seen(f), s = [G.hitstop, G.shake, G.slowT]; sfxMute = !v; fn(); sfxMute = false; if (!v) [G.hitstop, G.shake, G.slowT] = s; };
-  for (const f of alive) if (f.isAI && f.tgt) offscreen(f, () => control(f, f.tgt, aiThink(dt, f, f.tgt, f.ai), dt));
-    else if (f.isAI) { const z = G.zone, dz = Math.hypot(z.x - f.x, z.y - f.y) || 1; control(f, f, {mx: dz > 30 ? (z.x - f.x)/dz*.6 : 0, my: dz > 30 ? (z.y - f.y)/dz*.6 : 0}, dt); }
-  for (const f of alive) offscreen(f, () => { stepF(f, f.tgt || f, dt); terrainStep(f); });
+  const dk = G.mikiriT > 0 ? .4 : 1; if (G.mikiriT > 0) G.mikiriT -= dt;   // 奥義「見切り」：自分以外が遅くなる
+  for (const f of alive) if (f.isAI && f.tgt) offscreen(f, () => control(f, f.tgt, aiThink(dt*dk, f, f.tgt, f.ai), dt*dk));
+    else if (f.isAI) { const z = G.zone, dz = Math.hypot(z.x - f.x, z.y - f.y) || 1; control(f, f, {mx: dz > 30 ? (z.x - f.x)/dz*.6 : 0, my: dz > 30 ? (z.y - f.y)/dz*.6 : 0}, dt*dk); }
+  for (const f of alive) offscreen(f, () => { stepF(f, f.tgt || f, f === G.p ? dt : dt*dk); terrainStep(f); });
   updateItems(dt);
   updateZone(dt, alive);
   // 体の重なりを押し戻す（全員の組み合わせ）
@@ -758,7 +767,8 @@ function meleeEnd(){
   for (let i = 0; i < (win ? 2 : rank <= 3 ? 1 : 0); i++) drops.push(makeGear(dropGrade(luck)));
   for (let i = 0, x = 0; i < G.count.kills && x < 2; i++) if (Math.random() < .3) { drops.push(makeGear(dropGrade(luck))); x++; }
   if (G.bossKill) drops.unshift(bossDrop(G.bossKill));
-  const got = dropHtml(grantGear(drops), G.bossKill);
+  const hd = G.bossKill ? heartDrop() : null, od = G.bossKill ? orbDrop() : null;
+  const got = dropHtml(grantGear(drops), G.bossKill) + (hd ? `<div class="dropT">からくり心臓「${HEARTS[hd].n}」を手に入れた！</div>` : '') + (od ? `<div class="dropT">${ORBS[od].i} ${ORBS[od].n}を手に入れた！</div>` : '');
   const earn = `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
   card(`<h2>${win ? '勝ち残り！' : rank + '位'}</h2><p>${n}人の乱戦で ${rank}位（撃破 ${G.count.kills}）</p>${earn}${got}<button id="b1">もう一度</button>`, newMelee);
   paintThumbs();
@@ -797,6 +807,7 @@ function resolveThrow(att, o){
   for (const d of cands) { const dx = d.x - att.x, dy = d.y - att.y, dd = Math.hypot(dx, dy);
     if (dd < (att.thrReach ?? THROW.reach) + att.r + d.r && Math.abs(angDiff(Math.atan2(dy, dx), att.face)) < THROW.arc/2 && dd < bd && !blocked(att, d)) { bd = dd; def = d; } }
   const fail = () => { att.thr = 'miss'; if (seen(att)) say('投げ空振り', att.x, att.y - 30, '#9AA3AE', 13, .6); };
+  if (def && def.migawari > 0) { migawariDodge(def, att); att.thr = 'miss'; return; }
   const pStun = def && def.state === 'stun' && def.stunKind === 'parry';   // はじかれてよろめいている相手も掴める
   if (!def || def.iframe > 0 || !(['idle', 'recover', 'dash'].includes(def.state) || pStun) || G.phase !== 'fight') return fail();
   def.pThrow = pStun;
@@ -825,6 +836,7 @@ function slam(att, def){
   const a = Math.atan2(def.y - att.y, def.x - att.x);   // 叩きつけた向き（投げた側の背中側）へ少し滑る。崖のそばなら落ちる
   def.kx = Math.cos(a)*THROW.knock*.55*def.m.knock; def.ky = Math.sin(a)*THROW.knock*.55*def.m.knock;
   if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
+  gainOugi(att, OUGI_GAIN.throw); gainOugi(def, OUGI_GAIN.taken);
   spark(def.x, def.y + 6, '#C9B48A', 22, 260); spark(def.x, def.y, '#FFFFFF', 8, 200);
   (G.rings = G.rings || []).push({x: def.x, y: def.y + 8, life: .4, max: .4});
   say(`${def.pThrow ? 'はじき投げ！' : '投げ！'} ${dm}`, def.x, def.y - 40, def.pThrow ? '#FFE08A' : '#7FE0C0', 24, 1.1); def.pThrow = false;
@@ -845,6 +857,7 @@ function startDash(f, o, mx, my, cost = f.dashSt){
 
 // 入力を受け取って行動に変える（プレイヤーもAIも同じ関数を通す）
 function control(f, o, inp, dt){
+  if (inp.ougi && f.heart && f.ougi >= 100 && (f.state === 'idle' || f.state === 'recover')) useOugi(f, o);   // 奥義（立っているとき・攻撃の戻りで出せる）
   if (f.state === 'idle') {
     if (inp.guard && !f.guard) { f.guard = true; f.parryOK = G.now - f.guardStart > parryRearm(f); f.guardStart = G.now; }
     if (!inp.guard) f.guard = false;
@@ -852,7 +865,7 @@ function control(f, o, inp, dt){
     else if (inp.throw) { startThrow(f); }
     else if (inp.dash) { startDash(f, o, inp.mx, inp.my); }
     if (f.state === 'idle') {
-      const sp = (f.guard ? f.w.speed*.44 : f.w.speed)*f.m.speed*(f.buffs.spd > 0 ? 1.35 : 1), l = Math.hypot(inp.mx, inp.my);
+      const sp = (f.guard ? f.w.speed*.44 : f.w.speed)*f.m.speed*(f.buffs.spd > 0 ? 1.35 : 1)*(f.wetT > 0 ? .8 : 1), l = Math.hypot(inp.mx, inp.my);
       if (l > .15) { const k = Math.min(1, l); f.x += inp.mx/l*k*sp*dt; f.y += inp.my/l*k*sp*dt; }
     }
   } else if ((f.state === 'windup' || f.state === 'active' || f.state === 'recover') && inp.attack && f.atk < lastIdx(f)) {
@@ -860,16 +873,24 @@ function control(f, o, inp, dt){
   } else if (f.state === 'stun' && f.stunKind === 'parry' && inp.dash) {   // はじかれた怯みの間だけ、回避で抜けられる（スタミナ多め）
     if (startDash(f, o, inp.mx, inp.my, Math.round(f.dashSt*ESC_ST_MUL))) { say('緊急回避', f.x, f.y - 36, '#8FE3FF', 15, .7); }
   }
-  inp.attack = false; inp.dash = false; inp.throw = false;
+  inp.attack = false; inp.dash = false; inp.throw = false; inp.ougi = false;
 }
 
 function stepF(f, o, dt){
   const toO = Math.atan2(o.y - f.y, o.x - f.x);
   for (const k in f.buffs) f.buffs[k] = Math.max(0, f.buffs[k] - dt);
+  f.teppeki = Math.max(0, (f.teppeki || 0) - dt); f.migawari = Math.max(0, (f.migawari || 0) - dt);
+  f.wetT = Math.max(0, (f.wetT || 0) - dt); f.iceT = Math.max(0, (f.iceT || 0) - dt); f.shockT = Math.max(0, (f.shockT || 0) - dt);
+  if (f.burnT > 0) {   // 火の鍔玉：0.5秒ごとに体力が減る
+    f.burnT -= dt; f.burnTick = (f.burnTick || 0) + dt;
+    if (f.burnTick >= .5 && G.phase === 'fight' && f.hp > 0) { f.burnTick -= .5; const dm = Math.max(1, Math.round(f.burnDps*.5));
+      if (!G.practice) f.hp -= dm; f.lastHit = f.burnBy || f.lastHit; say(String(dm), f.x + rnd(-8, 8), f.y - 30, ORBS.hi.c, 13, .6);
+      if (f.hp <= 0) { f.hp = 0; ko(f); } }
+  }
   f.iframe = Math.max(0, f.iframe - dt); f.flash = Math.max(0, f.flash - dt); f.stFlash = Math.max(0, f.stFlash - dt);
   f.x += f.kx*dt; f.y += f.ky*dt; const dk = Math.exp(-9*dt); f.kx *= dk; f.ky *= dk;
   const busy = f.state === 'windup' || f.state === 'active' || f.state === 'recover' || f.state === 'dash';
-  if (!busy && G.now - f.stLast > .5) f.st = Math.min(f.stMax, f.st + (f.guard ? 8 : 28)*f.m.stRegen*(f.buffs.st > 0 ? 2 : 1)*dt);
+  if (!busy && G.now - f.stLast > .5 && !(f.burnT > 0)) f.st = Math.min(f.stMax, f.st + (f.guard ? 8 : 28)*f.m.stRegen*(f.buffs.st > 0 ? 2 : 1)*dt);   // 燃えている間は回復しない
   // 動いた速さ（歩きの弾みに使う）
   const lt = f.trail[f.trail.length - 1]; if (lt && dt > 0) f.moveSpd = f.moveSpd*.7 + .3*Math.hypot(f.x - lt.x, f.y - lt.y)/dt;
   if (f.state === 'idle' && f.moveSpd > 25) f.walkPh += dt*Math.min(f.moveSpd, 170)*.11;
@@ -877,6 +898,11 @@ function stepF(f, o, dt){
 
   if (f.state === 'idle') f.face = toO;
   else if (f.state === 'throw' && f.thr === 'hold') holdStep(f, dt);
+  else if (f.state === 'rush') {   // 奥義「迅雷」：一気に飛び込む → 相手に着くか0.2秒で斬る
+    f.t += dt; const t = f.rushTgt, near = t && !t.dead && Math.hypot(t.x - f.x, t.y - f.y) < f.r + t.r + 14;
+    if (!near && f.t < .2) { f.x += Math.cos(f.rushDir)*900*dt; f.y += Math.sin(f.rushDir)*900*dt; }
+    else { rushHit(f); f.state = 'recover'; f.atk = 0; f.t = 0; f.queued = false; }
+  }
   else if (f.state === 'held') {   // 掴まれている：投げた側が倒れた・やめたら、その場に落ちる
     const h = f.heldBy; if (!h || h.dead || h.state !== 'throw' || h.thr !== 'hold') { f.state = 'stun'; f.stunKind = 'thrown'; f.stunT = .35; f.t = 0; f.z = 0; f.heldBy = null; }
   }
@@ -887,7 +913,7 @@ function stepF(f, o, dt){
     if (f.thr && f.t >= THROW.wind + (f.thr === 'hit' ? THROW.rec : THROW.whiff)) { f.state = 'idle'; f.t = 0; }
   } else if (f.state === 'windup') {
     f.face += clamp(angDiff(toO, f.face), -4.5*dt, 4.5*dt);   // ため中は向きがゆっくりしか変わらない → 横に回り込めばかわせる
-    f.t += dt;
+    f.t += dt*(f.wetT > 0 ? .78 : 1);   // 水の鍔玉で濡れていると、ためが遅い
     if (f.t >= f.w.atk[f.atk].wind) { f.state = 'active'; f.t = 0; SFX.swing(f.w.atk[f.atk].heavy, f.w.atk[f.atk].arc < 1, f.x);
       if (G.melee) { for (const d of G.fs) if (d !== f && !d.dead) resolveHit(f, d, true); }   // 乱戦：振った範囲にいる全員に当たる（横やり・巻き添えもある）
       else resolveHit(f, o); }
@@ -920,6 +946,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   const dmg = Math.round(A.dmg*(att.buffs.atk > 0 ? 1.4 : 1)*(1 + WLV_DMG*(att.wlv || 0))*def.m.dmgTaken*att.m.atk*(konshin ? 1.25 : 1)*(att.oikaze ? 1.3 : 1)*(fukutsu ? .75 : 1));
   const inArc = Math.abs(angDiff(Math.atan2(dy, dx), att.face)) < A.arc/2 + (d < 36 ? .5 : 0);
   if (d > A.reach + A.lunge*.5 + def.r || !inArc) { if (!quiet && d < 160) say('空振り', att.x, att.y - 30, '#9AA3AE', 13, .6); return; }
+  if (def.migawari > 0 && def.iframe <= 0) { migawariDodge(def, att); return; }   // 奥義「身代わり」
   if (blocked(att, def)) { if (seen(att) && (att === G.p || def === G.p)) { say('柱', att.x + dx*.5, att.y + dy*.5 - 20, '#C9C2B0', 13, .5); SFX.guard(att.x); } return; }
   def.lastHit = att;
   const hx = (att.x+def.x)/2, hy = (att.y+def.y)/2, nx = dx/(d||1), ny = dy/(d||1);
@@ -927,7 +954,9 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   if (def.guard && def.state === 'idle') {
     if (parryOpen(def)) {           // はじき：攻撃側に大きな隙
       att.state = 'stun'; att.stunKind = 'parry'; att.stunT = .95; att.t = 0; att.queued = false;
+      if (def.orb && def.orb.k === 'kori') { att.stunT += .35 + .06*def.orb.lv; att.iceT = att.stunT; say('凍結', att.x, att.y - 50, ORBS.kori.c, 16, .9); }   // 氷の鍔玉
       def.st = Math.min(def.stMax, def.st + 15 + (def.m.set === 'meikyo' ? 20 : 0));
+      gainOugi(def, OUGI_GAIN.parry);
       if (def.m.sp.kaeshi) { def.hp = Math.min(def.maxHp, def.hp + 8); say('返し +8', def.x, def.y - 50, '#8FE0A6', 14, .9); }
       att.kx -= nx*160; att.ky -= ny*160;
       spark(hx, hy, '#FFFFFF', 22, 320); spark(hx, hy, '#FFE08A', 10, 200);
@@ -936,7 +965,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
       G.hitstop = .12; G.slowT = .45; G.shake = .18;
       return;
     }
-    def.st -= dmg*1.8*def.w.guardMul*def.m.guardMul*att.m.chip; if (!G.practice) def.hp -= dmg*.1; def.stLast = G.now;   // 普通のガード：スタミナが削れる
+    if (!(def.teppeki > 0)) { def.st -= dmg*1.8*def.w.guardMul*def.m.guardMul*att.m.chip; if (!G.practice) def.hp -= dmg*.1; def.stLast = G.now; }   // 普通のガード：スタミナが削れる（奥義「鉄壁」の間は減らない）
     def.kx += nx*140*def.m.knock; def.ky += ny*140*def.m.knock;
     spark(hx, hy, '#9CCBFF', 8, 180); say('ガード', def.x, def.y - 30, '#9CCBFF', 13, .5); if (def.st > 0) SFX.guard(hx);
     G.hitstop = .04;
@@ -955,6 +984,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   const counter = def.state === 'throw' && !def.thr;   // 投げの出かかりを斬った
   if (counter) { const ex = Math.round(dmg*.3); if (!G.practice) def.hp -= ex; say('カウンター', def.x, def.y - 52, '#FFB347', 16, .9); }
   if (!G.practice) def.hp -= dmg;   // 練習では体力が減らない
+  gainOugi(att, A.heavy ? OUGI_GAIN.heavy : OUGI_GAIN.hit); gainOugi(def, OUGI_GAIN.taken);
   def.flash = .12; if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
   def.kx += nx*(A.heavy ? 330 : 170)*def.m.knock; def.ky += ny*(A.heavy ? 330 : 170)*def.m.knock;
   spark(hx, hy, '#FF6B5E', A.heavy ? 20 : 10, A.heavy ? 320 : 220);
@@ -966,12 +996,13 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   const stunNew = (A.heavy ? .55 : .18)*def.m.stunMul, keepParry = def.state === 'stun' && def.stunKind === 'parry', nextA = att.w.atk[att.atk + 1];
   if (keepParry) def.stunT = def.t + Math.max(def.stunT - def.t, stunNew, nextA ? A.act + A.rec*.25 + nextA.wind + .12 : 0);
   if (!armor && !keepParry) { def.state = 'stun'; def.stunKind = 'hit'; def.stunT = stunNew; def.t = 0; def.guard = false; def.queued = false; }
+  if (att.orb) orbHit(att, def, A);   // 鍔玉（プレイヤーだけ）
   if (def.hp <= 0) { def.hp = 0; ko(def); }
 }
 
 function ko(loser){
   if (G.melee) return meleeKO(loser);
-  G.phase = 'ko'; G.phaseT = 0; G.slowT = 1.0; SFX.ko();
+  G.phase = 'ko'; G.phaseT = 0; G.slowT = 1.0; SFX.ko(); G.pOugi = G.p.ougi; G.mikiriT = 0;
   for (const f of [G.p, G.e]) { f.queued = false; if (f.state === 'windup') { f.state = 'idle'; f.t = 0; } }   // 一本が決まったら、構えていた攻撃は出さない
   if (loser === G.e) G.pw++; else G.ew++;
 }
@@ -980,7 +1011,7 @@ function ko(loser){
 // v0.28 性格：数値の掛け率（agg 攻め、parry はじき、block ガード、thr 投げ、keep 間合いの外で待つ、dodge 回避）と癖
 //   hitrun：斬ったらすぐ離れる、vulture：弱った相手・戦っている相手を狙う（乱戦）、hide：体力が減ると草むらに隠れる（乱戦）
 const PERSONA = {
-  tosshin: { n: '猪突',     c: '#FF8A5A', d: 'どんどん攻めてくる。守りは甘い',             agg: 1.7, parry: .6,  block: .7,  thr: .6,  keep: 0,  dodge: .7 },
+  tosshin: { n: '猪突',     c: '#FF8A5A', d: 'どんどん攻めてくる。守りは甘い',             agg: 1.4, parry: .6,  block: .7,  thr: .6,  keep: 0,  dodge: .7 },
   shincho: { n: '慎重',     c: '#9CCBFF', d: '間合いの外で様子を見る。ガードが固い（投げが効く）', agg: .6, parry: 1.1, block: 1.5, thr: .7,  keep: 1,  dodge: 1, hide: 1 },
   kaeshi:  { n: '返し狙い', c: '#FFE08A', d: 'はじきを狙ってくる（投げが効く）',          agg: .7,  parry: 2,   block: 1,   thr: .5,  keep: .5, dodge: .8 },
   nage:    { n: '投げ好き', c: '#7FE0C0', d: 'ガードを見ると投げてくる（攻めれば勝てる）', agg: .9,  parry: .8,  block: .9,  thr: 3,   keep: 0,  dodge: 1 },
@@ -990,13 +1021,14 @@ const PERSONA = {
 const PER_KEYS = Object.keys(PERSONA), BOSS_PER = { onimaru: 'tosshin', tsukikage: 'nigeru', raiden: 'shincho' };
 let foePer = 'tosshin';   // 1対1の次の相手の性格（loadout で決める）
 function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：その相手（乱戦では一番近い相手）、ai：そのAIの覚え書き
-  const L = e.lv || G.level, now = G.now;   // e.lv：強敵（ボス）は強さが上
+  const L = 1 + ((e.lv || G.level) - 1)*.7, now = G.now;   // e.lv：強敵（ボス）は強さが上。v0.31.1：Lvが上がっても強くなりすぎないよう、上がり方を0.7倍に
   const pf = ai.prof || {};   // 自動テスト用：人間に近い反応の操作に差し替えられる
   // v0.12 で全体に弱くした（反応が遅く、はじき・ガードが減り、攻めも控えめ）
-  const react = pf.react ?? Math.max(.18, .40 - .022*(L-1));
-  const parryRate0 = pf.parryRate ?? Math.min(.40, .04 + .04*(L-1));
+  // v0.31.1：「敵が強い」→ さらに弱くした（反応を遅く、はじき・攻めを控えめに）
+  const react = pf.react ?? Math.max(.22, .46 - .02*(L-1));
+  const parryRate0 = pf.parryRate ?? Math.min(.30, .03 + .03*(L-1));
   const blockRate0 = pf.blockRate ?? .32;
-  const aggression0 = pf.aggression ?? .5 + .12*L;
+  const aggression0 = pf.aggression ?? .45 + .09*L;
   const inp = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false};
   ai.heat = Math.max(0, ai.heat - dt*.8);
   const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy), ux = dx/(d||1), uy = dy/(d||1);
@@ -1015,7 +1047,7 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
     ai.guardAt = 0; ai.dashAt = 0; ai.dashIn = false;
     const escCost = Math.round(dashSt*ESC_ST_MUL);
     if (e.state === 'stun' && e.stunKind === 'parry') {   // はじかれて怯んでいる → 緊急回避で逃げるか、耐えるか
-      if (d < A.reach + 70 && e.st >= escCost && Math.random() < (pf.escRate ?? Math.min(.5, .12 + .038*L))) ai.dashAt = Math.max(canAt, hitAt - rnd(.02, .12));
+      if (d < A.reach + 70 && e.st >= escCost && Math.random() < (pf.escRate ?? Math.min(.35, .08 + .03*L))) ai.dashAt = Math.max(canAt, hitAt - rnd(.02, .12));
     } else if (d < A.reach + 70) {
       const r = Math.random(), pr = holding ? 0 : parryRate + Math.min(.2, ai.heat*.04);   // 攻めが単調だと読まれる
       if (A.heavy && r < Math.min(.85, (pf.heavyDodge ?? .45)*Pe.dodge) && e.st >= dashSt)  ai.dashAt = Math.max(canAt, hitAt - rnd(.02, .12));
@@ -1105,18 +1137,18 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
 }
 
 // ================= 入力 =================
-const BTN = { atk:{x:296, y:556, r:38, label:'攻撃'}, grd:{x:214, y:588, r:30, label:'ガード'}, dash:{x:300, y:470, r:28, label:'回避'}, thr:{x:220, y:508, r:25, label:'投げ'} };
-const P = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false};
+const BTN = { atk:{x:296, y:556, r:38, label:'攻撃'}, grd:{x:214, y:588, r:30, label:'ガード'}, dash:{x:300, y:470, r:28, label:'回避'}, thr:{x:220, y:508, r:25, label:'投げ'}, ougi:{x:238, y:452, r:21, label:'奥義'} };
+const P = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false, ougi:false};
 const touches = new Map(); let stick = null; const keys = {};
 function toLogical(e){ const r = cv.getBoundingClientRect(); return {x:(e.clientX - r.left)/scale, y:(e.clientY - r.top)/scale}; }
-function btnAt(x, y){ for (const k in BTN) { const b = BTN[k]; if (Math.hypot(x-b.x, y-b.y) < b.r + 10) return k; } return null; }
+function btnAt(x, y){ for (const k in BTN) { const b = BTN[k]; if (k === 'ougi' && !(G && G.p && G.p.heart)) continue; if (Math.hypot(x-b.x, y-b.y) < b.r + 10) return k; } return null; }
 // 画面の外側の余白（iPhoneで上下に残る帯）から触っても操作できるように、#app 全体で受ける
 const appEl = document.getElementById('app');
 appEl.addEventListener('pointerdown', e => {
   if (e.target !== cv && e.target !== appEl) return;   // 装備画面などのボタンはそのまま
   e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(err) {}
   const q = toLogical(e), b = btnAt(q.x, q.y);
-  if (b) { touches.set(e.pointerId, {role:b}); if (b === 'atk') P.attack = true; if (b === 'dash') P.dash = true; if (b === 'thr') P.throw = true; }
+  if (b) { touches.set(e.pointerId, {role:b}); if (b === 'atk') P.attack = true; if (b === 'dash') P.dash = true; if (b === 'thr') P.throw = true; if (b === 'ougi') P.ougi = true; }
   else if (q.x < W*0.6 && q.y > 300) { stick = {id:e.pointerId, ox:q.x, oy:q.y, x:q.x, y:q.y}; touches.set(e.pointerId, {role:'stick'}); }
   syncGuard();
 });
@@ -1127,7 +1159,7 @@ const up = e => { touches.delete(e.pointerId); if (stick && e.pointerId === stic
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 function syncGuard(){ P.guardTouch = [...touches.values()].some(t => t.role === 'grd'); }
 addEventListener('keydown', e => { if (e.repeat) return; keys[e.code] = true;
-  if (e.code === 'KeyJ') P.attack = true; if (e.code === 'KeyU') P.throw = true; if (e.code === 'KeyL' || e.code === 'Space') { P.dash = true; e.preventDefault(); } });
+  if (e.code === 'KeyJ') P.attack = true; if (e.code === 'KeyU') P.throw = true; if (e.code === 'KeyI') P.ougi = true; if (e.code === 'KeyL' || e.code === 'Space') { P.dash = true; e.preventDefault(); } });
 addEventListener('keyup', e => { keys[e.code] = false; });
 function readPlayer(){
   let mx = 0, my = 0;
@@ -1143,21 +1175,24 @@ function update(rdt){
   if (!G) return;
   G.shake = Math.max(0, G.shake - rdt);
   for (const t of G.texts) { t.y -= 30*rdt; t.life -= rdt; } G.texts = G.texts.filter(t => t.life > 0);
+  if (G.ofx) { for (const q of G.ofx) { q.life -= rdt; q.x += q.vx*rdt; q.y += q.vy*rdt; q.vy += (q.g || 0)*rdt; q.vx *= q.drag || 1; }   // 鍔玉の演出の粒
+    G.ofx = G.ofx.filter(q => q.life > 0); if (G.ofx.length > 500) G.ofx.splice(0, G.ofx.length - 500); }
   if (G.hitstop > 0) { G.hitstop -= rdt; return; }
   let dt = rdt; if (G.slowT > 0) { G.slowT -= rdt; dt *= .3; }
   for (const f of G.fx) { f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= .9; f.vy *= .9; f.life -= dt; } G.fx = G.fx.filter(f => f.life > 0);
   if (G.rings) { for (const r of G.rings) r.life -= dt; G.rings = G.rings.filter(r => r.life > 0); }
   G.phaseT += rdt;
   // 戦っていない間（開始前・一本の後・結果画面）に押した攻撃・回避は捨てる（残っていると「始め」の直後に勝手に出る）
-  if (G.phase !== 'fight') { P.attack = false; P.dash = false; P.throw = false; }
+  if (G.phase !== 'fight') { P.attack = false; P.dash = false; P.throw = false; P.ougi = false; }
   if (G.phase === 'over') return;   // 勝負がついたら止める（結果画面の裏で戦い続けないように）
   if (G.phase === 'intro') { if (G.phaseT > 1.2) { G.phase = 'fight'; } if (!G.startSnd && G.phaseT > .6) { G.startSnd = 1; SFX.start(); } return; }
   if (G.melee) return updateMelee(dt);
   if (G.phase === 'ko') { stepF(G.p, G.e, dt); stepF(G.e, G.p, dt); if (G.phaseT > 1.6) endRound(); return; }
   G.now += dt;
+  const dk = G.mikiriT > 0 ? .4 : 1; if (G.mikiriT > 0) G.mikiriT -= dt;   // 奥義「見切り」：相手だけ遅くなる
   control(G.p, G.e, readPlayer(), dt);
-  control(G.e, G.p, aiThink(dt), dt);
-  stepF(G.p, G.e, dt); stepF(G.e, G.p, dt);
+  control(G.e, G.p, aiThink(dt*dk), dt*dk);
+  stepF(G.p, G.e, dt); stepF(G.e, G.p, dt*dk);
   updateItems(dt);
   // 体の重なりを押し戻す
   const dx = G.e.x - G.p.x, dy = G.e.y - G.p.y, d = Math.hypot(dx, dy), m = G.p.r + G.e.r;
@@ -1177,7 +1212,8 @@ function endRound(){
     bag.koban += total; saveBag(); if (win) SFX.win(); else SFX.lose();
     // 仕掛けの戦利品：勝てば1つ（強敵ならその銘の極以上）、負けても1本取っていれば3割で1つ。練習ではなし
     const drops = G.practice ? [] : win ? [G.boss ? bossDrop(G.boss) : makeGear(dropGrade(G.level/2))] : G.pw && Math.random() < .3 ? [makeGear(dropGrade(0))] : [];
-    const got = dropHtml(grantGear(drops), win && G.boss);
+    const hd = win && G.boss && !G.practice ? heartDrop() : null, od = win && G.boss && !G.practice ? orbDrop() : null;
+    const got = dropHtml(grantGear(drops), win && G.boss) + (hd ? `<div class="dropT">からくり心臓「${HEARTS[hd].n}」を手に入れた！</div>` : '') + (od ? `<div class="dropT">${ORBS[od].i} ${ORBS[od].n}を手に入れた！</div>` : '');
     const earn = `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
     card(win ? `<h2>勝利</h2><p>${G.e.name} を ${G.pw}-${G.ew} で倒しました。<br>次の相手は少し強くなります。</p>${earn}${got}<button id="b1">次の相手（Lv${lv}）を見る</button>`
              : `<h2>敗北</h2><p>${G.e.name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p>${earn}${got}<button id="b1">装備を見直す</button>`,
@@ -1263,6 +1299,122 @@ function drawPart(key, t){
   for (let i = 0; i < N*N; i++) if (M[i]) { x.fillStyle = M[i]; x.fillRect(i % N, Math.floor(i/N), 1, 1); }
   return partCv;
 }
+// ---- 鍔玉の演出（v0.32.1）：刃のまわりで属性ごとに動く。粒は四角い点（ドット絵にそろえる） ----
+const FIRE_CS = ['#FFF6C8', '#FFE14A', '#FFB030', '#FF6A28', '#C8321E', '#5A2418'];   // 火の粉：若いほど白っぽく、消える前は黒い煙
+const ICE_CS = ['#FFFFFF', '#E4F6FF', '#A4E4FC', '#6FB8E0'];
+function ofx(q){ (G.ofx = G.ofx || []).push({ max: q.life, ...q }); }
+// 実時間の経過（描画の間に粒をどれだけ出すか）
+const fxDt = f => { const now = performance.now()/1000, d = Math.min(.05, now - (f.fxT || now)); f.fxT = now; return d; };
+function orbBlade(f, hx, hy, ba, L){
+  const k = f.orb.k, t = performance.now()/1000, cx = Math.cos(ba), cy = Math.sin(ba), nx = -cy, ny = cx, dt = fxDt(f);
+  const act = f.state === 'active' || f.state === 'rush', rate = act ? 3 : 1, at = u => [hx + cx*L*u, hy + cy*L*u];
+  const n = q => { let m = q*dt*rate; let c = Math.floor(m); if (Math.random() < m - c) c++; return c; };   // 1秒に q 個（攻撃中は多め）
+  const glowLine = (c, w, a) => { const [x0, y0] = at(.1), [x1, y1] = at(1); ctx.globalAlpha = a; ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); };
+  ctx.save();
+  if (k === 'hi') {   // メラメラ：刃全体が炎に包まれ、炎の舌がゆらぎ、火の粉が上へ舞う
+    ctx.shadowColor = '#FF6A28'; ctx.shadowBlur = 18; glowLine('#FF6A28', 9 + 2*Math.sin(t*20), .35);
+    for (let i = 0; i < 8; i++) { const u = .15 + i*.12, [x, y] = at(u), h = 16 + 7*Math.sin(t*16 + i*1.9) + 4*Math.sin(t*29 + i) + (act ? 12 : 0), w = 5.5;
+      ctx.globalAlpha = .9; ctx.fillStyle = '#E8401E'; ctx.beginPath(); ctx.moveTo(x - w, y + 2); ctx.quadraticCurveTo(x - w*.7 + Math.sin(t*20 + i)*3, y - h*.6, x + Math.sin(t*13 + i)*4, y - h); ctx.quadraticCurveTo(x + w*.7, y - h*.5, x + w, y + 2); ctx.fill();
+      ctx.fillStyle = '#FFB030'; ctx.beginPath(); ctx.moveTo(x - w*.65, y + 1); ctx.quadraticCurveTo(x - w*.3, y - h*.5, x + Math.sin(t*13 + i)*2.5, y - h*.72); ctx.quadraticCurveTo(x + w*.5, y - h*.35, x + w*.65, y + 1); ctx.fill();
+      ctx.fillStyle = '#FFF2A8'; ctx.beginPath(); ctx.moveTo(x - w*.3, y); ctx.quadraticCurveTo(x, y - h*.3, x + Math.sin(t*13 + i)*1.2, y - h*.4); ctx.quadraticCurveTo(x + w*.25, y - h*.2, x + w*.3, y); ctx.fill(); }
+    for (let i = n(120); i--;) { const [x, y] = at(.1 + Math.random()*.9); ofx({ x: x + rnd(-5, 5), y: y - rnd(0, 8), vx: rnd(-25, 25), vy: rnd(-150, -60), g: -40, life: rnd(.4, .85), cs: FIRE_CS, sz: rnd(3, 6.5), shrink: 1 }); }
+  } else if (k === 'rai') {   // バチバチ：刃が帯電して光り、太い稲妻が何本も走り、横へはねる
+    if (!f.bolt || t - f.boltT > .05) { f.boltT = t;
+      f.bolt = [0, 1, 2].map(() => Array.from({ length: 8 }, (_, i) => (i === 0 || i === 7) ? rnd(-2, 2) : rnd(-11, 11)*(act ? 1.8 : 1)));
+      f.boltBr = Array.from({ length: Math.random() < (act ? 1 : .7) ? (act ? 3 : 2) : 0 }, () => [rnd(.25, 1), Math.random() < .5 ? -1 : 1, rnd(14, act ? 34 : 24)]); }
+    ctx.shadowColor = '#FFE14A'; ctx.shadowBlur = 20; glowLine('#FFE14A', 12, .18 + .14*Math.random());
+    ctx.lineJoin = 'miter';
+    f.bolt.forEach((b, j) => { ctx.strokeStyle = j === 0 ? '#FFFFFF' : j === 1 ? '#FFF27A' : '#FFD21E'; ctx.lineWidth = [3.5, 2.2, 1.4][j]; ctx.globalAlpha = 1 - j*.2; ctx.beginPath();
+      b.forEach((o, i) => { const [x, y] = at(.08 + i*.92/7); i ? ctx.lineTo(x + nx*o, y + ny*o) : ctx.moveTo(x + nx*o, y + ny*o); }); ctx.stroke(); });
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.globalAlpha = 1;
+    for (const [u, sd, l] of f.boltBr) { const [x, y] = at(u); ctx.beginPath(); ctx.moveTo(x, y);
+      ctx.lineTo(x + nx*sd*l*.35 + rnd(-5, 5), y + ny*sd*l*.35 + rnd(-5, 5)); ctx.lineTo(x + nx*sd*l*.7 + rnd(-5, 5), y + ny*sd*l*.7 + rnd(-5, 5)); ctx.lineTo(x + nx*sd*l + cx*8, y + ny*sd*l + cy*8); ctx.stroke(); }
+    for (let i = n(70); i--;) { const [x, y] = at(Math.random()); ofx({ x, y, vx: rnd(-220, 220), vy: rnd(-220, 220), drag: .88, life: rnd(.08, .2), c: Math.random() < .5 ? '#FFFFFF' : '#FFE14A', sz: rnd(2, 4) }); }
+  } else if (k === 'mizu') {   // 太い水の帯がうねりながら刃を流れ、しずくが飛び散る
+    ctx.lineCap = 'round'; ctx.shadowColor = '#4FA8FF'; ctx.shadowBlur = 12;
+    for (const [w, c, a, ph, amp] of [[8, '#2F7FE0', .5, 0, 6], [5, '#4FA8FF', .75, .8, 5], [2, '#E8F6FF', .95, 1.6, 4]]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.globalAlpha = a; ctx.beginPath();
+      for (let i = 0; i <= 18; i++) { const u = .08 + i*.92/18, o = Math.sin(t*10 - u*16 + ph)*(amp + (act ? 5 : 0)), [x, y] = at(u); i ? ctx.lineTo(x + nx*o, y + ny*o) : ctx.moveTo(x + nx*o, y + ny*o); } ctx.stroke(); }
+    for (let i = n(45); i--;) { const [x, y] = at(.2 + Math.random()*.8); ofx({ x: x + rnd(-4, 4), y, vx: rnd(-30, 30), vy: rnd(-40, 30), g: 300, life: rnd(.35, .6), c: Math.random() < .35 ? '#E8F6FF' : '#4FA8FF', sz: rnd(2.5, 5) }); }
+  } else if (k === 'kaze') {   // 大きな三日月の風が刃のまわりを渦巻く
+    const [mx, my] = at(.55);
+    ctx.strokeStyle = '#DFFFF4'; ctx.lineCap = 'round'; ctx.shadowColor = '#7FE0C0'; ctx.shadowBlur = 12;
+    for (let i = 0; i < 4; i++) { const a0 = t*(act ? 18 : 10) + i*1.57, R = 14 + 5*Math.sin(t*5 + i) + (act ? 10 : 0);
+      ctx.globalAlpha = .85; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.ellipse(mx, my, R + L*.4, R*.6, ba, a0, a0 + 1.7); ctx.stroke();
+      ctx.globalAlpha = .45; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(mx, my, R + L*.4 + 7, R*.6 + 5, ba, a0 + .3, a0 + 1.3); ctx.stroke(); }
+    for (let i = n(45); i--;) { const [x, y] = at(Math.random()), sp = rnd(90, 200)*(Math.random() < .5 ? 1 : -1); ofx({ x: x + nx*rnd(-12, 12), y: y + ny*rnd(-12, 12), vx: cx*sp + nx*rnd(-40, 40), vy: cy*sp + ny*rnd(-40, 40), life: rnd(.18, .35), c: Math.random() < .5 ? '#BFF5E4' : '#FFFFFF', sz: rnd(2, 3.5), a: .85 }); }
+  } else if (k === 'kori') {   // 刃が凍って白く光り、大きな結晶がきらめき、冷気が下へ流れる
+    ctx.shadowColor = '#A4E4FC'; ctx.shadowBlur = 16; glowLine('#CFF2FF', 9, .4);
+    for (let i = 0; i < 7; i++) { const u = .14 + i*.13, [x, y] = at(u), tw = .5 + .5*Math.sin(t*7 + i*2.3), s2 = 3 + tw*4 + (act ? 2 : 0);
+      ctx.globalAlpha = .45 + .55*tw; ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.moveTo(x, y - s2*1.7); ctx.lineTo(x + s2*.6, y); ctx.lineTo(x, y + s2*1.7); ctx.lineTo(x - s2*.6, y); ctx.fill();
+      ctx.fillRect(x - s2*1.5, y - .75, s2*3, 1.5); ctx.globalAlpha *= .6; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI/4); ctx.fillRect(-s2, -.6, s2*2, 1.2); ctx.fillRect(-.6, -s2, 1.2, s2*2); ctx.restore(); }
+    for (let i = n(60); i--;) { const [x, y] = at(Math.random()); ofx({ x: x + rnd(-6, 6), y, vx: rnd(-12, 12), vy: rnd(20, 50), life: rnd(.6, 1.1), cs: ICE_CS, sz: rnd(3, 7), a: .6, shrink: 1 }); }
+  }
+  ctx.restore();
+}
+// 状態の演出：燃えている相手から炎、濡れた相手からしずく、しびれた相手のまわりに稲妻
+function orbAura(f){
+  if (!(f.burnT > 0 || f.wetT > 0 || (f.shockT > 0 && f.state === 'stun'))) return;
+  const now = performance.now()/1000, dt = Math.min(.05, now - (f.auT || now)); f.auT = now;
+  const n = q => { let m = q*dt, c = Math.floor(m); if (Math.random() < m - c) c++; return c; };
+  if (f.burnT > 0) for (let i = n(40); i--;) ofx({ x: f.x + rnd(-11, 11), y: f.y + rnd(-26, 4), vx: rnd(-10, 10), vy: rnd(-80, -40), g: -20, life: rnd(.3, .55), cs: FIRE_CS, sz: rnd(2.5, 4.5), shrink: 1 });
+  if (f.wetT > 0) for (let i = n(14); i--;) ofx({ x: f.x + rnd(-12, 12), y: f.y + rnd(-26, 0), vx: 0, vy: rnd(20, 40), g: 240, life: rnd(.3, .45), c: '#4FA8FF', sz: rnd(2, 3) });
+  if (f.shockT > 0 && f.state === 'stun') {
+    ctx.save(); ctx.strokeStyle = '#FFFBE0'; ctx.shadowColor = '#FFE14A'; ctx.shadowBlur = 10; ctx.lineWidth = 1.5;
+    for (let j = 0; j < 2; j++) { ctx.beginPath(); let a = rnd(0, Math.PI*2); ctx.moveTo(f.x + Math.cos(a)*16, f.y - 10 + Math.sin(a)*20);
+      for (let i = 0; i < 4; i++) { a += rnd(.4, .9); ctx.lineTo(f.x + Math.cos(a)*rnd(12, 22), f.y - 10 + Math.sin(a)*rnd(14, 26)); } ctx.stroke(); }
+    ctx.restore();
+  }
+}
+// 当てたとき：属性ごとにはじける
+function orbBurst(def, k){
+  const x = def.x, y = def.y - 8;
+  if (k === 'hi') { for (let i = 0; i < 26; i++) { const a = rnd(0, Math.PI*2), v = rnd(60, 200); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 60, g: -60, drag: .94, life: rnd(.35, .7), cs: FIRE_CS, sz: rnd(3, 6), shrink: 1 }); } }
+  else if (k === 'rai') { def.shockT = Math.max(def.shockT || 0, .25); for (let i = 0; i < 22; i++) { const a = rnd(0, Math.PI*2), v = rnd(150, 320); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, drag: .88, life: rnd(.1, .25), c: Math.random() < .5 ? '#FFFBE0' : '#FFE14A', sz: rnd(2, 3.5) }); } }
+  else if (k === 'mizu') { for (let i = 0; i < 22; i++) { const a = rnd(-Math.PI, 0), v = rnd(60, 170); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, g: 420, life: rnd(.35, .6), c: Math.random() < .3 ? '#E8F6FF' : '#4FA8FF', sz: rnd(2.5, 4) }); } }
+  else if (k === 'kaze') { (G.rings = G.rings || []).push({ x: def.x, y: def.y + 4, life: .35, max: .35, c: '#BFF5E4' }, { x: def.x, y: def.y - 6, life: .5, max: .5, c: '#DFFFF4' });
+    for (let i = 0; i < 16; i++) { const a = rnd(0, Math.PI*2), v = rnd(120, 240); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v*.6, drag: .9, life: rnd(.2, .35), c: '#DFFFF4', sz: rnd(1.5, 3) }); } }
+  else if (k === 'kori') { for (let i = 0; i < 18; i++) { const a = rnd(0, Math.PI*2), v = rnd(80, 200); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, g: 200, drag: .95, life: rnd(.4, .7), cs: ICE_CS, sz: rnd(3, 5.5) }); } }
+}
+function drawOfx(){
+  if (!G.ofx) return;
+  for (const q of G.ofx) { const k = q.life/q.max, s2 = q.sz*(q.shrink ? .35 + .65*k : 1);
+    ctx.globalAlpha = Math.min(1, k*1.6)*(q.a || 1); ctx.fillStyle = q.cs ? q.cs[Math.min(q.cs.length - 1, Math.floor((1 - k)*q.cs.length))] : q.c;
+    ctx.fillRect(Math.round(q.x - s2/2), Math.round(q.y - s2/2), Math.ceil(s2), Math.ceil(s2)); }
+  ctx.globalAlpha = 1;
+}
+// 鍔玉の絵：金の輪（鍔）にはまった属性の色の玉。光の点つき
+function drawOrb(key){
+  const x = partCv.getContext('2d'), N = 36, M = new Array(N*N).fill(null), c = ORBS[key] ? ORBS[key].c : '#7A828C', dk = shadeOf(c);
+  for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+    const dx = X + .5 - 18, dy = y + .5 - 18, r = Math.hypot(dx, dy);
+    if (r < 16.5 && r >= 13.5) M[y*N + X] = (dx + dy < 0) ? '#FCE08C' : '#B8860B';
+    else if (r < 13.5) M[y*N + X] = r < 4 && dx < 0 && dy < 0 ? '#FCFCFC' : (dx*-.6 + dy*-.8)/Math.max(r, 1) > -.2 ? c : dk;
+  }
+  for (const [a, b] of [[10, 9], [11, 9], [10, 10]]) M[b*N + a] = '#FCFCFC';
+  x.clearRect(0, 0, N, N);
+  for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+    if (M[y*N + X]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => { const u = X + a, w = y + b; return u >= 0 && w >= 0 && u < N && w < N && M[w*N + u]; })) { x.fillStyle = '#000000'; x.fillRect(X, y, 1, 1); } }
+  for (let i = 0; i < N*N; i++) if (M[i]) { x.fillStyle = M[i]; x.fillRect(i % N, Math.floor(i/N), 1, 1); }
+  return partCv;
+}
+// からくり心臓の絵：金属のハート、まん中に心臓ごとの色の芯（光る）、リベット
+function drawHeart(key, t = 0){
+  const x = partCv.getContext('2d'), N = 36, M = new Array(N*N).fill(null), c = HEARTS[key] ? HEARTS[key].c : '#7A828C', bt = 1 + .04*Math.sin(t*7);
+  for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+    const u = (X + .5 - 18)/(15*bt), v = -(y + .5 - 19)/(15*bt), q = u*u + v*v - 1;
+    if (q*q*q - u*u*v*v*v > 0) continue;
+    const r = Math.hypot(X + .5 - 18, y + .5 - 17);
+    M[y*N + X] = r < 2.2 ? '#FCFCFC' : r < 5 ? c : r < 6.3 ? '#3A2420' : (u*-.6 + v*.8) > .15 ? '#D0583E' : '#8C2E22';
+  }
+  for (const [a, b] of [[10, 12], [26, 12], [18, 27], [9, 19], [27, 19]]) M[b*N + a] = '#FCE08C';   // リベット
+  x.clearRect(0, 0, N, N);
+  for (let y = 0; y < N; y++) for (let X = 0; X < N; X++) {
+    if (M[y*N + X]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => { const u = X + a, w = y + b; return u >= 0 && w >= 0 && u < N && w < N && M[w*N + u]; })) { x.fillStyle = '#000000'; x.fillRect(X, y, 1, 1); } }
+  for (let i = 0; i < N*N; i++) if (M[i]) { x.fillStyle = M[i]; x.fillRect(i % N, Math.floor(i/N), 1, 1); }
+  return partCv;
+}
 const EQ_SKIN_SLOTS = ['head', 'bodyP', 'armP', 'legP'];            // 右の列
 const EQ_CHIP_SLOTS = ['back', 'blade', 'hair', 'hairC', 'outfit'];  // キャラの下の小さな枠
 // 見た目のサムネイル：その部品だけを大きく描く（[描く部品, 注目する位置［前・右・上］, 大きさ]）。背中の物は全身を後ろから
@@ -1281,6 +1433,10 @@ function eqThumb(cvs, kind, key){
   const x = cvs.getContext('2d'), S = cvs.width; x.clearRect(0, 0, S, S); x.imageSmoothingEnabled = false;
   if (kind === 'w') return drawWeaponIcon(x, key, S);
   if (kind === 'blade') return drawWeaponIcon(x, myW, S, key);
+  if (kind === 'O') { if (!ORBS[key]) return; const img = drawOrb(key), k = Math.max(1, Math.floor(S*.7/36));
+    x.drawImage(img, Math.round((S - 36*k)/2), Math.round((S - 36*k)/2), 36*k, 36*k); return; }
+  if (kind === 'D') { if (!HEARTS[key]) return; const img = drawHeart(key, 0), k = Math.max(1, Math.floor(S*.78/36));
+    x.drawImage(img, Math.round((S - 36*k)/2), Math.round((S - 36*k)/2), 36*k, 36*k); return; }
   if (armorKind(kind)) { const img = drawPart(key, 0), k = Math.max(1, Math.floor(S*.78/36));
     x.drawImage(img, Math.round((S - 36*k)/2), Math.round((S - 36*k)/2), 36*k, 36*k); return; }
   // 飾りは形の違う頭にはつかないので、いつもの頭で見せる
@@ -1322,7 +1478,7 @@ function loadout(level, eW, eGear, practice){
   const boss = practice ? null : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
   eW = boss ? boss.wk : eW || WKEYS[Math.floor(Math.random()*WKEYS.length)];
   eGear = eGear || (practice ? randomGear() : aiGear(level, boss ? { boss: 1, set: boss.set } : {}));
-  let scrapArm = false, lastUp = null;   // 仕掛け：分解の確かめ中、直前の強化で伸びた副効果
+  let scrapArm = false, lastUp = null, wTab = 'w';   // wTab：武器の一覧の中の「武器」「鍔玉」のどちらを見ているか   // 仕掛け：分解の確かめ中、直前の強化で伸びた副効果
   let F = Math.PI/2 - .55, showDet = false, sheet = null, sel = null, base = null;   // base：一覧を開いたときの武器・防具（能力の差を出す元）   // F：キャラの向き（なぞると回る）、sheet：開いている一覧、sel：一覧で選んでいる物
   const save = () => { saveBag(); try { localStorage.setItem('maai_weapon', myW); localStorage.setItem('maai_skin', JSON.stringify(mySkin));
     if (practice) localStorage.setItem('maai_practice', JSON.stringify({level, eW, eGear})); } catch(e) {} };
@@ -1340,6 +1496,8 @@ function loadout(level, eW, eGear, practice){
         ${SLOTS.map(s => `<div class="eqRowT">${ARMOR[s].label}</div><div class="eqGrid">${Object.entries(ARMOR[s].items).map(([k, it]) => itemBtn(s, k, it.name, true, -1, eGear[s], `data-fa="${s}" data-k`)).join('')}</div>`).join('')}
       </div></div>`;
     }
+    if (sheet === 'D') return heartSheet();
+    if (sheet === 'w' && wTab === 'orb') return orbSheet();
     if (armorKind(sheet)) return armorSheet();
     let title, items, cur, det;
     if (sheet === 'w') { title = '武器'; cur = myW; items = WKEYS.map(k => [k, WEAPONS[k].name, true, -1]); }
@@ -1355,7 +1513,7 @@ function loadout(level, eW, eGear, practice){
     if (sheet === 'w') det = `<span class="nm">${WEAPONS[k].name}</span>${WEAPONS[k].desc}${diffChips(statsOf(k, myGear, PARRY_BONUS), statsOf(base.w, base.gear, PARRY_BONUS))}`;
     else if (armorKind(sheet)) { const it = ARMOR[sheet].items[k]; det = `<span class="nm">${it.name}</span>${chips(it.pros, it.cons)}${row[2] ? '' : `<span class="tag n">店で${ARMOR_PRICE[k]}枚</span>`}`; }
     else det = `<span class="nm">${row[3] >= 0 ? rareTag(row[3]) : ''}${row[1]}</span><span class="tag n">見た目だけ</span>${row[2] ? '' : '<span class="tag n">ガチャ・店で手に入る</span>'}`;
-    return `<div class="eqSheet"><div class="eqSheetHd"><b>${title}</b><button id="shX" aria-label="閉じる">✕</button></div>
+    return `<div class="eqSheet"><div class="eqSheetHd">${sheet === 'w' ? wTabs() : `<b>${title}</b>`}<button id="shX" aria-label="閉じる">✕</button></div>
       <div class="eqScroll eqSheetBody"><div class="eqGrid">${items.map(([key, name, own, r]) => itemBtn(sheet, key, name, own, r, cur)).join('')}</div>${stHtml}</div>
       <div class="eqDetail">${det}</div></div>`;
   }
@@ -1373,6 +1531,39 @@ function loadout(level, eW, eGear, practice){
     return `<div class="dChips">${ch.length ? '<span class="dLbl">装備すると</span>' : '<span class="dLbl">今の能力</span>'}${rows.map(([n, key, up, u = '']) => { const d = +now[key] - +was[key];
       return `<span class="dc${ch.length ? ((d > 0) === !!up ? ' p' : ' c') : ''}">${n} <b>${now[key]}${u}</b>${ch.length ? `<em>${d > 0 ? '+' : ''}${Number.isInteger(d) ? d : d.toFixed(2)}</em>` : ''}</span>`; }).join('')}</div>`;
   };
+  // 武器の一覧のタブ（武器／鍔玉）と、鍔玉の一覧
+  const wTabs = () => `<div class="wTabs"><button data-wtab="w" class="${wTab === 'w' ? 'on' : ''}">武器</button><button data-wtab="orb" class="${wTab === 'orb' ? 'on' : ''}">鍔玉${bag.orbEq ? ' ' + ORBS[bag.orbEq].i : ''}</button></div>`;
+  const orbSel = () => sel && ORBS[sel] ? sel : (bag.orbEq || ORB_KEYS[0]);
+  function orbSheet(){
+    const k = orbSel(), O = ORBS[k], own = bag.orbs[k] != null, lv = own ? bag.orbs[k] : 0, eq = bag.orbEq === k;
+    const grid = ORB_KEYS.map(h => { const o = bag.orbs[h] != null;
+      return `<button class="eqItem g${bag.orbEq === h ? ' cur' : ''}${h === k ? ' sel' : ''}${o ? '' : ' lock'}" data-orb="${h}" style="--rc:${ORBS[h].c}"><canvas data-th="O|${h}" width="112" height="112"></canvas><span>${o ? '' : '🔒'}${ORBS[h].e}${bag.orbs[h] ? '+' + bag.orbs[h] : ''}</span></button>`; }).join('');
+    const det = `<div class="gDet"><div class="gHd"><span class="nm">${O.i} ${O.n}${lv ? ' +' + lv : ''}</span>${eq ? '<span class="tag n">はめている</span>' : ''}</div>
+      <div class="gSp"><b>${O.e}の属性</b>${O.d(lv)}</div>
+      ${own && lv < ORB_MAX ? `<div class="gSet">強化すると：${O.d(lv + 1)}</div>` : ''}
+      <div class="gSet">武器の鍔にはめると、刃が属性の色に光る。はめられるのは1つだけ。いつでも付け替えられる</div>
+      ${own ? '' : `<div class="gSet">店で${ORB_PRICE}枚。強敵を倒すと、ときどき手に入る</div>`}</div>`;
+    const acts = !own ? '' : `<div class="gActs">${eq ? '<button id="oOff">外す</button>' : '<button id="oEq" class="go">はめる</button>'}
+      <button id="oUp" ${lv >= ORB_MAX || bag.koban < orbCost(lv) ? 'disabled' : ''}>${lv >= ORB_MAX ? '強化 最大' : `強化 +${lv + 1}<small>小判 ${orbCost(lv)}</small>`}</button></div>`;
+    return `<div class="eqSheet gs"><div class="eqSheetHd">${wTabs()}<button id="shX" aria-label="閉じる">✕</button></div>
+      <div class="gTop">${det}</div><div class="eqScroll eqSheetBody"><div class="eqGrid">${grid}</div></div>${acts ? `<div class="eqDetail">${acts}</div>` : ''}</div>`;
+  }
+  // からくり心臓の一覧：押すと中身を見る → 装備する／外す・強化
+  const heartSel = () => sel && HEARTS[sel] ? sel : (bag.heartEq || HEART_KEYS[0]);
+  function heartSheet(){
+    const k = heartSel(), H = HEARTS[k], own = bag.hearts[k] != null, lv = own ? bag.hearts[k] : 0, eq = bag.heartEq === k;
+    const grid = HEART_KEYS.map(h => { const o = bag.hearts[h] != null;
+      return `<button class="eqItem g${bag.heartEq === h ? ' cur' : ''}${h === k ? ' sel' : ''}${o ? '' : ' lock'}" data-heart="${h}" style="--rc:${HEARTS[h].c}"><canvas data-th="D|${h}" width="112" height="112"></canvas><span>${o ? '' : '🔒'}${HEARTS[h].o}${bag.hearts[h] ? '+' + bag.hearts[h] : ''}</span></button>`; }).join('');
+    const det = `<div class="gDet"><div class="gHd"><span class="nm">${H.n}${lv ? ' +' + lv : ''}</span>${eq ? '<span class="tag n">装備中</span>' : ''}</div>
+      <div class="gSp"><b>奥義「${H.o}」</b>${H.d(lv)}</div>
+      ${own && lv < HEART_MAX ? `<div class="gSet">強化すると：${H.d(lv + 1)}／ゲージのたまり +${12*(lv + 1)}%</div>` : ''}
+      <div class="gSet">奥義ゲージは、はじき・斬って当てる・投げる・斬られるでたまる。満タンで「奥義」ボタン（キーボードは I）${lv ? `。今のたまり +${12*lv}%` : ''}</div>
+      ${own ? '' : `<div class="gSet">店で${HEART_PRICE}枚。強敵を倒すと、ときどき手に入る</div>`}</div>`;
+    const acts = !own ? '' : `<div class="gActs">${eq ? '<button id="hOff">外す</button>' : '<button id="hEq" class="go">装備する</button>'}
+      <button id="hUp" ${lv >= HEART_MAX || bag.koban < heartCost(lv) ? 'disabled' : ''}>${lv >= HEART_MAX ? '強化 最大' : `強化 +${lv + 1}<small>小判 ${heartCost(lv)}</small>`}</button></div>`;
+    return `<div class="eqSheet gs"><div class="eqSheetHd"><b>からくり心臓<small>　あなただけの部位。奥義が使える</small></b><button id="shX" aria-label="閉じる">✕</button></div>
+      <div class="gTop">${det}</div><div class="eqScroll eqSheetBody"><div class="eqGrid">${grid}</div></div>${acts ? `<div class="eqDetail">${acts}</div>` : ''}</div>`;
+  }
   function armorSheet(){
     const eq = bag.eq[sheet], list = bag.gear.filter(g => g.s === sheet).sort((a, b) => (b.id === eq) - (a.id === eq) || b.r - a.r || b.lv - a.lv || b.id - a.id);
     const it = gearById(sel) || myGear[sheet], A = ARMOR[sheet].items[it.k], S = SETS[it.set], own = !!it.id;
@@ -1398,10 +1589,10 @@ function loadout(level, eW, eGear, practice){
     const bars = [['体力', st.hp, 140], ['スタミナ', st.st, 130], ['速さ', st.speed, 170], ['はじき', st.parry, .7]];
     const det = [['攻撃力', st.atk + '%'], ['スタミナ回復', st.stRegen + '%'], ['受けるダメージ', st.taken + '%'], ['回避の無敵', st.dodge + '秒'], ['回避のスタミナ', st.dashSt], ['回避の距離', st.dashDist + '%'],
                  ['ガードで減るスタミナ', st.guard + '%'], ['吹き飛び', st.knock + '%'], ['怯みの長さ', st.stun + '%']];
-    ov.innerHTML = `<div class="eq${sheet ? ' open' : ''}"><div class="eqBody eqScroll">
+    ov.innerHTML = `<div class="eq${sheet ? ' open' : ''}${sheet === 'D' || armorKind(sheet) || (sheet === 'w' && wTab === 'orb') ? ' tall' : ''}"><div class="eqBody eqScroll">
       <div class="eqTop"><button class="eqBack" id="back" aria-label="タイトルへ戻る">‹</button><b>${practice ? '練習の準備' : '装備'}</b><span class="coin">小判 <b>${bag.koban}</b></span></div>
       <div class="eqStage">
-        <div class="eqCol">${slotBtn('w', myW, '武器')}${SLOTS.map(s => slotBtn(s, myGear[s].k, ARMOR[s].label + (myGear[s].lv ? ' +' + myGear[s].lv : ''), false, myGear[s].r)).join('')}</div>
+        <div class="eqCol five">${slotBtn('w', myW, '武器' + (bag.orbEq ? ' ' + ORBS[bag.orbEq].i : ''))}${SLOTS.map(s => slotBtn(s, myGear[s].k, ARMOR[s].label + (myGear[s].lv ? ' +' + myGear[s].lv : ''), false, myGear[s].r)).join('')}${slotBtn('D', bag.heartEq || 'none', '心臓' + (bag.heartEq && bag.hearts[bag.heartEq] ? ' +' + bag.hearts[bag.heartEq] : ''), false, -1)}</div>
         <div class="eqMid"><canvas id="eqChar" width="400" height="520"></canvas><button id="skRand" class="eqDice" aria-label="見た目をランダムに">🎲</button></div>
         <div class="eqCol">${EQ_SKIN_SLOTS.map(s => slotBtn(s, mySkin[s], SKINS[s].name)).join('')}</div>
       </div>
@@ -1422,6 +1613,15 @@ function loadout(level, eW, eGear, practice){
     // 仕掛けの一覧の操作
     ov.querySelectorAll('[data-gear]').forEach(b => b.onclick = () => { sel = +b.dataset.gear; const g = gearById(sel); if (g.isNew) { g.isNew = false; saveBag(); } scrapArm = false; lastUp = null; render(); });
     const gSel = () => gearById(sel) || gearById(bag.eq[sheet]), on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+    ov.querySelectorAll('[data-heart]').forEach(b => b.onclick = () => { sel = b.dataset.heart; render(); });
+    on('hEq', () => { const k = heartSel(); if (bag.hearts[k] == null) return; bag.heartEq = k; saveBag(); SFX.pickup(); render(); });
+    on('hOff', () => { bag.heartEq = null; saveBag(); render(); });
+    ov.querySelectorAll('[data-wtab]').forEach(b => b.onclick = () => { wTab = b.dataset.wtab; sel = null; render(); });
+    ov.querySelectorAll('[data-orb]').forEach(b => b.onclick = () => { sel = b.dataset.orb; render(); });
+    on('oEq', () => { const k = orbSel(); if (bag.orbs[k] == null) return; bag.orbEq = k; saveBag(); SFX.pickup(); render(); });
+    on('oOff', () => { bag.orbEq = null; saveBag(); render(); });
+    on('oUp', () => { const k = orbSel(), lv = bag.orbs[k]; if (lv == null || lv >= ORB_MAX || bag.koban < orbCost(lv)) return; bag.koban -= orbCost(lv); bag.orbs[k] = lv + 1; saveBag(); SFX.coin(); render(); });
+    on('hUp', () => { const k = heartSel(), lv = bag.hearts[k]; if (lv == null || lv >= HEART_MAX || bag.koban < heartCost(lv)) return; bag.koban -= heartCost(lv); bag.hearts[k] = lv + 1; saveBag(); SFX.coin(); render(); });
     on('gEq', () => { const g = gSel(); bag.eq[sheet] = g.id; syncGear(); save(); SFX.pickup(); render(); });
     on('gUp', () => { const g = gSel(), c = enhCost(g); if (bag.koban < c || g.lv >= MAX_LV[g.r]) return; bag.koban -= c; lastUp = enhance(g); saveBag(); SFX.coin(); render(); });
     on('gLock', () => { const g = gSel(); g.lock = !g.lock; saveBag(); render(); });
@@ -1538,7 +1738,15 @@ function shopScreen(tab = 'armor'){
   if (tab === 'armor') body = `<p class="shNote top">仕掛けの箱：上以上が1つ出る。型・副効果・銘はランダム。試合に勝っても手に入る</p>` + SLOTS.map(s => `
     <div class="shRow"><div class="shIcon"><canvas data-th="${s}|${Object.keys(ARMOR[s].items)[(Date.now()/1000|0) % 3]}" width="96" height="96"></canvas></div>
       <div class="shInfo"><b>${ARMOR[s].label}の箱</b><div>${[3, 2, 1].map(r => `<span class="tag" style="background:${RARE[r].c}33;color:${RARE[r].c}">${RARE[r].n} ${BOX.w[r]}%</span>`).join('')}</div></div>
-      <button class="shBuy" data-box="${s}" ${bag.koban < BOX.price ? 'disabled' : ''}>${BOX.price}<small>枚</small></button></div>`).join('');
+      <button class="shBuy" data-box="${s}" ${bag.koban < BOX.price ? 'disabled' : ''}>${BOX.price}<small>枚</small></button></div>`).join('')
+    + `<div class="shSec">からくり心臓（奥義が使える。あなただけの部位）</div>` + HEART_KEYS.map(k => `
+    <div class="shRow"><div class="shIcon"><canvas data-th="D|${k}" width="96" height="96"></canvas></div>
+      <div class="shInfo"><b>${HEARTS[k].n}</b><div><span class="tag sp">奥義「${HEARTS[k].o}」</span>${HEARTS[k].d(0)}</div></div>
+      ${bag.hearts[k] != null ? '<span class="shOwn">所持</span>' : `<button class="shBuy" data-heartbuy="${k}" ${bag.koban < HEART_PRICE ? 'disabled' : ''}>${HEART_PRICE}<small>枚</small></button>`}</div>`).join('')
+    + `<div class="shSec">鍔玉（武器に属性をつける。あなただけ）</div>` + ORB_KEYS.map(k => `
+    <div class="shRow"><div class="shIcon"><canvas data-th="O|${k}" width="96" height="96"></canvas></div>
+      <div class="shInfo"><b>${ORBS[k].i} ${ORBS[k].n}</b><div>${ORBS[k].d(0)}</div></div>
+      ${bag.orbs[k] != null ? '<span class="shOwn">所持</span>' : `<button class="shBuy" data-orbbuy="${k}" ${bag.koban < ORB_PRICE ? 'disabled' : ''}>${ORB_PRICE}<small>枚</small></button>`}</div>`).join('');
   else {
     const frag = tab === 'frag';
     list = frag ? SKIN_POOL.filter(it => !ownsSkin(it.slot, it.key)).sort((a, b) => b.r - a.r) : dailyItems();
@@ -1551,6 +1759,10 @@ function shopScreen(tab = 'armor'){
   screen('店', `<div class="shTabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}</div>${body}`);
   ov.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => shopScreen(b.dataset.tab));
   ov.querySelectorAll('[data-box]').forEach(b => b.onclick = () => openBox(b.dataset.box));
+  ov.querySelectorAll('[data-orbbuy]').forEach(b => b.onclick = () => { const k = b.dataset.orbbuy; if (bag.koban < ORB_PRICE || bag.orbs[k] != null) return;
+    bag.koban -= ORB_PRICE; bag.orbs[k] = 0; if (!bag.orbEq) bag.orbEq = k; saveBag(); SFX.coin(); shopScreen('armor'); });
+  ov.querySelectorAll('[data-heartbuy]').forEach(b => b.onclick = () => { const k = b.dataset.heartbuy; if (bag.koban < HEART_PRICE || bag.hearts[k] != null) return;
+    bag.koban -= HEART_PRICE; bag.hearts[k] = 0; if (!bag.heartEq) bag.heartEq = k; saveBag(); SFX.coin(); shopScreen('armor'); });
   ov.querySelectorAll('[data-sk2]').forEach(b => b.onclick = () => { const it = list[+b.dataset.sk2], price = tab === 'frag' ? FRAG_COST[it.r] : DAILY_PRICE[it.r];
     if (tab === 'frag') { if (bag.frag < price) return; bag.frag -= price; } else { if (bag.koban < price) return; bag.koban -= price; }
     bag.skins[it.slot + ':' + it.key] = 1; saveBag(); SFX.coin(); shopScreen(tab); });
@@ -1623,10 +1835,11 @@ function draw(){
   if (G.terrain) for (const c of G.terrain.pillars) draws.push([c.y + 4, () => drawPillar(c)]);
   for (const [, fn] of draws.sort((a, b) => a[0] - b[0])) fn();
   if (G.terrain) for (const b of G.terrain.bushes) drawBush(b);
+  drawOfx();
   if (G.melee) { if (!G.p.dead) for (const f of G.fs) if (f.isAI && !f.dead && f.tgt === G.p) drawParryCue(G.p, f); }   // 乱戦：自分を狙っている相手の分だけ
   else drawParryCue(G.p, G.e);
   for (const r of G.rings || []) { const k = 1 - r.life/r.max, R = 10 + 46*k;   // 叩きつけの衝撃の輪
-    ctx.globalAlpha = r.life/r.max; ctx.strokeStyle = '#F4E3B5'; ctx.lineWidth = 4*(1 - k) + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, R, R*.5, 0, 0, Math.PI*2); ctx.stroke(); }
+    ctx.globalAlpha = r.life/r.max; ctx.strokeStyle = r.c || '#F4E3B5'; ctx.lineWidth = 4*(1 - k) + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, R, R*.5, 0, 0, Math.PI*2); ctx.stroke(); }
   for (const f of G.fx) { ctx.globalAlpha = Math.max(0, f.life*2.5); ctx.fillStyle = f.c; ctx.fillRect(f.x-2, f.y-2, 4, 4); }
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
@@ -1635,6 +1848,7 @@ function draw(){
   ctx.globalAlpha = 1;
   ctx.restore();
   if (G.cam) drawOffscreen();
+  if (G.mikiriT > 0) { ctx.fillStyle = `rgba(150,130,255,${Math.min(.14, G.mikiriT*.2)})`; ctx.fillRect(0, 76, W, 354); }   // 奥義「見切り」の間は紫がかる
   drawHUD(); drawControls();
   if (G.phase === 'intro') banner(G.melee ? `乱戦 ${G.fs.length}人` : G.practice ? `練習：${G.e.name}` : G.round === 1 && G.pw + G.ew === 0 ? `${G.e.name}` : `ラウンド ${G.round}`, G.phaseT > .6 ? '始め！' : '');
   if (G.phase === 'ko') banner(G.melee ? (G.meleeRank === 1 ? '勝ち残り！' : '撃破された') : G.e.hp <= 0 ? '一本！' : '一本取られた', '');
@@ -2134,8 +2348,9 @@ function dropGrade(luck = 0){
 // AIの仕掛け：強い相手ほど良い物を着ている（o.boss：自分の銘を3つ、極以上）
 function aiGear(level, o = {}){
   return Object.fromEntries(SLOTS.map(s => {
-    const r = o.boss ? (Math.random() < .3 ? 3 : 2) : clamp(Math.floor(Math.random()*(level/2 + 1)), 0, 3);
-    const it = makeGear(r, { s, set: o.set }), n = Math.floor(Math.random()*(MAX_LV[r]*Math.min(1, level/6) + 1));
+    // v0.31.1：敵の仕掛けを弱く（品位は上まで・極は強敵だけ、強化も控えめ）
+    const r = o.boss ? (Math.random() < .3 ? 3 : 2) : clamp(Math.floor(Math.random()*(level/4 + 1)), 0, 2);
+    const it = makeGear(r, { s, set: o.set }), n = Math.floor(Math.random()*(MAX_LV[r]*Math.min(1, level/10) + 1));
     for (let i = 0; i < n; i++) enhance(it);
     return [s, it]; }));
 }
@@ -2161,6 +2376,96 @@ if (!Array.isArray(bag.gear)) {
 bag.eq = bag.eq || {};
 syncGear();
 const setCount = gear => { const c = {}; for (const s of SLOTS) { const g = asItem(gear[s]); if (g && g.set) c[g.set] = (c[g.set] || 0) + 1; } return c; };
+// ================= からくり心臓（v0.31：第四の部位。プレイヤーだけ、敵はつけない） =================
+// 心臓をつけると「奥義」が使える。奥義ゲージは、はじき（大）・斬って当てる・投げる・斬られるでたまり、満タンで「奥義」ボタン（キーボードは I）
+// 心臓は1種類につき1つ。小判で強化すると、ゲージがたまるのが早くなり（Lvごとに+12%）、奥義も強くなる
+const HEARTS = {
+  abura:    { n: '油差しの心臓',   o: '油差し',   c: '#8FE0A6', d: lv => `体力を${30 + 5*lv}回復する` },
+  teppeki:  { n: '鉄壁の心臓',     o: '鉄壁',     c: '#7FB8FF', d: lv => `${(3 + .4*lv).toFixed(1)}秒間、ガードしてもスタミナが減らず、崩れない` },
+  migawari: { n: '身代わりの心臓', o: '身代わり', c: '#D9A86A', d: lv => `${(4 + .5*lv).toFixed(1)}秒以内に受ける次の一撃（投げも）を自動でかわし、相手の背後へ回る` },
+  jinrai:   { n: '迅雷の心臓',     o: '迅雷',     c: '#FFE14A', d: lv => `遠くの相手まで一気に飛び込んで斬る（${18 + 3*lv}ダメージ、はじけない）` },
+  mikiri:   { n: '見切りの心臓',   o: '見切り',   c: '#C9B8FF', d: lv => `${(2.2 + .3*lv).toFixed(1)}秒間、まわりがスローになる` },
+};
+const HEART_KEYS = Object.keys(HEARTS), HEART_MAX = 5, HEART_PRICE = 800, heartCost = lv => 150*(lv + 1);
+const OUGI_GAIN = { parry: 35, hit: 7, heavy: 12, throw: 15, taken: 5 };
+if (!bag.hearts) { bag.hearts = { abura: 0 }; bag.heartEq = 'abura'; saveBag(); }   // 最初から油差しの心臓を持っている
+const myHeart = () => bag.heartEq && bag.hearts[bag.heartEq] != null ? { k: bag.heartEq, lv: bag.hearts[bag.heartEq] } : null;
+// 強敵を倒したとき：まだ持っていない心臓が半分の確率で手に入る
+// ================= 鍔玉（v0.32：武器の属性。プレイヤーだけ） =================
+// 武器の鍔に玉を1つはめると属性がつく。数字より戦い方が変わる効果。小判で強化（最大+5）すると効果が伸びる
+const ORBS = {
+  hi:   { n: '火の鍔玉', e: '火', i: '🔥', c: '#FF7A3C', d: lv => `当てると相手が燃え、${(3 + .4*lv).toFixed(1)}秒間じわじわ体力が減る（毎秒${(2 + .4*lv).toFixed(1)}）。燃えている間、相手のスタミナは回復しない` },
+  mizu: { n: '水の鍔玉', e: '水', i: '💧', c: '#4FA8FF', d: lv => `当てると相手が濡れて、${(2 + .3*lv).toFixed(1)}秒間「ため」と移動が遅くなる（はじきやすくなる）` },
+  rai:  { n: '雷の鍔玉', e: '雷', i: '⚡', c: '#FFE14A', d: lv => `最後の段（重い一撃）が当たると、相手がしびれて${(.35 + .05*lv).toFixed(2)}秒長く止まる（相手の重い一撃の最中でも止める）` },
+  kaze: { n: '風の鍔玉', e: '風', i: '🌀', c: '#7FE0C0', d: lv => `当てたときの吹き飛ばしが${(1.6 + .1*lv).toFixed(1)}倍。乱戦では崖に落としやすい` },
+  kori: { n: '氷の鍔玉', e: '氷', i: '❄', c: '#A4E4FC', d: lv => `はじきに成功すると相手が凍り、よろめきが${(.35 + .06*lv).toFixed(2)}秒長くなる` },
+};
+const ORB_KEYS = Object.keys(ORBS), ORB_MAX = 5, ORB_PRICE = 600, orbCost = lv => 120*(lv + 1);
+if (!bag.orbs) { bag.orbs = { hi: 0 }; bag.orbEq = null; saveBag(); }   // 最初から火の鍔玉を1つ持っている（はめるのは自分で）
+const myOrb = () => bag.orbEq && bag.orbs[bag.orbEq] != null ? { k: bag.orbEq, lv: bag.orbs[bag.orbEq] } : null;
+function orbDrop(){ const un = ORB_KEYS.filter(k => bag.orbs[k] == null); if (!un.length || Math.random() > .5) return null; const k = pickOne(un); bag.orbs[k] = 0; saveBag(); return k; }
+// 斬って当てたとき（ガードされたときは出ない）。def の怯み・吹き飛ばしが決まった後に呼ぶ
+function orbHit(att, def, A){
+  const o = att.orb; if (!o || G.phase !== 'fight' || def.hp <= 0) return; const lv = o.lv, O = ORBS[o.k];
+  orbBurst(def, o.k);
+  if (o.k === 'hi') { def.burnT = 3 + .4*lv; def.burnDps = 2 + .4*lv; def.burnBy = att; }
+  else if (o.k === 'mizu') def.wetT = 2 + .3*lv;
+  else if (o.k === 'rai' && A.heavy) {   // しびれ：今の怯みに足す（重い一撃の最中で怯まなかった相手も止める）
+    const add = .35 + .05*lv;
+    if (def.state === 'stun') def.stunT += add; else { def.state = 'stun'; def.stunKind = 'hit'; def.stunT = add; def.t = 0; }
+    def.guard = false; def.queued = false; def.shockT = def.stunT - def.t; say('しびれ', def.x, def.y - 50, O.c, 15, .8); }
+  else if (o.k === 'kaze') { const k = 1.6 + .1*lv; def.kx *= k; def.ky *= k; }
+}
+function heartDrop(){ const un = HEART_KEYS.filter(k => bag.hearts[k] == null); if (!un.length || Math.random() > .5) return null; const k = pickOne(un); bag.hearts[k] = 0; saveBag(); return k; }
+function gainOugi(f, n){
+  if (!f || !f.heart || f.ougi >= 100) return;
+  f.ougi = Math.min(100, f.ougi + n*(1 + .12*f.heart.lv));
+  if (f.ougi >= 100) { say('奥義 準備よし', f.x, f.y - 58, '#FFE08A', 15, 1.1); SFX.pickup(); }
+}
+function useOugi(f, o){
+  const H = f.heart, lv = H.lv, D = HEARTS[H.k]; f.ougi = 0;
+  say(D.o + '！', f.x, f.y - 52, D.c, 24, 1.2); spark(f.x, f.y, D.c, 24, 260); (G.rings = G.rings || []).push({x: f.x, y: f.y + 8, life: .45, max: .45});
+  SFX.parry(f.x); G.hitstop = .08;
+  if (H.k === 'abura') f.hp = Math.min(f.maxHp, f.hp + 30 + 5*lv);
+  else if (H.k === 'teppeki') f.teppeki = 3 + .4*lv;
+  else if (H.k === 'migawari') f.migawari = 4 + .5*lv;
+  else if (H.k === 'mikiri') G.mikiriT = 2.2 + .3*lv;
+  else if (H.k === 'jinrai') { const t = o && o !== f && !o.dead ? o : null; f.rushDir = t ? Math.atan2(t.y - f.y, t.x - f.x) : f.face; f.face = f.dashDir = f.rushDir;
+    f.state = 'rush'; f.t = 0; f.iframe = .22; f.guard = false; f.queued = false; f.rushTgt = t; }
+}
+// 身代わり：その場に丸太を残して、相手の背後へ
+function migawariDodge(def, att){
+  def.migawari = 0; spark(def.x, def.y, '#D9A86A', 16, 200); say('身代わり！', def.x, def.y - 40, '#D9A86A', 20, 1);
+  const bx = att.x - Math.cos(att.face)*44, by = att.y - Math.sin(att.face)*44;
+  def.x = bx; def.y = by; def.face = Math.atan2(att.y - by, att.x - bx); def.iframe = .35; def.state = 'idle'; def.t = 0; def.guard = false; def.kx = def.ky = 0;
+  SFX.dash(def.x);
+}
+// 迅雷：飛び込んだ先で、前にいる相手を斬る（はじけない。ガードされたらスタミナを大きく削る）
+function rushHit(att){
+  if (G.phase !== 'fight') return;
+  const base = 18 + 3*(att.heart ? att.heart.lv : 0), cands = G.melee ? G.fs.filter(d => d !== att && !d.dead) : [att === G.p ? G.e : G.p];
+  let any = false;
+  for (const def of cands) {
+    const dx = def.x - att.x, dy = def.y - att.y, d = Math.hypot(dx, dy), nx = dx/(d || 1), ny = dy/(d || 1);
+    if (d > 62 + def.r || Math.abs(angDiff(Math.atan2(dy, dx), att.face)) > 1.3 || blocked(att, def)) continue;
+    if (def.iframe > 0) { say('回避！', def.x, def.y - 32, '#8FE3FF', 16); continue; }
+    if (def.migawari > 0) { migawariDodge(def, att); continue; }
+    any = true; def.lastHit = att;
+    if (def.guard && def.state === 'idle' && !(def.teppeki > 0)) {
+      def.st -= 60; def.stLast = G.now; def.kx += nx*220; def.ky += ny*220; say('ガード', def.x, def.y - 30, '#9CCBFF', 13, .5);
+      if (def.st <= 0) { def.st = 0; def.guard = false; def.state = 'stun'; def.stunKind = 'break'; def.stunT = 1.1; def.t = 0; say('ガードブレイク！', def.x, def.y - 36, '#FF9F43', 20, 1.1); SFX.guardBreak(def.x); }
+      continue;
+    }
+    const dmg = Math.round(base*att.m.atk*def.m.dmgTaken);
+    if (!G.practice) def.hp -= dmg;
+    def.flash = .14; def.state = 'stun'; def.stunKind = 'hit'; def.stunT = .5*def.m.stunMul; def.t = 0; def.guard = false; def.queued = false;
+    def.kx += nx*320*def.m.knock; def.ky += ny*320*def.m.knock;
+    if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
+    spark(def.x, def.y, '#FFE14A', 20, 300); say(String(dmg), def.x, def.y - 36, '#FFE14A', 26, 1);
+    if (def.hp <= 0) { def.hp = 0; ko(def); }
+  }
+  if (any) { G.hitstop = .13; G.shake = .25; SFX.hit(true, att.x, att.wk); } else say('空振り', att.x, att.y - 30, '#9AA3AE', 13, .6);
+}
 // ---- 強敵（ボス武者）：名前つき。倒すと、その武者だけの銘の仕掛けが落ちる ----
 // 1対1：Lv3の倍数で出る。乱戦：4割の試合で1体まざる
 const BOSSES = [
@@ -2255,10 +2560,13 @@ function drawF(f){
   if (f.dead) { if (!f.fell) drawBody(f, f.x, f.y, false, null); return; }   // 乱戦で倒された者：散らばった部品だけ（崖に落ちた者は消える）
   const A = f.w.atk[f.atk], Wp = f.w;
   // 回避中の残像
-  if (f.state === 'dash') for (let i=0;i<f.trail.length;i++){ const t = f.trail[i]; ctx.globalAlpha = i/f.trail.length*.35; drawBody(f, t.x, t.y, false, null); }
+  if (f.state === 'dash' || f.state === 'rush') for (let i=0;i<f.trail.length;i++){ const t = f.trail[i]; ctx.globalAlpha = i/f.trail.length*.35; drawBody(f, t.x, t.y, false, null); }
   ctx.globalAlpha = f.iframe > 0 ? .55 : 1;
   if (!f.z) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.1, f.r*.55, 0, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = TEAM[f.team]; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.3, f.r*.65, 0, 0, Math.PI*2); ctx.stroke(); }   // 敵味方の輪（宙に浮いている間は出さない）
+  if (f.teppeki > 0 || f.migawari > 0) { ctx.save(); ctx.strokeStyle = f.teppeki > 0 ? '#7FB8FF' : '#D9A86A'; ctx.lineWidth = 3;   // 奥義「鉄壁」「身代わり」の間：体のまわりの輪
+    if (f.migawari > 0) ctx.setLineDash([5, 4]); ctx.globalAlpha *= .6 + .3*Math.sin(G.now*10);
+    ctx.beginPath(); ctx.arc(f.x, f.y - 8, f.r + 12, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   if (f.boss) { ctx.save(); ctx.strokeStyle = f.boss.c; ctx.lineWidth = 3; ctx.globalAlpha *= .55 + .35*Math.sin(G.now*6);   // 強敵：足もとで脈打つ輪
     ctx.beginPath(); ctx.ellipse(f.x, f.y + 9, f.r*1.9, f.r*.95, 0, 0, Math.PI*2); ctx.stroke(); ctx.restore(); }
   // 強化中は足元に色の輪（残り2秒で点滅）
@@ -2277,10 +2585,11 @@ function drawF(f){
   const ba = f.face + sw, len = f.state === 'windup' && A.heavy ? Wp.len + 6*f.t/A.wind : Wp.len;
   if (f.state === 'active') {   // 攻撃の軌跡（突きは直線、斬りは弧）
     ctx.strokeStyle = A.heavy ? 'rgba(255,190,90,.8)' : 'rgba(255,255,255,.75)'; ctx.lineWidth = A.heavy ? 8 : 5; ctx.lineCap = 'round';
+    if (f.orb) { ctx.strokeStyle = ORBS[f.orb.k].c; ctx.lineWidth += 3; ctx.shadowColor = ORBS[f.orb.k].c; ctx.shadowBlur = 14; }   // 鍔玉：軌跡が属性の色に
     ctx.beginPath();
     if (A.arc < 1) { ctx.moveTo(f.x + Math.cos(f.face)*A.reach*.4, f.y + Math.sin(f.face)*A.reach*.4); ctx.lineTo(f.x + Math.cos(f.face)*(A.reach + 6), f.y + Math.sin(f.face)*(A.reach + 6)); }
     else ctx.arc(f.x, f.y, A.reach*.8, f.face - A.arc/2, f.face + A.arc/2);
-    ctx.stroke();
+    ctx.stroke(); ctx.shadowBlur = 0;
   }
   const bx = hx + Math.cos(ba)*len, by = hy + Math.sin(ba)*len;
   const bs = BLADE[f.skin.blade], edge = f.skin.blade === 'plain' ? Wp.blade : bs.edge;   // 刀のスキンは刃と柄の色
@@ -2288,8 +2597,10 @@ function drawF(f){
   const weapon = () => {
     const px = MECH_PX, wht = f.flash > 0;
     ctx.save(); if (bs.glow && !wht) { ctx.shadowColor = bs.edge; ctx.shadowBlur = 8; }
+    if (f.orb && !wht) { ctx.shadowColor = ORBS[f.orb.k].c; ctx.shadowBlur = 10; }   // 鍔玉：刃が属性の色に光る
     drawWeaponPix(ctx, hx, hy, ba, f.wk, px, len + (Wp.shaft ? 10 : 0), f.skin.blade, wht);   // 槍は穂先が届く所より先まで
     ctx.restore();
+    if (f.orb && !wht) orbBlade(f, hx, hy, ba, len + (Wp.shaft ? 10 : 0));   // 鍔玉：刃のまわりの属性の演出
     const hs0 = armSpr(f.skin, 'R'), hand = mspr(hs0.rows, f.skin.hairC + (f.skin.head === 'kabuto_kin' ? 'g' : ''), mechPal(f.skin, f.team), false, wht);
     const ax = Math.round(hs0.cx ?? hand.width/2 - .5), ay = Math.round(hs0.cy ?? hand.height/2 - .5);
     ctx.drawImage(hand, Math.round(hx/px)*px - ax*px, Math.round(hy/px)*px - ay*px, hand.width*px, hand.height*px);   // 刀を持つ手（腕の部品の絵）
@@ -2316,6 +2627,10 @@ function drawF(f){
   // スタミナ
   const bw = 36; ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(f.x - bw/2, f.y + f.r + 7, bw, 5);
   ctx.fillStyle = f.stFlash > 0 ? '#FF5A4E' : (f.st < 25 ? '#E8893A' : '#E8D25A'); ctx.fillRect(f.x - bw/2, f.y + f.r + 7, bw*f.st/f.stMax, 5);
+  if (!f.dead) orbAura(f);
+  { const st = [f.burnT > 0 && ORBS.hi.i, f.wetT > 0 && ORBS.mizu.i, f.shockT > 0 && f.state === 'stun' && ORBS.rai.i, f.iceT > 0 && f.state === 'stun' && ORBS.kori.i].filter(Boolean);
+    if (st.length && !f.dead) { ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(st.join(''), f.x, f.y - (G.melee && f.isAI ? 70 : 54)); }   // 鍔玉の状態（燃えている・濡れている・しびれ・凍結）
+    if (f.iceT > 0 && f.state === 'stun') { ctx.save(); ctx.globalAlpha = .45; ctx.fillStyle = ORBS.kori.c; ctx.beginPath(); ctx.ellipse(f.x, f.y - 8, f.r + 4, f.r + 12, 0, 0, Math.PI*2); ctx.fill(); ctx.restore(); } }
   if (G.melee && f.isAI && PERSONA[f.per]) {   // 乱戦：足もとに性格
     ctx.font = '800 9px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(21,24,29,.8)';
     ctx.strokeText(PERSONA[f.per].n, f.x, f.y + f.r + 22); ctx.fillStyle = PERSONA[f.per].c; ctx.fillText(PERSONA[f.per].n, f.x, f.y + f.r + 22); }
@@ -2386,12 +2701,25 @@ function drawControls(){
   // 右：ボタン
   const held = k => [...touches.values()].some(t => t.role === k) || (k === 'grd' && keys.KeyK);
   const col = {atk:'#C8463C', grd:'#3E7FC4', dash:'#5B6573', thr:'#2E8A6A'};
-  for (const k in BTN) { const b = BTN[k], on = held(k);
+  for (const k in BTN) { if (k === 'ougi') { drawOugiBtn(); continue; } const b = BTN[k], on = held(k);
     ctx.fillStyle = col[k]; ctx.globalAlpha = on ? 1 : .85; ctx.beginPath(); ctx.arc(b.x, b.y + (on ? 2 : 0), b.r, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = '#F4EEDF'; ctx.font = `${k === 'atk' ? 17 : 13}px "Dela Gothic One", sans-serif`; ctx.fillText(b.label, b.x, b.y + (k === 'atk' ? 6 : 5) + (on ? 2 : 0)); }
   ctx.font = '800 10px "M PLUS Rounded 1c", sans-serif'; ctx.fillStyle = '#6E7785';
-  ctx.fillText('キーボード：WASD移動 / J攻撃 / Kガード / U投げ / Space回避', W/2, H - 10);
+  ctx.fillText('キーボード：WASD移動 / J攻撃 / Kガード / U投げ / I奥義 / Space回避', W/2, H - 10);
+}
+// 奥義ボタン：まわりの輪がゲージ。満タンで心臓の色に光る（心臓をつけていなければ出さない）
+function drawOugiBtn(){
+  const b = BTN.ougi, f = G && G.p; if (!f || !f.heart) return;
+  const full = f.ougi >= 100, c = HEARTS[f.heart.k].c;
+  ctx.save();
+  ctx.fillStyle = full ? c : '#2E3440'; ctx.globalAlpha = full ? .8 + .2*Math.sin(performance.now()/120) : .9;
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#15181D'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 3, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 3, -Math.PI/2, -Math.PI/2 + Math.PI*2*f.ougi/100); ctx.stroke();
+  if (full) { ctx.shadowColor = c; ctx.shadowBlur = 14; }
+  ctx.fillStyle = full ? '#15181D' : '#9AA3AE'; ctx.font = '12px "Dela Gothic One", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('奥義', b.x, b.y + 4);
+  ctx.restore();
 }
 
 let last = performance.now();
@@ -2452,6 +2780,8 @@ function helpScreen(){
     ['スタミナ', '攻撃・ガード・回避で減る。足元の黄色いバー'],
     ['装備', '武器と仕掛け（眼・ゼンマイ・歯車＝からくりの中の部品）で能力が変わる。見た目の着せ替えは能力に関係しない'],
     ['仕掛け', '1つずつ中身が違う。品位（並・上・極・<b>伝</b>）、ランダムな副効果、極・伝には<b>特殊能力</b>。小判で強化すると副効果が増えたり伸びたりする。いらない物は分解して小判に（鍵をかければ守れる）'],
+    ['鍔玉（属性）', '武器の鍔に玉をはめると属性がつく（あなただけ）。🔥火＝燃やしてじわじわ／💧水＝濡らして遅くする／⚡雷＝重い一撃でしびれさせる／🌀風＝大きく吹き飛ばす／❄氷＝はじくと凍らせる。装備画面の「武器」→「鍔玉」で付け替え・強化。最初に火の鍔玉を1つ持っている'],
+    ['心臓・奥義', 'からくり心臓は、あなただけの第四の部位。つけると<b>奥義</b>が使える。はじき・斬って当てる・投げる・斬られるで奥義ゲージがたまり、満タンで「奥義」ボタン。心臓は5種類（油差し・鉄壁・身代わり・迅雷・見切り）で、店で買えるほか、強敵を倒すとときどき手に入る。強化するとゲージが早くたまり、奥義も強くなる'],
     ['銘', '仕掛けには銘がある。同じ銘を眼・ゼンマイ・歯車の3つそろえると、銘の効果がつく'],
     ['強敵', '名前つきのボス武者。1対1ではLv3・6・9…、乱戦ではときどき混ざる。倒すと、その武者だけの銘の仕掛けが手に入る'],
     ['小判', '勝つともらえる。見た目はガチャ、仕掛けは試合の戦利品と店の箱で手に入る'],
