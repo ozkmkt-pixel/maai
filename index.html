@@ -1473,6 +1473,7 @@ function drawXray(cx, slot, key, P, t){
 }
 // practice が true なら練習の準備：練習相手の強さ・武器・防具もここで決める（「練習相手」の枠から）
 function loadout(level, eW, eGear, practice){
+  weaponPrewarm(myW, mySkin.blade);   // これから使う武器の絵を先に作り始める
   BGM.play('loadout');
   if (!eGear) { foeSkin = randSkin(); foePer = pickOne(PER_KEYS); }   // 新しい相手は見た目と性格も新しく
   const boss = practice ? null : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
@@ -2249,6 +2250,20 @@ function mspr(rows, pk, pal, flip, white){   // ドット絵を小さな canvas 
   Object.defineProperty(c, 'height', { value: rows.big ? rows.length/2 : rows.length });
   return mCache[id] = c;
 }
+// ---------- v0.33.1 絵の先作り：試合中にその場で作ると iPhone でカクつくので、予約して毎フレーム少しずつ作る ----------
+const WARM = []; let warmI = 0;
+function warmStep(ms){
+  const t0 = performance.now();
+  while (warmI < WARM.length && performance.now() - t0 < ms) WARM[warmI++]();
+  if (warmI > 2000) { WARM.splice(0, warmI); warmI = 0; }
+}
+// キャラ：見た目と色の組を初めて見たら、8方向（と被弾の白）の部品の絵を予約
+const MWarmed = new Set(), warmCv = document.createElement('canvas'); warmCv.width = warmCv.height = 160;
+function mechWarm(skin, team){
+  const key = JSON.stringify(skin) + team; if (MWarmed.has(key)) return; MWarmed.add(key);
+  for (const white of [false, true]) for (let i = 0; i < 8; i++)
+    WARM.push(() => drawMech(warmCv.getContext('2d'), 80, 120, i*Math.PI/4, skin, team, MECH_BASE(), { px: MECH_PX, warm: true, white }));
+}
 // B：手で描き直した2倍の部品。名前 → 2倍の絵。横・斜めは左向き（元の絵と同じ）
 const DOME = [
   '....KKKKKKKKKKKK....',
@@ -2940,23 +2955,55 @@ function pixLine(c, x0, y0, x1, y1, px, col){
 // 武器のドット絵（試合・装備画面・アイコンで共通）。(x0, y0)＝握る位置、ang＝刃の向き、L＝握りから先端までの長さ（画面の単位）
 // 刃の軸に沿って u（前へ）、横へ v のドットで線を引く。先に全部を半ドット下へずらして濃い色で描き、縁取りにする
 const shadeOf = hex => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16)*.62).toString(16).padStart(2, '0')).join('');
-// 武器の絵は（種類・刃・白・大きさ・長さ・角度を 1/128 周で区切った物）ごとに1度だけ作って覚え、あとは貼るだけ
-// 小さな canvas を何百枚も持つとブラウザの後片付けで詰まるので、1枚の大きな canvas（WAtlas）に棚のように詰めて並べる
-const WCache = new Map(), WA = { S: 2048, x: 0, y: 0, rowH: 0 };
-const WAtlas = document.createElement('canvas'); WAtlas.width = WAtlas.height = WA.S; const WAx = WAtlas.getContext('2d');
-function atlasPut(img){   // img：ImageData
-  if (WA.x + img.width > WA.S) { WA.x = 0; WA.y += WA.rowH + 1; WA.rowH = 0; }
-  if (WA.y + img.height > WA.S) { WCache.clear(); WAx.clearRect(0, 0, WA.S, WA.S); WA.x = WA.y = WA.rowH = 0; }   // いっぱいになったら全部やり直し
-  const at = { x: WA.x, y: WA.y }; WAx.putImageData(img, at.x, at.y); WA.x += img.width + 1; WA.rowH = Math.max(WA.rowH, img.height); return at;
+// 武器の絵：組（種類・刃・白・大きさ・長さ）ごとに、角度 1/128 周ずつの絵を作って覚える
+// v0.33.1：試合中にその場で作ると iPhone でカクつくので、
+//   ① 試合の大きさ（MECH_PX）の組を初めて見たら、全部の角度を「粗い角度から順に」作る予約をし、毎フレーム少しずつ作る（warmStep）
+//   ② まだない角度は、近い角度（±3＝約8度まで。同じ組になければ長さ±1〜3の組、被弾の白なら普通の絵）で代わりに描き、ちょうどの絵は予約。どれもなければその場で作る
+//   ③ 絵は 1024 四方の画像（ページ）に棚のように詰める（大きな1枚だと、書き足すたびの送り直しが重い）
+const AQ = 128, WCombos = new Map(), WFam = new Set(), WPages = [];
+const AQ_ORDER = Array.from({ length: AQ }, (_, i) => { let r = 0; for (let b = 0; b < 7; b++) if (i & (1 << b)) r |= 1 << (6 - b); return r; });   // ビット反転：0, 64, 32, 96, 16, …
+function wPage(w, h){
+  let p = WPages[WPages.length - 1];
+  if (p && p.x + w > p.S) { p.x = 0; p.y += p.rowH + 1; p.rowH = 0; }
+  if (!p || p.y + h > p.S) {
+    if (WPages.length >= 10) { WPages.length = 0; WCombos.clear(); WFam.clear(); }   // 多すぎたら全部やり直し（めったにない）
+    const cv = document.createElement('canvas'); cv.width = cv.height = 1024; p = { cv, c: cv.getContext('2d'), x: 0, y: 0, rowH: 0, S: 1024 }; WPages.push(p);
+  }
+  const at = { pg: p, sx: p.x, sy: p.y }; p.x += w + 1; p.rowH = Math.max(p.rowH, h); return at;
 }
+const wKey = (wk, bladeKey, white, px, n) => wk + '|' + bladeKey + '|' + white + '|' + px + '|' + n;
+function wCombo(wk, bladeKey, white, px, n){
+  const key = wKey(wk, bladeKey, white, px, n); let cb = WCombos.get(key);
+  if (!cb) { cb = { wk, bladeKey, white, px, n, imgs: new Array(AQ) }; WCombos.set(key, cb);
+    const fam = wk + '|' + bladeKey + '|' + white + '|' + px;   // 長さ違い（重い攻撃のため）・白（被弾）・アイコンなどの大きさ違いは予約しない
+    if (px === MECH_PX && !white && !WFam.has(fam)) { WFam.add(fam); for (const a of AQ_ORDER) WARM.push(() => wMake(cb, a)); } }
+  return cb;
+}
+function wMake(cb, a){
+  if (cb.imgs[a]) return cb.imgs[a];
+  const m = makeWeaponImg(a/AQ*Math.PI*2, cb.wk, cb.px, cb.n, cb.bladeKey, cb.white), at = wPage(m.img.width, m.img.height);
+  at.pg.c.putImageData(m.img, at.sx, at.sy);
+  return cb.imgs[a] = { cv: at.pg.cv, sx: at.sx, sy: at.sy, w: m.img.width, h: m.img.height, gx0: m.gx0, gy0: m.gy0 };
+}
+function wNear(cb, a){
+  for (const dn of [0, -1, 1, -2, 2, -3, 3]) { const o = dn ? WCombos.get(wKey(cb.wk, cb.bladeKey, cb.white, cb.px, cb.n + dn)) : cb; if (!o) continue;
+    for (let d = 0; d <= 3; d++) { const i1 = o.imgs[(a + d) % AQ]; if (i1) return i1; const i2 = o.imgs[(a - d + AQ) % AQ]; if (i2) return i2; } }
+  return null;
+}
+// 装備画面で、これから使う武器の絵を先に作り始める
+const weaponPrewarm = (wk, bladeKey) => { if (WEAPONS[wk]) wCombo(wk, bladeKey || 'plain', false, MECH_PX, Math.max(4, Math.round((WEAPONS[wk].len + (WEAPONS[wk].shaft ? 10 : 0))/MECH_PX))); };
 function drawWeaponPix(c, x0, y0, ang, wk, px, L, bladeKey, white){
-  const AQ = 128, aq = ((Math.round(ang/(Math.PI*2)*AQ) % AQ) + AQ) % AQ, n = Math.max(4, Math.round(L/px)), dp = px/2;
-  const key = wk + '|' + bladeKey + '|' + white + '|' + px + '|' + n + '|' + aq;
-  let im = WCache.get(key);
-  if (!im) { const m = makeWeaponImg(aq/AQ*Math.PI*2, wk, px, n, bladeKey, white), at = atlasPut(m.img);
-    im = { sx: at.x, sy: at.y, w: m.img.width, h: m.img.height, gx0: m.gx0, gy0: m.gy0 }; WCache.set(key, im); }
+  const a = ((Math.round(ang/(Math.PI*2)*AQ) % AQ) + AQ) % AQ, n = Math.max(4, Math.round(L/px)), dp = px/2;
+  const cb = wCombo(wk, bladeKey, white, px, n);
+  let im = cb.imgs[a];
+  if (!im) {   // まだない角度：近い絵で代わりに描き、ちょうどの絵は予約。被弾の白は、なければ普通の絵で代わりに
+    const nw = white && WCombos.get(wKey(wk, bladeKey, false, px, n));
+    im = wNear(cb, a) || (nw && (nw.imgs[a] || wNear(nw, a)));
+    if (im) { if (!cb.queued) cb.queued = new Set(); if (!cb.queued.has(a)) { cb.queued.add(a); WARM.push(() => wMake(cb, a)); } }
+    else im = wMake(cb, a);
+  }
   const bx = Math.round(x0/dp), by = Math.round(y0/dp);
-  c.imageSmoothingEnabled = false; c.drawImage(WAtlas, im.sx, im.sy, im.w, im.h, (bx + im.gx0)*dp, (by + im.gy0)*dp, im.w*dp, im.h*dp);
+  c.imageSmoothingEnabled = false; c.drawImage(im.cv, im.sx, im.sy, im.w, im.h, (bx + im.gx0)*dp, (by + im.gy0)*dp, im.w*dp, im.h*dp);
 }
 // 握る位置を原点にして、半ドットのマス目1つ＝1画素の画素データ（ImageData）を作る
 function makeWeaponImg(ang, wk, px, n, bladeKey, white){
@@ -3015,6 +3062,7 @@ const MECH_VIEW = ['side', 'fdiag', 'front', 'fdiag', 'side', 'bdiag', 'back', '
 // 1体を描く。(x, y)＝足元。P＝部品の位置（ドット）。o.px＝1ドットの大きさ、o.white＝白い影絵、o.weapon＝{d, fn}（刀と右手をゲーム側で描く）、o.sword＝見本用の刀の向き
 function drawMech(c, x, y, F, skin, team, P, o = {}){
   const px = o.px || 2, pal = mechPal(skin, team), pk = skin.hairC + skin.outfit + skin.head + team;
+  if (px === MECH_PX && !o.warm) mechWarm(skin, team);   // 試合の大きさで初めて描く見た目は、8方向の絵を予約
   const cf = Math.cos(F), sf = Math.sin(F), cr = Math.cos(F + Math.PI/2), sr = Math.sin(F + Math.PI/2);
   const toS = ([f, s, u]) => ({ x: x + (f*cf + s*cr)*px, y: y + ((f*sf + s*sr)*.5 - u)*px, d: f*sf + s*sr });
   const sec = ((Math.round(Math.atan2(sf, cf)/(Math.PI/4)) % 8) + 8) % 8, view = MECH_VIEW[sec], flip = !!MECH_FLIP[sec];
@@ -3520,7 +3568,7 @@ function drawOugiBtn(){
 }
 
 let last = performance.now();
-function loop(now){ const dt = Math.min(.05, (now - last)/1000); last = now; update(dt); draw();
+function loop(now){ const dt = Math.min(.05, (now - last)/1000); last = now; update(dt); draw(); warmStep(3);
   const sh = !G || !ov.hidden; if (sndBtn.hidden !== sh) { sndBtn.hidden = sh; sndBtn.textContent = sndLabel(); }   // 音のボタンは試合中だけ
   requestAnimationFrame(loop); }
 
