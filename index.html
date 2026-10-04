@@ -2189,31 +2189,51 @@ async function ranJoin(){
   const btn = document.getElementById('nRan'); if (btn) btn.disabled = true;
   const done = text => { if (btn) btn.disabled = false; netStatus(`<span class="ng">${text}</span>`); };
   try { await netLoadLib(); } catch(e) { return done(e.message); }
-  // v0.35.1：見つからなければ3秒ごとに探し直す（60秒まで）。相手が結果の画面や装備選びの間でも、戻ってきたら入れる
-  const peer = new Peer(), me = { peer, chosen: null, miss: 0, conns: [] }, t0 = performance.now(), LIMIT = 60000;
-  NET = { role: 'guest', peer, code: '', ran: true, search: me };
+  // v0.35.1：見つからなければ探し直す（60秒まで）。相手が結果の画面や装備選びの間でも、戻ってきたら入れる
+  // v0.35.2：速く探しすぎると PeerJS のサーバーに切られる（約20秒・70回で network）→ 席へは0.12秒ずつずらして声をかけ、6秒ごとに。
+  //   それでも切られたら、つなぎ直して続ける
+  const me = { peer: null, chosen: null, miss: 0, conns: [], gen: 0 }, t0 = performance.now(), LIMIT = 60000;
+  NET = { role: 'guest', peer: null, code: '', ran: true, search: me };
   const alive = () => NET && NET.search === me && !me.chosen;
   const give = text => { if (alive()) { netClose(); done(text); } };
-  const again = () => {
+  const leftSec = () => Math.ceil((LIMIT - (performance.now() - t0))/1000);
+  const again = (wait = 6000) => {
     if (!alive()) return;
-    const left = Math.ceil((LIMIT - (performance.now() - t0))/1000);
-    if (left <= 3) return give('今は乱入を受け付けている人がいません。しばらくしてからもう一度');
+    const left = leftSec();
+    if (left*1000 <= wait) return give('今は乱入を受け付けている人がいません。しばらくしてからもう一度');
     netStatus(`受付中の人を探しています…（あと${left}秒）<br><small>相手が CPU 戦を始めたら入れます</small>`);
-    setTimeout(scan, 3000);
+    const g = ++me.gen; setTimeout(() => { if (me.gen === g) scan(); }, wait);
   };
   const miss = () => { if (++me.miss === RAN_SLOTS) again(); };
-  peer.on('error', err => {
-    if (me.chosen) return;
-    if (err.type === 'peer-unavailable') return miss();   // その席は空いている
-    give('つながりませんでした（' + (err.type || err) + '）');
-  });
-  function scan(){
+  function newPeer(){
     if (!alive()) return;
+    try { me.peer && me.peer.destroy(); } catch(e) {}
+    const peer = new Peer(); me.peer = peer; NET.peer = peer;
+    peer.on('open', () => { if (me.peer === peer) scan(); });
+    peer.on('error', err => {
+      if (me.chosen || me.peer !== peer) return;
+      if (err.type === 'peer-unavailable') return miss();   // その席は空いている
+      if (['network', 'server-error', 'socket-error', 'socket-closed', 'disconnected'].includes(err.type)) return relink();
+      give('つながりませんでした（' + (err.type || err) + '）');
+    });
+    peer.on('disconnected', () => { if (!me.chosen && me.peer === peer) relink(); });
+  }
+  function relink(){   // サーバーに切られた：少し待ってつなぎ直す
+    if (!alive()) return; me.gen++;
+    for (const c of me.conns) { try { c.close(); } catch(e) {} } me.conns = [];
+    try { me.peer && me.peer.destroy(); } catch(e) {} me.peer = null;
+    if (leftSec() <= 5) return give('今は乱入を受け付けている人がいません。しばらくしてからもう一度');
+    netStatus(`受付中の人を探しています…（あと${leftSec()}秒）<br><small>つなぎ直しています</small>`);
+    setTimeout(newPeer, 4000);
+  }
+  function scan(){
+    if (!alive() || !me.peer || me.peer.disconnected) return;
     for (const c of me.conns) { try { c.close(); } catch(e) {} }
     me.conns = []; me.miss = 0;
-    const conns = me.conns, seen = new Set();
+    const conns = me.conns, seen = new Set(), peer = me.peer, g = ++me.gen;
     const missOnce = conn => { if (seen.has(conn)) return; seen.add(conn); miss(); };
-    for (const i of ranShuffle(RAN_SLOTS)) {
+    ranShuffle(RAN_SLOTS).forEach((i, k) => setTimeout(() => {
+      if (!alive() || me.peer !== peer || me.conns !== conns) return;
       const conn = peer.connect(RAN_PREFIX + i, { reliable: true, serialization: 'json' }); conns.push(conn);
       conn.on('data', m => {   // 選ぶ前に「受け付けていない」が返った席は、いない扱い
         if (me.chosen === conn || !m || m.t !== 'busy') return; try { conn.close(); } catch(e) {} missOnce(conn); });
@@ -2228,10 +2248,10 @@ async function ranJoin(){
         netStatus('見つけました！'); netHello(conn);
         ranAlert('乱入！', '相手の試合に割り込みます…');
       });
-    }
-    setTimeout(() => { if (alive() && me.conns === conns && me.miss < RAN_SLOTS) { me.miss = RAN_SLOTS; again(); } }, 8000);   // 返事が来ない席があっても8秒で次へ
+    }, k*120));
+    setTimeout(() => { if (alive() && me.gen === g && me.miss < RAN_SLOTS) { me.miss = RAN_SLOTS; again(); } }, 10000);   // 返事が来ない席があっても10秒で次へ
   }
-  peer.on('open', scan);
+  newPeer();
   setTimeout(() => give('今は乱入を受け付けている人がいません。しばらくしてからもう一度'), LIMIT + 10000);
 }
 
