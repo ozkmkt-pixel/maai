@@ -2163,7 +2163,7 @@ function ranAlert(head, sub){
 // CPU 戦に戻る（止めたところから。仕切り直しの「始め！」を挟む）
 function ranResume(msg){
   const n = NET; setTimeout(() => { if (NET === n) netClose(); }, 200);
-  const g = RAN_HOLD; RAN_HOLD = null; ranRetryAt = performance.now() + 15000;   // 戻ってすぐ次の乱入が来ないよう、少し空ける
+  const g = RAN_HOLD; RAN_HOLD = null; ranRetryAt = performance.now() + 3000;   // 戻ってすぐ次の乱入が来ないよう、ほんの少し空ける（v0.35.1：15秒は長すぎて2回目が入れなかった）
   if (!g) { G = null; return title(); }
   G = g; G.phase = 'intro'; G.phaseT = 0; G.startSnd = 0; G.hitstop = 0; G.slowT = 0;
   P.attack = P.dash = P.throw = P.ougi = false;
@@ -2189,22 +2189,36 @@ async function ranJoin(){
   const btn = document.getElementById('nRan'); if (btn) btn.disabled = true;
   const done = text => { if (btn) btn.disabled = false; netStatus(`<span class="ng">${text}</span>`); };
   try { await netLoadLib(); } catch(e) { return done(e.message); }
-  const peer = new Peer(), conns = [], me = { peer, chosen: null, miss: 0 };
+  // v0.35.1：見つからなければ3秒ごとに探し直す（60秒まで）。相手が結果の画面や装備選びの間でも、戻ってきたら入れる
+  const peer = new Peer(), me = { peer, chosen: null, miss: 0, conns: [] }, t0 = performance.now(), LIMIT = 60000;
   NET = { role: 'guest', peer, code: '', ran: true, search: me };
-  const give = text => { if (NET && NET.search === me && !me.chosen) { netClose(); done(text); } };
-  const miss = () => { if (++me.miss >= RAN_SLOTS) give('今は乱入を受け付けている人がいません。しばらくしてからもう一度'); };
+  const alive = () => NET && NET.search === me && !me.chosen;
+  const give = text => { if (alive()) { netClose(); done(text); } };
+  const again = () => {
+    if (!alive()) return;
+    const left = Math.ceil((LIMIT - (performance.now() - t0))/1000);
+    if (left <= 3) return give('今は乱入を受け付けている人がいません。しばらくしてからもう一度');
+    netStatus(`受付中の人を探しています…（あと${left}秒）<br><small>相手が CPU 戦を始めたら入れます</small>`);
+    setTimeout(scan, 3000);
+  };
+  const miss = () => { if (++me.miss === RAN_SLOTS) again(); };
   peer.on('error', err => {
     if (me.chosen) return;
     if (err.type === 'peer-unavailable') return miss();   // その席は空いている
     give('つながりませんでした（' + (err.type || err) + '）');
   });
-  peer.on('open', () => {
+  function scan(){
+    if (!alive()) return;
+    for (const c of me.conns) { try { c.close(); } catch(e) {} }
+    me.conns = []; me.miss = 0;
+    const conns = me.conns, seen = new Set();
+    const missOnce = conn => { if (seen.has(conn)) return; seen.add(conn); miss(); };
     for (const i of ranShuffle(RAN_SLOTS)) {
       const conn = peer.connect(RAN_PREFIX + i, { reliable: true, serialization: 'json' }); conns.push(conn);
       conn.on('data', m => {   // 選ぶ前に「受け付けていない」が返った席は、いない扱い
-        if (me.chosen === conn || !m || m.t !== 'busy') return; try { conn.close(); } catch(e) {} miss(); });
+        if (me.chosen === conn || !m || m.t !== 'busy') return; try { conn.close(); } catch(e) {} missOnce(conn); });
       conn.on('open', () => {
-        if (me.chosen || !NET || NET.search !== me) return setTimeout(() => { try { conn.close(); } catch(e) {} }, 0);
+        if (!alive() || me.conns !== conns) return setTimeout(() => { try { conn.close(); } catch(e) {} }, 0);
         me.chosen = conn; NET.conn = conn;
         for (const c of conns) if (c !== conn) { try { c.close(); } catch(e) {} }
         conn.removeAllListeners('data');
@@ -2215,8 +2229,10 @@ async function ranJoin(){
         ranAlert('乱入！', '相手の試合に割り込みます…');
       });
     }
-  });
-  setTimeout(() => give('相手に届きませんでした。もう一度試してください'), 12000);
+    setTimeout(() => { if (alive() && me.conns === conns && me.miss < RAN_SLOTS) { me.miss = RAN_SLOTS; again(); } }, 8000);   // 返事が来ない席があっても8秒で次へ
+  }
+  peer.on('open', scan);
+  setTimeout(() => give('今は乱入を受け付けている人がいません。しばらくしてからもう一度'), LIMIT + 10000);
 }
 
 // ---------- 勝負がついた・切れた ----------
