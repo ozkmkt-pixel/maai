@@ -2173,13 +2173,763 @@ function mechPal(skin, team){
   return { K: '#000000', W: '#FCFCFC', Y: '#F8B800', y: '#AC7C00', R: '#D82800', r: '#881400', P: '#F83800', U: '#6844FC', u: '#4428BC', k: '#383838', m: '#686868',
            L: met[0], M: met[1], B: bod[0], b: bod[1], T: MTEAM[team][0], E: MTEAM[team][1] };
 }
+// ---------- v0.33 キャラの絵：2倍の細かさ（B）＋自動の陰影 ----------
+// 部品の絵（MSPR・HEADP など）は元の並びのまま。描くときに「元の並び → 2倍の絵（HAND2X）」で差し替え、陰影を自動でつける
+// 2倍の絵がない物は Scale2x で自動拡大。2倍の絵だけの物（背中の物の向き違い）は rows.big
+const OUT_DARK = '#140E1C';
+const hx2 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const toHex = a => '#' + a.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+const mix = (a, b, t) => { const A = hx2(a), B = hx2(b); return toHex(A.map((v, i) => v + (B[i] - v)*t)); };
+const RAMP = {};
+// 1色から4段：明るい所は暖かく、暗い所は青紫へ寄せる
+const rampOf = c => RAMP[c] || (RAMP[c] = { hi: mix(c, '#FFF4D8', .38), mid: c, sh: mix(c, '#2A1E4A', .38), deep: mix(c, '#140E24', .62) });
+// ドットの並びから色を塗り分ける（光は左上から）。目（E）のにじんだ光は c.glow に別に描いておき、貼るときに加算で重ねる
+function shadeSprite(rows, pal, flip, white){
+  const h = rows.length, w = rows[0].length, g = rows.map(r => flip ? [...r].reverse() : [...r]);
+  const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? '.' : g[y][x], open = ch => ch === '.' || ch === 'K';
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  const eyes = []; let glint = false;
+  for (let y = 0; y < h; y++) for (let i = 0; i < w; i++) {
+    const ch = g[y][i]; if (ch === '.') continue;
+    let col;
+    if (white) col = '#FFFFFF';
+    else if (ch === 'K') {   // 縁：真っ黒ではなく、隣の色の濃い色。外側の縁ほど暗く
+      const nb = [at(i, y - 1), at(i + 1, y), at(i, y + 1), at(i - 1, y)], edge = nb.includes('.');
+      const inn = nb.find(n => !open(n)) || [at(i - 1, y - 1), at(i + 1, y - 1), at(i - 1, y + 1), at(i + 1, y + 1)].find(n => !open(n));
+      col = inn ? mix(rampOf(pal[inn]).deep, OUT_DARK, edge ? .55 : .3) : OUT_DARK;
+    } else {
+      const R = rampOf(pal[ch]), u = at(i, y - 1), d = at(i, y + 1), l = at(i - 1, y), r = at(i + 1, y);
+      if (open(u) && !open(d)) col = R.hi;
+      else if (open(d) || (open(r) && !open(l))) col = R.sh;
+      else if (open(l) && y < h*.6) col = mix(R.mid, R.hi, .5);
+      else if (y >= h*.66) col = mix(R.mid, R.sh, .45);
+      else col = R.mid;
+      if (!glint && 'LWY'.includes(ch) && open(u) && !open(d)) { col = mix(R.hi, '#FFFFFF', .7); glint = true; }   // 金属の照り（1点）
+      if (ch === 'E') { eyes.push([i, y]); col = mix(pal.E, '#FFFFFF', .35); }
+    }
+    x.fillStyle = col; x.fillRect(i, y, 1, 1);
+  }
+  // 目の光：にじんだ光をあらかじめ1枚に描いておく（毎回ぼかすと重い）。K＝細かさ、pad＝まわりの余白（ドット）
+  if (eyes.length && !white) { const K = 4, pad = 3, g = document.createElement('canvas'); g.width = (w + pad*2)*K; g.height = (h + pad*2)*K;
+    const gx = g.getContext('2d'), [r0, g0, b0] = hx2(pal.E);
+    for (const [i, y] of eyes) { const cx = (i + pad + .5)*K, cy = (y + pad + .5)*K, rg = gx.createRadialGradient(cx, cy, 0, cx, cy, 2.6*K);
+      rg.addColorStop(0, `rgba(${r0},${g0},${b0},.6)`); rg.addColorStop(1, `rgba(${r0},${g0},${b0},0)`); gx.fillStyle = rg; gx.fillRect(cx - 3*K, cy - 3*K, 6*K, 6*K); }
+    c.glow = { cv: g, pad, w, h }; }
+  return c;
+}
+// 自動の2倍拡大（Scale2x）。外側の縁が太くなるので、外に近い内側の縁は中の色にする
+function scale2x(rows){
+  const h = rows.length, w = rows[0].length, at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? '.' : rows[y][x];
+  const o = Array.from({ length: h*2 }, () => Array(w*2));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const P = at(x, y), A = at(x, y - 1), B = at(x + 1, y), C = at(x - 1, y), D = at(x, y + 1);
+    let e1 = P, e2 = P, e3 = P, e4 = P;
+    if (C === A && C !== D && A !== B) e1 = A; if (A === B && A !== C && B !== D) e2 = B;
+    if (D === C && D !== B && C !== A) e3 = C; if (B === D && B !== A && D !== C) e4 = D;
+    o[2*y][2*x] = e1; o[2*y][2*x + 1] = e2; o[2*y + 1][2*x] = e3; o[2*y + 1][2*x + 1] = e4;
+  }
+  const H = h*2, Wd = w*2, a2 = (x, y) => (x < 0 || y < 0 || x >= Wd || y >= H) ? '.' : o[y][x];
+  const res = o.map(r => [...r]);
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wd; x++) {
+    if (o[y][x] !== 'K') continue;
+    const n8 = [[0,-1],[1,0],[0,1],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]].map(([dx, dy]) => a2(x + dx, y + dy));
+    if (n8.includes('.')) continue;
+    let near = false; for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) if (a2(x + dx, y + dy) === '.') { near = true; break; }
+    const inner = n8.slice(0, 4).find(n => n !== 'K' && n !== '.');
+    if (near && inner) res[y][x] = inner;
+  }
+  return res.map(r => r.join(''));
+}
 const mCache = {};
 function mspr(rows, pk, pal, flip, white){   // ドット絵を小さな canvas にして覚えておく（white：被弾の白い影絵）
   const id = rows.join('/') + pk + flip + white; if (mCache[id]) return mCache[id];
-  const w = rows[0].length, h = rows.length, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
-  rows.forEach((r, y) => [...r].forEach((ch, i) => { if (ch !== '.') { x.fillStyle = white ? '#FFFFFF' : pal[ch]; x.fillRect(flip ? w - 1 - i : i, y, 1, 1); } }));
+  const c = shadeSprite(rows.big ? rows : HAND2X[rows.join('/')] || scale2x(rows), pal, flip, white);
+  // 描く側は元のドット数で大きさを決めているので、元の幅・高さを名乗らせる（中身は2倍の細かさ）
+  Object.defineProperty(c, 'width', { value: rows.big ? rows[0].length/2 : rows[0].length });
+  Object.defineProperty(c, 'height', { value: rows.big ? rows.length/2 : rows.length });
   return mCache[id] = c;
 }
+// B：手で描き直した2倍の部品。名前 → 2倍の絵。横・斜めは左向き（元の絵と同じ）
+const DOME = [
+  '....KKKKKKKKKKKK....',
+  '..KKLLLLLLLLLLLLKK..',
+  '.KLLWWLLLLLLLLLLLLK.',
+  '.KLWLLLLLLLLLLLLLMK.',
+  'KLLLLLLLLLLLLLLLLLMK',
+  'KMMMMMMMMMMMMMMMMMMK'];
+const JAW = [
+  '.KMMMMMMMMMMMMMMMMK.',
+  '..KMMMMMMMMMMMMMMK..',
+  '....KKKKKKKKKKKK....'];
+const SKIRT = [
+  '.KKKKKKKKKKKKKKKKKK.',
+  '.KbBBBKbBBBBbKBBBbK.',
+  '..KbBBKbBBBBbKBBbK..',
+  '...KKKKKKKKKKKKKK...'];
+const B2 = {
+  head_front: [...DOME,
+    'KMKKKKKKKKKKKKKKKKMK',
+    'KMKkEEEkKKKKkEEEkKMK',
+    'KMKKKKKKKKKKKKKKKKMK',
+    'KMMKKKKKKKKKKKKKKMMK',
+    '.KMMmMMMMMMMMMMmMMK.', ...JAW],
+  head_fdiag: [...DOME,
+    'KKKKKKKKKKKKKKKMMMMK',
+    'KkEEEkKKKkEEEkKMMLMK',
+    'KKKKKKKKKKKKKKKMMMMK',
+    'KKKKKKKKKKKKKKMMMMMK',
+    '.KMMmMMMMMMMMMmMMMK.', ...JAW],
+  head_side: [
+    '...KKKKKKKKKKKK.....',
+    '.KKLLLLLLLLLLLLKK...',
+    'KLLWWLLLLLLLLLLLLLK.',
+    'KLWLLLLLLLLLLLLLLLMK',
+    'KLLLLLLLLLLLLLLLLLMK',
+    'KMMMMMMMMMMMMMMMMMMK',
+    'KKKKKKKMMMMMMMMMMMMK',
+    'KEEkKKKMMMMMLLMMMMMK',
+    'KkkKKKKMMMMLMMLMMMMK',
+    'KKKKKKMMMMMMLLMMMMMK',
+    '.KMMMMMMMMMMMMMmMMK.', ...JAW],
+  head_bdiag: [...DOME,
+    'KKKMMMMMMMMMMMMMMMMK',
+    'KKkMMMMMMMMMMMMMMMMK',
+    'KKKMMMMLLLLLLLLLMMMK',
+    'KKMMMMMLmmmmmmmLMMMK',
+    '.KMMMMMLLLLLLLLLMMK.', ...JAW],
+  head_back: [...DOME,
+    'KMMMMMMMMMMMMMMMMMMK',
+    'KMMMMMMMMMMMMMMMMMMK',
+    'KMMLLLLLLLLLLLLLLMMK',
+    'KMMLmmmmmmmmmmmmLMMK',
+    '.KMLLLLLLLLLLLLLLMK.', ...JAW],
+  body_front: [
+    '..KKKKKKKKKKKKKKKK..',
+    '.KBBBBBBBBBBBBBBBBK.',
+    'KBBWBBBBBBBBBBBBBBbK',
+    'KBLLBBBBTTTTBBBBLLbK',
+    'KBLLBBBTTWWTTBBBLLbK',
+    'KbBBBBBTTWWTTBBBBbbK',
+    'KbBBBBBBTTTTBBBBBbbK',
+    'KbbBBBBBBTTBBBBBBbbK',
+    '.KbBBBBBBBBBBBBBbbK.',
+    '.KKKKKKKKKKKKKKKKKK.',
+    '.KYYYYYYyKKyYYYYYYK.',
+    '.KyyyyyyyKKyyyyyyyK.', ...SKIRT],
+  body_fdiag: [
+    '..KKKKKKKKKKKKKKKK..',
+    '.KBBBBBBBBBBBBBBbbK.',
+    'KBBWBBBBBBBBBBBBbbbK',
+    'KBLLBBTTTTBBBBLLbbbK',
+    'KBLLBTTWWTTBBBLLbbbK',
+    'KbBBBTTWWTTBBBBBbbbK',
+    'KbBBBBTTTTBBBBBBbbbK',
+    'KbbBBBBTTBBBBBBBbbbK',
+    '.KbBBBBBBBBBBBBbbbK.',
+    '.KKKKKKKKKKKKKKKKKK.',
+    '.KYYYYYyKKyYYYYYyyK.',
+    '.KyyyyyyKKyyyyyyyyK.',
+    '.KKKKKKKKKKKKKKKKKK.',
+    '.KbBBKbBBBBbKBBBbbK.',
+    '..KbBKbBBBBbKBBbbK..',
+    '...KKKKKKKKKKKKKK...'],
+  body_side: [
+    '....KKKKKKKKKKKK....',
+    '...KBBBBBBBBBBBBK...',
+    '..KBWBBBBBBBBBBBbK..',
+    '..KTTTBBBBBBBBBbbK..',
+    '..KTWTBBBLLBBBBbbK..',
+    '..KTTTBBBLLBBBBbbK..',
+    '..KBBBBBBBBBBBBbbK..',
+    '..KbBBBBBBBBBBbbbK..',
+    '...KbBBBBBBBBBbbK...',
+    '...KKKKKKKKKKKKKK...',
+    '...KYYYYYYYYYYyyK...',
+    '...KyyyyyyyyyyyyK...',
+    '...KKKKKKKKKKKKKK...',
+    '...KbBBBKbBBBBbbK...',
+    '....KbBBKbBBBbbK....',
+    '.....KKKKKKKKKK.....'],
+  body_bdiag: [
+    '..KKKKKKKKKKKKKKKK..',
+    '.KBBBBBBBBBBBBBBBBK.',
+    'KBBWBBBBBBBBBBBBBBbK',
+    'KTTBBBBBBBBBBBBBBbbK',
+    'KTTbBBBBBBTTTTBBBbbK',
+    'KTbBBBBBBTTWWTTBBbbK',
+    'KbbBBBBBBBTTTTBBBbbK',
+    'KbbBBBBBBBBBBBBBBbbK',
+    '.KbBBBBBBBBBBBBBbbK.',
+    '.KKKKKKKKKKKKKKKKKK.',
+    '.KYYYYYYYYYYYYYYyyK.',
+    '.KyyyyyyyyyyyyyyyyK.', ...SKIRT],
+  body_back: [
+    '..KKKKKKKKKKKKKKKK..',
+    '.KBBBBBBBBBBBBBBBBK.',
+    'KBBWBBBBBBBBBBBBBBbK',
+    'KbBBBBBBBBBBBBBBBBbK',
+    'KbBBBBBBTTTTBBBBBBbK',
+    'KbBBBBBTTWWTTBBBBBbK',
+    'KbBBBBBBTTTTBBBBBBbK',
+    'KbbBBBBBBBBBBBBBBbbK',
+    '.KbBBBBBBBBBBBBBBbK.',
+    '.KKKKKKKKKKKKKKKKKK.',
+    '.KYYYYYYYYYYYYYYYYK.',
+    '.KyyyyyyyyyyyyyyyyK.', ...SKIRT],
+  hand: [
+    '..KKKKKK..',
+    '.KLLLLLMK.',
+    'KLWLLLLMMK',
+    'KLLLLLMMMK',
+    'KLLKKKKMMK',
+    'KLLLLMMMMK',
+    'KLLLMMMMMK',
+    'KMMMMMMMMK',
+    '.KMMMMMMK.',
+    '..KKKKKK..'],
+  foot_front: [
+    '..KKKKKKKK..',
+    '.KLLLLLLMMK.',
+    'KLWLLLLLMMMK',
+    'KLLLLLLMMMMK',
+    'KMMMMMMMMMMK',
+    'KKKKKKKKKKKK',
+    'KkkkkkkkkkkK',
+    '.KKKKKKKKKK.'],
+  foot_side: [
+    '....KKKKKKKK..',
+    '...KLLLLLLMMK.',
+    '..KLWLLLLLMMMK',
+    '.KLLLLLLLMMMMK',
+    'KLLLLLLLMMMMMK',
+    'KKKKKKKKKKKKKK',
+    'KkkkkkkkkkkkkK',
+    '.KKKKKKKKKKKK.'],
+  kuwa_front: [
+    '.Y................Y.',
+    '.YY..............YY.',
+    '..YY............YY..',
+    '..YYY..........YYY..',
+    '...YYYyyyyyyyyYYY...',
+    '....YYyyyTTyyyYY....'],
+  kuwa_side: [
+    'Y...................',
+    'YY..................',
+    '.YY.................',
+    '.YYY................',
+    '..YYYyyyyY..........',
+    '...YYyyyTY..........'],
+  kuwa_fdiag: [
+    'Y...........Y.......',
+    'YY..........YY......',
+    '.YY........YY.......',
+    '.YYY......YYY.......',
+    '..YYYyyyyyYY........',
+    '...YYyyTyyY.........'],
+  kuwa_bdiag: [
+    'Y.......Y...........',
+    'YY......YY..........',
+    '.YY....YY...........',
+    '.YYY..YYY...........',
+    '..YYYyyYY...........',
+    '...YYyyY............'],
+  bigkuwa_front: [
+    'Y......................Y',
+    'YY....................YY',
+    '.YY..................YY.',
+    '.YYY................YYY.',
+    '..YYY..............YYY..',
+    '...YYY............YYY...',
+    '....YYYyyyyyyyyyyYYY....',
+    '.....YYyyyyTTyyyyYY.....'],
+  bigkuwa_side: [
+    'Y.......................',
+    'YY......................',
+    '.YY.....................',
+    '.YYY....................',
+    '..YYY...................',
+    '...YYY..................',
+    '....YYYyyyyY............',
+    '.....YYyyyTY............'],
+  bigkuwa_fdiag: [
+    'Y.................Y.....',
+    'YY...............YY.....',
+    '.YY.............YY......',
+    '.YYY...........YYY......',
+    '..YYY.........YYY.......',
+    '...YYY.......YYY........',
+    '....YYYyyyyyYYY.........',
+    '.....YYyyTyyYY..........'],
+  bigkuwa_bdiag: [
+    'Y.............Y.........',
+    'YY...........YY.........',
+    '.YY.........YY..........',
+    '.YYY.......YYY..........',
+    '..YYY.....YYY...........',
+    '...YYY...YYY............',
+    '....YYYyYYY.............',
+    '.....YYyYY..............'],
+};
+// 元の絵の並び → 2倍の絵
+const HAND2X = {};
+const reg = (orig, big) => { if (!big) return; const a = orig.length, b = orig[0].length;
+  if (big.length !== a*2 || big.some(r => r.length !== b*2)) console.warn('大きさ違い', orig, big); HAND2X[orig.join('/')] = big; };
+for (const n in MSPR) reg(MSPR[n], B2[n]);
+for (const v of ['front', 'side', 'fdiag', 'bdiag']) { reg(KUWA[v][0], B2['kuwa_' + v]); reg(BIGKUWA[v][0], B2['bigkuwa_' + v]); }
+
+// ---------- 背中の物：向きごとの絵（2倍）。横・斜めは左向き。rows.big＝元の絵のない2倍の絵 ----------
+const rev = rows => rows.map(r => [...r].reverse().join(''));
+const FLAG_BACK = [
+  'KKKKKKKKKKKK',
+  'KTTTTTTTTTTK',
+  'KTTTTTTTTTTK',
+  'KTTTWWWWTTTK',
+  'KTTWWWWWWTTK',
+  'KTTWWTTWWTTK',
+  'KTTWWTTWWTTK',
+  'KTTWWWWWWTTK',
+  'KTTTWWWWTTTK',
+  'KTTTTTTTTTTK',
+  'KTTTTTTTTTTK',
+  'KKKKKKKKKKKK',
+  ...Array(8).fill('KkK.........')];
+const FLAG_SIDE = [
+  'KKK.........',
+  'KkKKKK......',
+  'KkKTTTKK....',
+  'KkKTTTTTK...',
+  'KkKKTTTTTK..',
+  'KkK.KKTTTK..',
+  'KkKKTTTTK...',
+  'KkKTTTTK....',
+  'KkKTTTTTK...',
+  'KkKKTTTTTK..',
+  'KkK.KKKKKK..',
+  ...Array(9).fill('KkK.........')];
+const FLAG_FDIAG = [
+  '..KKKKKKKKKK',
+  '..KTTTTTTKkK',
+  '..KTTWWWTKkK',
+  '..KTWWWWWKkK',
+  '..KTWTTWTKkK',
+  '..KTWTTWTKkK',
+  '..KTWWWWTKkK',
+  '..KTTWWTTKkK',
+  '..KTTTTTTKkK',
+  '..KTTTTTTKkK',
+  '..KKKKKKKKkK',
+  ...Array(9).fill('.........KkK')];
+const flagSet = { front: rev(FLAG_BACK), fdiag: FLAG_FDIAG, side: FLAG_SIDE, bdiag: rev(FLAG_FDIAG), back: FLAG_BACK };
+const toKin = rows => rows.map(r => r.replace(/T/g, 'Y').replace(/W/g, 'T'));
+const CAPE_BACK = [
+  '....KKKKKKKKKKKKKKKK....',
+  '..KKRRRRRRRRRRRRRRRRKK..',
+  '.KRRRRRRRRRRRRRRRRRRRRK.',
+  'KRRrRRRRRRRRRRRRRRRRrRRK',
+  'KRRrRRRRRRYYYYRRRRRRrRRK',
+  'KRRrRRRRRYYKKYYRRRRRrRRK',
+  'KRRrRRRRRYKTTKYRRRRRrRRK',
+  'KRRrRRRRRYYKKYYRRRRRrRRK',
+  'KRRrRRRRRRYYYYRRRRRRrRRK',
+  'KRRrRRRRRRRRRRRRRRRRrRRK',
+  'KRRrRRRRRRRRRRRRRRRRrRRK',
+  'KRRrRRRRRRRRRRRRRRRRrRRK',
+  'KRrRRRRRRRRRRRRRRRRRRrRK',
+  'KRrRRRRRRRRRRRRRRRRRRrRK',
+  'KrRRRRRRRRRRRRRRRRRRRRrK',
+  'KrRRRRRRRRRKKRRRRRRRRRrK',
+  'KrRRRRRRRRK..KRRRRRRRRrK',
+  '.KKKKKKKKKK..KKKKKKKKKK.'];
+const CAPE_FRONT = [
+  '....KKKKKKKKKKKKKKKK....',
+  '..KKRRRRRRRRRRRRRRRRKK..',
+  '.KRrrrrrrrrrrrrrrrrrrRK.',
+  ...Array(12).fill('KRrrrrrrrrrrrrrrrrrrrrRK'),
+  'KRrrrrrrrrrKKrrrrrrrrrRK',
+  'KRrrrrrrrrK..KrrrrrrrrRK',
+  '.KKKKKKKKKK..KKKKKKKKKK.'];
+const CAPE_SIDE = [
+  '..KKKKKK....',
+  '.KRRRRRRK...',
+  '.KRRRRRRRK..',
+  '.KrRRRRRRK..',
+  ...Array(6).fill('.KrRRRRRRRK.'),
+  ...Array(4).fill('KrRRRRRRRRK.'),
+  ...Array(3).fill('KrRRRRRRRRRK'),
+  '.KKKKKKKKKK.'];
+const CAPE_FDIAG = [
+  '...KKKKKKKKKK...',
+  '.KKRRRRRRRRRRK..',
+  'KRrrrrrrRRRRRRK.',
+  ...Array(11).fill('KRrrrrrrRRRRRRRK'),
+  ...Array(3).fill('KRrrrrrRRRRRRRRK'),
+  '.KKKKKKKKKKKKKK.'];
+const CAPE_BDIAG = [
+  '...KKKKKKKKKKKKKK...',
+  '.KKRRRRRRRRRRRRRRKK.',
+  'KRRRRRRRRRRRRRRRRRRK',
+  'KRRRRRRRRRRRRRRRRrRK',
+  'KRRRRRRYYYYRRRRRRrRK',
+  'KRRRRRYYKKYYRRRRRrRK',
+  'KRRRRRYKTTKYRRRRRrRK',
+  'KRRRRRYYKKYYRRRRRrRK',
+  'KRRRRRRYYYYRRRRRRrRK',
+  ...Array(5).fill('KRRRRRRRRRRRRRRRRrRK'),
+  ...Array(3).fill('KRRRRRRRRRRRRRRRRRrK'),
+  '.KKKKKKKKKKKKKKKKKK.'];
+// 母衣：丸い袋。w＝見えている幅、cx＝袋の真ん中のずれ（横向きは後ろ＝右へ）、mon＝上の金の留め具を見せるか
+function horoView(w, cx, mon){
+  const W = 24, H = 20, rows = [];
+  for (let y = 0; y < H; y++) { let r = '';
+    for (let x = 0; x < W; x++) {
+      const dx = (x + .5 - (W/2 + cx))/(w/2), dy = (y + .5 - H/2)/(H/2), d = dx*dx + dy*dy;
+      const inEll = (xx, yy) => { const a = (xx + .5 - (W/2 + cx))/(w/2), b = (yy + .5 - H/2)/(H/2); return a*a + b*b <= 1; };
+      if (d > 1) { r += '.'; continue; }
+      if (!inEll(x - 1, y) || !inEll(x + 1, y) || !inEll(x, y - 1) || !inEll(x, y + 1)) { r += 'K'; continue; }
+      const sx = Math.round(dx*4);   // 縦の縞：袋の丸みに沿って寄る
+      if (mon && y <= 3 && Math.abs(x + .5 - (W/2 + cx)) < 2.5) { r += y === 3 ? 'y' : 'Y'; continue; }   // 上の金の留め具
+      r += (Math.abs(dx*4 - sx) < .18 && sx !== 0 && Math.abs(sx) < 4) ? 'u' : 'U';
+    }
+    rows.push(r); }
+  return rows;
+}
+const BACK2 = {
+  flag: flagSet,
+  flag_kin: Object.fromEntries(Object.entries(flagSet).map(([k, v]) => [k, toKin(v)])),
+  cape: { front: CAPE_FRONT, fdiag: CAPE_FDIAG, side: CAPE_SIDE, bdiag: CAPE_BDIAG, back: CAPE_BACK },
+  horo: { front: horoView(24, 0, false), fdiag: horoView(20, 1, true), side: horoView(14, 3, true), bdiag: horoView(20, 1, true), back: horoView(24, 0, true) },
+};
+for (const k in BACK2) for (const v in BACK2[k]) { const r = BACK2[k][v]; r.big = true;
+  if (r.length % 2 || r.some(x => x.length !== r[0].length) || r[0].length % 2) console.warn('背中の絵の大きさ', k, v); }
+
+// ---------- 着せ替えの頭（HEADP）：2倍。M＝左半分を描いて左右反転でつなぐ ----------
+const M = half => half.map(r => r + [...r].reverse().join(''));
+const H2 = {
+  oni: {
+    front: M([
+      'KK..........', 'KWK.........', 'KWWK........', '.KWWK.......', '.KWWWKKKKKKK', '..KKLLLLLLLL',
+      '..KLLWLLLLLL', '..KLLLLLLLLL', '..KLKKKLLLLL', '..KLMKKKKLMM', '..KMMEEEKMMM', '..KMMKEEKMMM',
+      '..KMMMMMMMMM', '..KMMKKKKKKK', '..KMKWKWWKWW', '..KMKKWKKKKK', '...KMMMMMMMM', '....KKKKKKKK']),
+    back: M([
+      'KK..........', 'KWK.........', 'KWWK........', '.KWWK.......', '.KWWWKKKKKKK', '..KKLLLLLLLL',
+      '..KLLWLLLLLL', '..KLLLLLLLLL', '..KMMMMMMMMM', '..KMMMMMMMMM', '..KMMMMMMMMM', '..KMMMMMMMMM',
+      '..KMMMMMMMMM', '..KMLLLLLLLL', '..KMLmmmmmmm', '..KMLLLLLLLL', '...KMMMMMMMM', '....KKKKKKKK']),
+    side: [
+      '..........KK........', '.........KWK........', '........KWWK........', '.......KWWK.........',
+      '..KKKKKWWWKKKKKK....', '.KLLLLLLLLLLLLLLLK..', 'KLLWLLLLLLLLLLLLLLK.', 'KLLLLLLLLLLLLLLLLLMK',
+      'KKKKLLLLLLLLLLLLLLMK', 'KMKKKKMMMMMMMMMMMMMK', 'KEEEKMMMMMMMMMMMMMMK', 'KEEKMMMMMMMMMMMMMMMK',
+      'KMMMMMMMMMMMMMMMMMMK', 'KKKKKKMMMMMMMMMMMMMK', 'KWKWWKMMMMMMMMMMMMK.', 'KKWKKMMMMMMMMMMMMMK.',
+      '.KMMMMMMMMMMMMMMMK..', '..KKKKKKKKKKKKKKK...'],
+    fdiag: [
+      'KK..............KK......', 'KWK............KWK......', 'KWWK..........KWWK......', '.KWWK........KWWK.......',
+      '.KWWWKKKKKKKKWWWKKKKK...', '..KLLLLLLLLLLLLLLLLLLK..', '..KLLWLLLLLLLLLLLLLLLLK.', '..KLLLLLLLLLLLLLLLLLLMK.',
+      '..KLKKKLLLKKKLLLLLLLMMK.', '..KMMKKKMKKKMMMMMMMMMMK.', '..KMEEEKMEEEKMMMMMMMMMK.', '..KMKEEKMKEEKMMMMMMMMMK.',
+      '..KMMMMMMMMMMMMMMMMMMMK.', '..KKKKKKKKKKMMMMMMMMMMK.', '..KWKWWKWWKKMMMMMMMMMMK.', '..KKWKKKKWKMMMMMMMMMMK..',
+      '...KMMMMMMMMMMMMMMMMK...', '....KKKKKKKKKKKKKKKK....'],
+    bdiag: [
+      '....KK..............KK..', '....KWK............KWK..', '....KWWK..........KWWK..', '.....KWWK........KWWK...',
+      '..KKKKKWWWKKKKKKKWWWKK..', '..KLLLLLLLLLLLLLLLLLLK..', '..KLLWLLLLLLLLLLLLLLLLK.', '..KLLLLLLLLLLLLLLLLLLMK.',
+      '..KKMMMMMMMMMMMMMMMMMMK.', '..KKMMMMMMMMMMMMMMMMMMK.', '..KKMMMMMMMMMMMMMMMMMMK.', '..KKMMMMMMMMMMMMMMMMMMK.',
+      '..KMMMMLLLLLLLLLLLMMMMK.', '..KMMMMLmmmmmmmmmLMMMMK.', '..KMMMMLLLLLLLLLLLMMMMK.', '..KMMMMMMMMMMMMMMMMMMK..',
+      '...KMMMMMMMMMMMMMMMMK...', '....KKKKKKKKKKKKKKKK....'] },
+  tengu: {
+    front: M([
+      '.......KKK', '......Kkkk', '......Kkkk', '...KKKKKKK', '..KRRRRRRR', '.KRRRRRRRR',
+      '.KWWWWRRRR', '.KRWWWWRRR', '.KRKEEKRRR', '.KRRKKRRRK', '.KRRRRRRKP', '.KRRRRRKPP',
+      '.KRRRRRKPP', '.KRRRRRRKK', '..KRRRRKKK', '..KRRRRRRR', '...KKRRRRR', '.....KKKKK']),
+    back: M([
+      '.......KKK', '......Kkkk', '......Kkkk', '...KKKKKKK', '..Kkkkkkkk', '.Kkkkkkkkk',
+      '.Kkkmkkkkk', '.Kkkkkmkkk', '.Kkkkkkkkk', '.KRkkkkkkk', '.KRkkkkkkk', '.KRRkkkkkk',
+      '.KRRRkkkkk', '.KRRRRkkkk', '..KRRRRRRR', '..KRRRRRRR', '...KKRRRRR', '.....KKKKK']),
+    side: [
+      '..............KKKK........', '.............KkkkkK.......', '.............KkkkkK.......', '........KKKKKKKKKKKKKKKK..',
+      '........KRRRRRRRRRRRRRRRK.', '........KRRRRRRRRRRRRRRRRK', '........KWWWWWWRRRRRRRRRRK', '........KRWWWWRRRRRRRRRRRK',
+      '........KKEEKRRRRRRRRRRRRK', '........KRKKRRRRRRRRRRRRRK', '........KRRRRRRRRRRRRRRRRK', '..KKKKKKKRRRRRRRRRRRRRRRRK',
+      'KKPPPPPPPKRRRRRRRRRRRRRRRK', 'KPPPPPPPPPKRRRRRRRRRRRRRK.', '.KKKKKKKKKKRRRRRRRRRRRRRK.', '..........KRRRRRRRRRRRRRK.',
+      '........KKKKRRRRRRRRRRRK..', '.........KRRRRRRRRRRRRK...', '..........KRRRRRRRRRRK....', '...........KKKKKKKKKK.....'],
+    fdiag: [
+      '..........KKKK..........', '.........KkkkkK.........', '.........KkkkkK.........', '....KKKKKKKKKKKKKKKK....',
+      '....KRRRRRRRRRRRRRRRRK..', '....KRRRRRRRRRRRRRRRRRK.', '....KWWWWKRRWWWWRRRRRRRK', '....KRWWRRRRRWWRRRRRRRRK',
+      '....KKEEKRRRKEEKRRRRRRRK', '....KRKKRRRRRKKRRRRRRRRK', '....KRRRRRRRRRRRRRRRRRRK', 'KKKKKKKKKRRRRRRRRRRRRRRK',
+      'KPPPPPPPPKRRRRRRRRRRRRRK', 'KPPPPPPPPPKRRRRRRRRRRRK.', '.KKKKKKKKKKRRRRRRRRRRRK.', '...........KRRRRRRRRRRK.',
+      '........KKKKKRRRRRRRRK..', '.........KRRRRRRRRRRK...', '..........KRRRRRRRRK....', '...........KKKKKKKKK....'],
+    bdiag: [
+      '..........KKKK........', '.........KkkkkK.......', '.........KkkkkK.......', '......KKKKKKKKKKKKKKKK',
+      '.....KRRkkkkkkkkkkkkkK', '....KRRRkkkkkmkkkkkkkK', '....KRRkkkkkkkkkmkkkkK', '....KRRkkkkkkkkkkkkkkK',
+      '....KRRRkkkkkkkkkkkkkK', '....KRRRRkkkkkkkkkkkkK', 'KKKKKRRRRRkkkkkkkkkkRK', 'KPPPKRRRRRRkkkkkkkkRRK',
+      'KKKKKRRRRRRRkkkkkkRRRK', '....KRRRRRRRRRRRRRRRRK', '.....KRRRRRRRRRRRRRRK.', '......KRRRRRRRRRRRRK..',
+      '.......KRRRRRRRRRRK...', '........KKKKKKKKKK....'] },
+  shishi: {
+    front: M([
+      '....KKKKKKKK', '..KKWWWWWWWW', '.KWWWWWWWWWW', 'KWWWKKKKKKKK', 'KWWKRRRRRRRR', 'KWWKYYYYYRRR',
+      'KWWKRKEEKRRR', 'KWWKRKEEKRRR', 'KWWKRRKKRRRR', 'KWWKRRRRRRKR', 'KWWKRRRRRRRR', 'KWWKKKKKKKKK',
+      'KWWKWWKWWKWW', 'KWWKKKKKKKKK', '.KWKWWKWWKWW', '.KWWKKKKKKKK', '..KKWWWWWWWW', '....KKKKKKKK']),
+    back: M([
+      '....KKKKKKKK', '..KKWWWWWWWW', '.KWWWWWWWWWW', 'KWWWWWWWWWWW', 'KWWWWWWWWWWW', 'KWWWWWWWWWWW',
+      'KWWWWWWWWWWW', 'KWWWWWWWWWWW', 'KWWWWWWWWWWW', 'KWWWWWWWWWWW', 'KWWWWWWWWWWW', 'KWWWWWWWWWWW',
+      'KWWWWWWWWWWW', 'KWWWWWWWWWWW', '.KWWWWWWWWWW', '.KWWWWWWWWWW', '..KKWWWWWWWW', '....KKKKKKKK']),
+    side: [
+      '......KKKKKKKKKKKKKK....', '....KKWWWWWWWWWWWWWWK...', '..KKWWWWWWWWWWWWWWWWWK..', '.KKKKKKKKKKKKWWWWWWWWWK.',
+      'KRRRRRRRRRRRKWWWWWWWWWWK', 'KRYYYYRRRRRRKWWWWWWWWWWK', 'KKEEKRRRRRRRKWWWWWWWWWWK', 'KKEEKRRRRRRRKWWWWWWWWWWK',
+      'KRKKRRRRRRRRKWWWWWWWWWWK', 'KRRRRRRRRRRRKWWWWWWWWWWK', 'KKRRRRRRRRRRKWWWWWWWWWWK', 'KKKKKKKKKRRRKWWWWWWWWWWK',
+      'KWWKWWKWKRRRKWWWWWWWWWK.', 'KKKKKKKKKRRKWWWWWWWWWWK.', '.KWWKWWKRRRKWWWWWWWWWK..', '..KKKKKKKKKWWWWWWWWWK...',
+      '...KWWWWWWWWWWWWWWWK....', '....KKKKKKKKKKKKKKK.....'],
+    fdiag: [
+      '....KKKKKKKKKKKKKKKK....', '..KKWWWWWWWWWWWWWWWWKK..', '.KWWWWWWWWWWWWWWWWWWWWK.', 'KKKKKKKKKKKKKKWWWWWWWWWK',
+      'KRRRRRRRRRRRRKWWWWWWWWWK', 'KYYYYRRYYYYRRKWWWWWWWWWK', 'KKEEKRRKEEKRRKWWWWWWWWWK', 'KKEEKRRKEEKRRKWWWWWWWWWK',
+      'KRKKRRRRKKRRRKWWWWWWWWWK', 'KRRRRRRRRRRRRKWWWWWWWWWK', 'KRRRRRKKRRRRRKWWWWWWWWWK', 'KKKKKKKKKKKKRKWWWWWWWWWK',
+      'KWWKWWKWWKWKRKWWWWWWWWK.', 'KKKKKKKKKKKKKKWWWWWWWWK.', '.KWWKWWKWWKRKWWWWWWWWK..', '..KKKKKKKKKKKWWWWWWWK...',
+      '...KWWWWWWWWWWWWWWWK....', '....KKKKKKKKKKKKKKK.....'],
+    bdiag: [
+      '....KKKKKKKKKKKKKKKK....', '..KKWWWWWWWWWWWWWWWWKK..', '.KRWWWWWWWWWWWWWWWWWWWK.', 'KRRWWWWWWWWWWWWWWWWWWWWK',
+      'KRRWWWWWWWWWWWWWWWWWWWWK', 'KRRWWWWWWWWWWWWWWWWWWWWK', 'KRRKWWWWWWWWWWWWWWWWWWWK', 'KRRWWWWWWWWWWWWWWWWWWWWK',
+      'KRRWWWWWWWWWWWWWWWWWWWWK', 'KRRWWWWWWWWWWWWWWWWWWWWK', 'KRRWWWWWWWWWWWWWWWWWWWWK', 'KKRWWWWWWWWWWWWWWWWWWWWK',
+      'KKKWWWWWWWWWWWWWWWWWWWWK', 'KKWWWWWWWWWWWWWWWWWWWWWK', '.KWWWWWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWWWWWK.',
+      '..KKWWWWWWWWWWWWWWWWKK..', '....KKKKKKKKKKKKKKKK....'] },
+  dokuro: {
+    front: M([
+      '....KKKKKK', '..KKWWWWWW', '.KWWWWWWWW', '.KWWWWWWWW', 'KWWWWWWWWW', 'KWWWWWWWWW',
+      'KWWKKKKWWW', 'KWKKKKKKWW', 'KWKKEEKKWW', 'KWKKEEKKWW', 'KWWKKKKWWW', 'KWWWWWWWWK',
+      'KWWWWWWWKK', '.KWWWWWWWW', '.KWKWKWKWK', '.KWKWKWKWK', '..KWWWWWWW', '...KKKKKKK']),
+    back: [
+      '....KKKKKKKKKKKK....', '..KKWWWWWWWWWWWWKK..', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.',
+      'KWWWWWWWWWWKWWWWWWWK', 'KWWWWWWWWWKWWWWWWWWK', 'KWWWWWWWWWKKWWWWWWWK', 'KWWWWWWWWWWKWWWWWWWK',
+      'KWWWWWWWWWWWKWWWWWWK', 'KWWWWWWWWWWKWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK',
+      '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.',
+      '..KWWWWWWWWWWWWWWK..', '...KKKKKKKKKKKKKK...'],
+    side: [
+      '....KKKKKKKKKKKK....', '..KKWWWWWWWWWWWWKK..', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.',
+      'KWWWWWWWWWWWWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK', 'KKKKKWWWWWWWWWWWWWWK', 'KKKKKKWWWWWWWWWWWWWK',
+      'KEEKKKWWWWWWWWWWWWWK', 'KEEKKKWWWWWWWWWWWWWK', 'KKKKKWWWWWWWWWWWWWWK', 'KWWWWKWWWWWWWWWWWWWK',
+      'KWWWKKWWWWWWWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK', 'KKWKWKWKWWWWWWWWWWK.', 'KKWKWKWKWWWWWWWWWWK.',
+      '.KWWWWWWWWWWWWWWWK..', '..KKKKKKKKKKKKKKK...'],
+    fdiag: [
+      '....KKKKKKKKKKKK....', '..KKWWWWWWWWWWWWKK..', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.',
+      'KWWWWWWWWWWWWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK', 'KKKKKWWKKKKWWWWWWWWK', 'KKKKKKKKKKKKWWWWWWWK',
+      'KEEKKKKKEEKKWWWWWWWK', 'KEEKKKKKEEKKWWWWWWWK', 'KKKKKWWKKKKWWWWWWWWK', 'KWWWWWKKWWWWWWWWWWWK',
+      'KWWWWKKKKWWWWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK', '.KWKWKWKWKWKWWWWWWK.', '.KWKWKWKWKWKWWWWWWK.',
+      '..KWWWWWWWWWWWWWWK..', '...KKKKKKKKKKKKKK...'],
+    bdiag: [
+      '....KKKKKKKKKKKK....', '..KKWWWWWWWWWWWWKK..', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.',
+      'KKWWWWWWWWWWKWWWWWWK', 'KKWWWWWWWWWKWWWWWWWK', 'KKWWWWWWWWWKKWWWWWWK', 'KKWWWWWWWWWWKWWWWWWK',
+      'KKWWWWWWWWWWWKWWWWWK', 'KWWWWWWWWWWWKWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK', 'KWWWWWWWWWWWWWWWWWWK',
+      '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.', '.KWWWWWWWWWWWWWWWWK.',
+      '..KWWWWWWWWWWWWWWK..', '...KKKKKKKKKKKKKK...'] },
+};
+// 提灯：丸い胴は共通、顔だけ向きで描き分け（face：行番号 → その行の絵）
+const CHO_BACK = M([
+  '....KKKKKK', '....KYYYYY', '....Kyyyyy', '..KKKKKKKK', '.KRRRRRRRR', 'KRRkkkkkkk', 'KRRRRRRRRR',
+  'KRRRRRRRRR', 'KRkkkkkkkk', 'KRRRRRRRRR', 'KRRRRRRRRR', 'KRkkkkkkkk', 'KRRRRRRRRR', 'KRRRRRRRRR',
+  'KRkkkkkkkk', '.KRRRRRRRR', '..KKKKKKKK', '....KYYYYY', '....Kyyyyy', '....KKKKKK']);
+const withFace = (rows, face) => rows.map((r, i) => face[i] || r);
+H2.chochin = {
+  front: M([
+    '....KKKKKK', '....KYYYYY', '....Kyyyyy', '..KKKKKKKK', '.KRRRRRRRR', 'KRRkkkkkkk', 'KRRRRRRRRR',
+    'KRRRRRKKKK', 'KRkkkKWEEE', 'KRRRRKWEEE', 'KRRRRRKKKK', 'KRkkkkkkkk', 'KRRRRKKKKK', 'KRRRRKPPPP',
+    'KRkkkkKPPP', '.KRRRRRKKK', '..KKKKKKKK', '....KYYYYY', '....Kyyyyy', '....KKKKKK']),
+  side: withFace(CHO_BACK, { 7: 'KKKKRRRRRRRRRRRRRRRK', 8: 'KWEEKkkkkkkkkkkkkkRK', 9: 'KWEEKRRRRRRRRRRRRRRK', 10: 'KKKKRRRRRRRRRRRRRRRK',
+    12: 'KKKKKRRRRRRRRRRRRRRK', 13: 'KPPPKRRRRRRRRRRRRRRK', 14: 'KPPPKkkkkkkkkkkkkkRK', 15: '.KKKKRRRRRRRRRRRRRK.' }),
+  fdiag: withFace(CHO_BACK, { 7: 'KRKKKKKKRRRRRRRRRRRK', 8: 'KRKWEEWKkkkkkkkkkkRK', 9: 'KRKWEEWKRRRRRRRRRRRK', 10: 'KRRKKKKRRRRRRRRRRRRK',
+    12: 'KRKKKKKKKRRRRRRRRRRK', 13: 'KRKPPPPPKRRRRRRRRRRK', 14: 'KRkKPPPKkkkkkkkkkkRK', 15: '.KRRKPKRRRRRRRRRRRK.' }),
+  bdiag: CHO_BACK, back: CHO_BACK,
+};
+// 頭に重ねる飾り（headOver）：[元の絵, 2倍の絵]
+const OVER2 = [
+  [['...kkkkkk...', '.kkmmmmmmkk.', 'kmmmmmmmmmmk', '.kkkkkkkkkk.'], [   // 陣笠
+    '........kkkkkkkk........', '......kkmmmmmmmmkk......', '....kkmmmmmmmmmmmmkk....', '...kmmmmmmmYYmmmmmmmk...',
+    '..kmmmmmmmmmmmmmmmmmmk..', '.kmmmmmmmmmmmmmmmmmmmmk.', 'kmmmmmmmmmmmmmmmmmmmmmmk', '.kkkkkkkkkkkkkkkkkkkkkk.']],
+  [['KRRRRRRRRK', '.KRWRRWRK.'], ['KRRRRRRRRRRRRRRRRRRK', 'KRRRrRRRRRRRRRRrRRRK', '.KRRRWRRRRRRRRWRRRK.', '..KKKKKKKKKKKKKKKK..']],   // 面頬（正面・斜め・横）
+  [['KRRRRRRMMK', '.KRWRWMMK.'], ['KRRRRRRRRRRRRRMMMMMK', 'KRRRrRRRRRRrRRMMMMMK', '.KRRWRRRRWRRRMMMMMK.', '..KKKKKKKKKKKKKKKK..']],
+  [['KRRRRMMMMK', '.KRWRMMMK.'], ['KRRRRRRRRMMMMMMMMMMK', 'KRRrRRRRRMMMMMMMMMMK', '.KRRWRRRMMMMMMMMMMK.', '..KKKKKKKKKKKKKKKK..']],
+  [['.K......K.', 'KWK....KWK'], ['.K................K.', '.KK..............KK.', 'KWRK............KRWK', 'KWWK............KWWK']],   // 狐の耳（正面・横・斜め）
+  [['..K...K...', '.KWK.KWK..'], ['....K.......K.......', '....KK......KK......', '...KRWK....KRWK.....', '..KWWWK...KWWWK.....']],
+  [['.K....K...', 'KWK..KWK..'], ['.K..........K.......', '.KK.........KK......', 'KWRK.......KRWK.....', 'KWWK.......KWWK.....']],
+  [['KWWWWWWWWK', 'KWRRWWRRWK', '.KWWWWWWK.'], ['KWWWWWWWWWWWWWWWWWWK', 'KWRRRWWWWWWWWWWRRRWK', 'KWWRRRWWWWWWWWRRRWWK',   // 狐面（正面・斜め・横）
+    'KWWWWWWWWWWWWWWWWWWK', '.KWWWWWWWKKWWWWWWWK.', '..KKKKKKKKKKKKKKKK..']],
+  [['KWWWWWWWK', 'KRRWWRRWK', '.KWWWWWK.'], ['KWWWWWWWWWWWWWWWWK', 'KRRRWWWWWRRRWWWWWK', 'KWRRRWWWWWRRRWWWWK',
+    'KWWWWWWWWWWWWWWWWK', '.KWWWKKWWWWWWWWWK.', '..KKKKKKKKKKKKKK..']],
+  [['KWWWWK', 'KRRWWK', '.KWWK.'], ['KWWWWWWWWWWK', 'KRRRWWWWWWWK', 'KWRRRWWWWWWK', 'KWWWWWWWWWWK', 'KKWWWWWWWWK.', '.KKKKKKKKK..']],
+];
+for (const k in H2) for (const v in H2[k]) { const o = HEADP[k][v]; if (o) reg(Array.isArray(o) ? o : o.rows, H2[k][v]); else console.warn('頭の向きがない', k, v); }
+for (const [o, b] of OVER2) reg(o, b);
+
+// ---------- 着せ替えの胴（BODYP）：2倍。横・斜めは左向き ----------
+const B2BODY = {
+  hosomi: {
+    front: M([
+      '..KKKK', '.KBBBB', 'KBWBBB', 'KBBBTT', 'KBBTWW', 'KBBTWW', 'KBBBTT', 'KbBBBB', 'KbBBBB',
+      'KKKKKK', 'KYYYYy', 'KyyyyK', 'KKKKKK', 'KbBBKB', 'KbBBKB', 'KbBBKB', '.KbBKB', '..KKKK']),
+    back: M([
+      '..KKKK', '.KBBBB', 'KBWBBB', 'KbBBBB', 'KbBBTT', 'KbBBTT', 'KbBBBB', 'KbBBBB', 'KbBBBB',
+      'KKKKKK', 'KYYYYY', 'Kyyyyy', 'KKKKKK', 'KbBBKB', 'KbBBKB', 'KbBBKB', '.KbBKB', '..KKKK']),
+    fdiag: [
+      '..KKKKKKKK..', '.KBBBBBBBbK.', 'KBWBBBBBBbbK', 'KTTTTBBBBbbK', 'KTWWTBBBBbbK', 'KTWWTBBBBbbK',
+      'KTTTTBBBBbbK', 'KBBBBBBBBbbK', 'KbBBBBBBBbbK', 'KKKKKKKKKKKK', 'KYYyKKyYYYyK', 'KyyyKKyyyyyK',
+      'KKKKKKKKKKKK', 'KbBKBBBKBBbK', 'KbBKBBBKBBbK', 'KbBKBBBKBBbK', '.KbKBBBKBbK.', '..KKKKKKKK..'],
+    side: [
+      '..KKKKKK..', '.KBBBBBBK.', 'KBWBBBBbbK', 'KTTTBBBbbK', 'KTWTBBBbbK', 'KTTTBBBbbK',
+      'KBBBBBBbbK', 'KbBBBBBbbK', 'KbBBBBBbbK', 'KKKKKKKKKK', 'KYYYYYYyyK', 'KyyyyyyyyK',
+      'KKKKKKKKKK', 'KbBBKBBbbK', 'KbBBKBBbbK', 'KbBBKBBbbK', '.KbBKBbbK.', '..KKKKKK..'],
+    bdiag: [
+      '..KKKKKKKK..', '.KBBBBBBBBK.', 'KBWBBBBBBBbK', 'KTBBBBBBBBbK', 'KTbBBBTTBBbK', 'KTbBBBTTBBbK',
+      'KbbBBBBBBBbK', 'KbBBBBBBBBbK', 'KbBBBBBBBBbK', 'KKKKKKKKKKKK', 'KYYYYYYYYYyK', 'KyyyyyyyyyyK',
+      'KKKKKKKKKKKK', 'KbBBKBBBKBbK', 'KbBBKBBBKBbK', 'KbBBKBBBKBbK', '.KbBKBBBKbK.', '..KKKKKKKK..'] },
+  taru: {
+    front: M([
+      '....KKKKKKKK', '..KKBBBBBBBB', '.KBBWBBBBBBB', 'Kkkkkkkkkkkk', 'Kmmmmmmmmmmm', 'KBBBbBBBBBTT',
+      'KBBBbBBBBTWW', 'KBBBbBBBBTWW', 'KBBBbBBBBBTT', 'KBBBbBBBBBBB', 'Kkkkkkkkkkkk', 'Kmmmmmmmmmmm',
+      'KbBBbBBBBBBB', 'KbBBbBBBBBBB', '.KbBbBBBBBBB', '.KbbbBBBBBBB', '..KKbBBBBBBB', '....KKKKKKKK']),
+    side: [
+      '....KKKKKKKKKKKK....', '..KKBBBBBBBBBBBBKK..', '.KBBWBBBBBBBBBBBbbK.', 'KkkkkkkkkkkkkkkkkkkK',
+      'KmmmmmmmmmmmmmmmmmmK', 'KTTTTBBBbBBBBBBBbbbK', 'KTWWTBBBbBBBBBBBbbbK', 'KTWWTBBBbBBBBBBBbbbK',
+      'KTTTTBBBbBBBBBBBbbbK', 'KBBBBBBBbBBBBBBBbbbK', 'KkkkkkkkkkkkkkkkkkkK', 'KmmmmmmmmmmmmmmmmmmK',
+      'KbBBBBBBbBBBBBBBbbbK', 'KbBBBBBBbBBBBBBBbbbK', '.KbBBBBBbBBBBBBBbbK.', '.KbbBBBBbBBBBBBbbbK.',
+      '..KKbBBBbBBBBBbbKK..', '....KKKKKKKKKKKK....'],
+    fdiag: [
+      '....KKKKKKKKKKKKKKKK....', '..KKBBBBBBBBBBBBBBbbKK..', '.KBBWBBBBBBBBBBBBBBbbbK.', 'KkkkkkkkkkkkkkkkkkkkkkkK',
+      'KmmmmmmmmmmmmmmmmmmmmmmK', 'KBBBbBTTTTBBBBbBBBBbbbbK', 'KBBBbBTWWTBBBBbBBBBbbbbK', 'KBBBbBTWWTBBBBbBBBBbbbbK',
+      'KBBBbBTTTTBBBBbBBBBbbbbK', 'KBBBbBBBBBBBBBbBBBBbbbbK', 'KkkkkkkkkkkkkkkkkkkkkkkK', 'KmmmmmmmmmmmmmmmmmmmmmmK',
+      'KbBBbBBBBBBBBBbBBBBbbbbK', 'KbBBbBBBBBBBBBbBBBBbbbbK', '.KbBbBBBBBBBBBbBBBBbbbK.', '.KbbbBBBBBBBBBbBBBbbbbK.',
+      '..KKbBBBBBBBBBbBBbbbKK..', '....KKKKKKKKKKKKKKKK....'] },
+  hoe: {
+    front: [
+      '......KKKKKKKKKKKK......', '.....KBBBBBBBBBBBBK.....', '....KBWBBBBBBBBBBBBK....', '....KYYBBBBBBBTTBBBK....',
+      '....KBYYBBBBBTWWTBBK....', '...KBBBYYBBBBTWWTBBBK...', '...KBBBBYYBBBBTTBBBBK...', '...KBBBBBYYBBBBBBBBBK...',
+      '..KBBBBBBBYYBBBBBBBBbK..', '..KbBBBBBBBYYBBBBBBBbK..', '..KbBBBBBBBBYYBBBBBBbK..', '.KbBBBBBBBBBBYYBBBBBBbK.',
+      '.KbBBBBBBBBBBBYYBBBBBbK.', 'KbBBBBBBBBBBBBBYYBBBBBbK', 'KbBBBBBBBBBBBBBBYYBBBBbK', 'KbbBBBBBBBBBBBBBBYYBBbbK',
+      'KbbBBBBBBBBBBBBBBBYYBbbK', 'KKKKKKKKKKKKKKKKKKKKKKKK'],
+    back: [
+      '......KKKKKKKKKKKK......', '.....KBBBBBBBBBBBBK.....', '....KBWBBBBBBBBBBBBK....', '....KYYBBBBBBBBBBYYK....',
+      '....KBYYBBBBBBBBYYBK....', '...KBBBYYBBBBBBYYBBBK...', '...KBBBBYYBBBBYYBBBBK...', '...KBBBBBYYBBYYBBBBBK...',
+      '..KbBBBBBBYYYYBBBBBBbK..', '..KbBBBBBBBYYBBBBBBBbK..', '..KbBBBBBBTTTTBBBBBBbK..', '.KbBBBBBBTTWWTTBBBBBBbK.',
+      '.KbBBBBBBBTTTTBBBBBBBbK.', 'KbBBBBBBBBBBBBBBBBBBBBbK', 'KbBBBBBBBBBBBBBBBBBBBBbK', 'KbbBBBBBBBBBBBBBBBBBBbbK',
+      'KbbBBBBBBBBBBBBBBBBBBbbK', 'KKKKKKKKKKKKKKKKKKKKKKKK'],
+    side: [
+      '....KKKKKKKKKK......', '...KBBBBBBBBBBK.....', '...KBWBBBBBBBBBK....', '...KTTTBBBBBBBBK....',
+      '...KTWTBBBBYYBBBK...', '...KTTTBBBYYBBBBK...', '..KBBBBBBYYBBBBBK...', '..KBBBBBYYBBBBBBbK..',
+      '..KBBBBYYBBBBBBBbK..', '..KbBBYYBBBBBBBBbK..', '.KbBBYYBBBBBBBBBbK..', '.KbBYYBBBBBBBBBBbK..',
+      '.KbYYBBBBBBBBBBBbbK.', 'KbYYBBBBBBBBBBBBbbK.', 'KbYBBBBBBBBBBBBBbbK.', 'KbbBBBBBBBBBBBBBbbbK',
+      'KbbBBBBBBBBBBBBBbbbK', 'KKKKKKKKKKKKKKKKKKKK'] },
+  juso: {
+    front: M([
+      '.KKKKKKKKKKKKK', 'KLLLWLLLKBBBBB', 'KLLLLLLMKBBBBB', 'KLMMMMMMKBBBTT', 'KMMLMMLMKBBTWW', 'KMMMMMMMKBBTWW',
+      'KMMMMMMMKBBBTT', '.KKKKKKKKBBBBB', '........KbBBBB', '........KbBBBB', '........KKKKKK', '........KYYYYy',
+      '........Kyyyyy', '........KKKKKK', '........KbBBKB', '........KbBBKB', '.........KbBKB', '..........KKKK']),
+    back: M([
+      '.KKKKKKKKKKKKK', 'KLLLWLLLKBBBBB', 'KLLLLLLMKBBBBB', 'KLMMMMMMKBBBBB', 'KMMLMMLMKBBBTT', 'KMMMMMMMKBBBTT',
+      'KMMMMMMMKBBBBB', '.KKKKKKKKBBBBB', '........KbBBBB', '........KbBBBB', '........KKKKKK', '........KYYYYY',
+      '........Kyyyyy', '........KKKKKK', '........KbBBKB', '........KbBBKB', '.........KbBKB', '..........KKKK']),
+    side: [
+      '..KKKKKKKKKKKKKK....', '.KLLLWLLLLLLLLLLK...', 'KLLLLLLLLLLLLLLLMK..', 'KLMMMMMMMMMMMMMMMMK.',
+      'KMMMLMMMMLMMMMLMMMK.', 'KMMMMMMMMMMMMMMMMMK.', '.KMMMMMMMMMMMMMMMK..', '..KKKKKKKKKKKKKKK...',
+      '...KTTBBBBBBBBbbK...', '...KbBBBBBBBBBbbK...', '...KKKKKKKKKKKKKK...', '...KYYYYYYYYYYyyK...',
+      '...KyyyyyyyyyyyyK...', '...KKKKKKKKKKKKKK...', '...KbBBBKbBBBBbbK...', '...KbBBBKbBBBBbbK...',
+      '....KbBBKbBBBbbK....', '.....KKKKKKKKKK.....'],
+    fdiag: [
+      '.KKKKKKKKKKKKKKKKKKKKKK.', 'KLLLWLLLKBBBBBBBKLLLLLK.', 'KLLLLLLMKBBBBBBbKLLLLMK.', 'KLMMMMMMKTTTTBBbKLMMMMK.',
+      'KMMLMMLMKTWWTBBbKMMLMMK.', 'KMMMMMMMKTWWTBBbKMMMMMK.', 'KMMMMMMMKTTTTBBbKMMMMMK.', '.KKKKKKKKBBBBBBbKKKKKK..',
+      '........KbBBBBbbK.......', '........KbBBBBbbK.......', '........KKKKKKKKK.......', '........KYYYYYyyK.......',
+      '........KyyyyyyyK.......', '........KKKKKKKKK.......', '........KbBKBBbbK.......', '........KbBKBBbbK.......',
+      '.........KbKBbbK........', '..........KKKKK.........'] },
+  tokei: {
+    front: [
+      '....KKKKKKKKKKKK....', '..KKYYYYYYYYYYYYKK..', '.KYYYyyyyyyyyyyYYYK.', 'KYYyWWWWWKWWWWWWyYYK',
+      'KYyWWWWWWKWWWWWWWyYK', 'KYyWWWWWWKWWWWWWWyYK', 'KYyWWWWWWKWWWWWWWyYK', 'KYyKWWWWWKKKKKWWKyYK',
+      'KYyWWWWWWWWWWWWWWyYK', 'KYyWWWWWWWWWWWWWWyYK', 'KYyyWWWWWWKWWWWWyyYK', 'KYYyyyyyyyyyyyyyyYYK',
+      '.KYYYYYYYYYYYYYYYYK.', '.KKKKKKKKKKKKKKKKKK.', '.KBBBTTTTBBBBBBBBbK.', '.KBBBTWWTBBBBBBBBbK.',
+      '.KbBBTTTTBBBBBBBBbK.', '.KbBBBBBBBBBBBBBBbK.', '.KbbBBBBBBBBBBBBbbK.', '..KKKKKKKKKKKKKKKK..'],
+    back: [
+      '....KKKKKKKKKKKK....', '..KKYYYYYYYYYYYYKK..', '.KYYYyyyyyyyyyyYYYK.', 'KYYyBBBBBBBBBBBByYYK',
+      'KYyBBBBBmmmmBBBBByYK', 'KYyBBBBmYYYYmBBBByYK', 'KYyBBBBmYYYYmBBBByYK', 'KYyBBBBBmmmmBBBBByYK',
+      'KYyBBBBBBBBBBBBBByYK', 'KYyBBBBBBBBBBBBBByYK', 'KYyyBBBBBBBBBBBByyYK', 'KYYyyyyyyyyyyyyyyYYK',
+      '.KYYYYYYYYYYYYYYYYK.', '.KKKKKKKKKKKKKKKKKK.', '.KbBBBBBBTTTTBBBBbK.', '.KbBBBBBBTWWTBBBBbK.',
+      '.KbBBBBBBTTTTBBBBbK.', '.KbBBBBBBBBBBBBBBbK.', '.KbbBBBBBBBBBBBBbbK.', '..KKKKKKKKKKKKKKKK..'],
+    side: [
+      '....KKKKKKKK....', '..KKYYYYYYYYKK..', '.KYYYYYYYYYYYYK.', 'KYYBBBBBBBBBBYyK',
+      'KYBBBBBBBBBBBByK', 'KYBBBBBBBBBBBByK', 'KYBBBBBBBBBBBByK', 'KYBBBBBBBBBBBByK',
+      'KYBBBBBBBBBBBByK', 'KYBBBBBBBBBBBByK', 'KYBBBBBBBBBBBByK', 'KYYBBBBBBBBBBYyK',
+      '.KYYYYYYYYYYYYK.', '.KKKKKKKKKKKKKK.', '.KTTTBBBBBBBbbK.', '.KTWTBBBBBBBbbK.',
+      '.KTTTBBBBBBBbbK.', '.KbBBBBBBBBBbbK.', '.KbbBBBBBBBbbbK.', '..KKKKKKKKKKKK..'],
+  },
+};
+B2BODY.taru.back = B2BODY.taru.front;
+B2BODY.taru.bdiag = B2BODY.taru.fdiag.map((r, i) => ({ 5: 'KTTBbBBBBBBBTTTTbBBBbbbK', 6: 'KTTBbBBBBBBBTWWTbBBBbbbK', 7: 'KTTBbBBBBBBBTWWTbBBBbbbK',
+  8: 'KTTBbBBBBBBBTTTTbBBBbbbK', 9: 'KbBBbBBBBBBBBBBBbBBBbbbK' })[i] || r);
+B2BODY.hoe.fdiag = rev(B2BODY.hoe.front);
+B2BODY.hoe.bdiag = rev(B2BODY.hoe.front).map(r => r.replace(/[TW]/g, 'B'));
+B2BODY.juso.bdiag = rev(B2BODY.juso.fdiag);
+B2BODY.tokei.fdiag = B2BODY.tokei.front.map((r, i) => ({ 3: 'KYyWWWWKWWWyYBBBByYK', 4: 'KYyWWWWKWWWWyYBBByYK', 5: 'KYyWWWWKWWWWyYBBByYK',
+  6: 'KYyWWWWKWWWWyYBBByYK', 7: 'KYyKWWWKKKKWyYBBByYK', 8: 'KYyWWWWWWWWWyYBBByYK', 9: 'KYyWWWWWWWWWyYBBByYK',
+  10: 'KYyyWWWKWWWyyYBBByYK', 11: 'KYYyyyyyyyyyYYBBByYK' })[i] || r);
+B2BODY.tokei.bdiag = B2BODY.tokei.back;
+for (const k in B2BODY) for (const v in B2BODY[k]) { const o = BODYP[k][v]; if (o) reg(Array.isArray(o) ? o : o.rows, B2BODY[k][v]); else console.warn('胴の向きがない', k, v); }
+
+// ---------- 着せ替えの腕（ARMP）・脚（LEGP）：2倍 ----------
+const B2ARM = {
+  kobushi: [   // 大拳
+    '..KKKKKKKKKK..', '.KLLWLLLLLLMK.', 'KLLLLLLLLLLMMK', 'KLKKLKKLKKLMMK', 'KLLKLLKLLKLMMK', 'KLLLLLLLLLLMMK',
+    'KLLLLLLLLLMMMK', 'KMMKKKKKMMMMMK', 'KMMMMMMMMMMMMK', 'KMMMMMMMMMMMMK', 'KMmMMMMMMMMMMK', 'KMMMMMMMMMMMMK',
+    '.KMMMMMMMMMMK.', '..KKKKKKKKKK..'],
+  tsume: [     // かぎ爪
+    '....KKKKKK....', '...KLLWLLMK...', '..KLLLLLLMMK..', '..KLLLLLLMMK..', '..KLLLLLMMMK..', '..KMMMMMMMMK..',
+    '.KKKKKKKKKKKK.', 'KWWK.KWWK.KWWK', 'KWWK.KWWK.KWWK', 'KWWK.KWWK.KWWK', 'KWWK.KWWK.KWWK', '.KWK..KWK..KWK',
+    '.KK...KK...KK.', '..K....K....K.'],
+  ogi: [       // 扇
+    '...KKKKKKKKKKKK...', '.KRRYRRYRRYRRYRRK.', 'KRRYRRYRRYRRYRRYRK', 'KRRRYRRYRRYRRYRRRK', 'KRRRYRRYRRYRRYRRRK', '.KRRRRYRYYRYRRRRK.',
+    '..KRRRRYYYYRRRRK..', '...KKRRRYYRRRKK...', '.....KKKYYKKK.....', '......KKYYKK......', '.....KLLLLLMK.....', '....KLLWLLLMMK....',
+    '....KLLLLLMMMK....', '....KLLLLMMMMK....', '....KMMMMMMMMK....', '....KMMMMMMMMK....', '.....KMMMMMMK.....', '......KKKKKK......'],
+  kusari: [    // 鎖分銅
+    '..KKKKKK..', '.KLLWLLMK.', 'KLWLLLLMMK', 'KLLLLLMMMK', 'KLLLLMMMMK', 'KLLLMMMMMK', 'KMMMMMMMMK',
+    '.KMMMMMMK.', '..KKKKKK..', '....KK....', '...KmmK...', '....KK....', '...KmmK...', '..KKKKKK..',
+    '.KmWmmmkK.', 'KmWmmmmkkK', 'KmmmmmkkkK', 'KkmmmkkkkK', '.KkkkkkkK.', '..KKKKKK..'],
+};
+const JET_TOP_F = ['..KKKKKKKK..', '.KLLWLLLMMK.', 'KLLLLLLMMMMK', 'KMMMMMMMMMMK', 'KMmMMMMMMmMK', 'KKKKKKKKKKKK', '..KkkkkkkK..', '...KKKKKK...'];
+const JET_TOP_S = ['....KKKKKKKK..', '..KKLLWLLLMMK.', '.KLLLLLLLLMMMK', 'KLLLLLLLLMMMMK', 'KMMMMMMMMMmMMK', 'KKKKKKKKKKKKKK', '....KkkkkkK...', '.....KKKKK....'];
+const B2LEG = {
+  geta: {
+    front: ['..KKKKKKKK..', '.KLLWLLLMMK.', 'KLLLLLLMMMMK', 'KMMMMMMMMMMK', 'KKKKKKKKKKKK', 'KYYYYYYYYYyK', 'KyyyyyyyyyyK',
+            'KKKKKKKKKKKK', '...KyyyyK...', '...KYyyyK...', '...KYyyyK...', '...KYyyyK...', '...KyyyyK...', '...KKKKKK...'],
+    side:  ['....KKKKKKKK..', '...KLLWLLLMMK.', '..KLLLLLLLMMMK', '.KLLLLLLLMMMMK', 'KKKKKKKKKKKKKK', 'KYYYYYYYYYYYyK', 'KyyyyyyyyyyyyK',
+            'KKKKKKKKKKKKKK', '....KyyyyK....', '....KYyyyK....', '....KYyyyK....', '....KYyyyK....', '....KyyyyK....', '....KKKKKK....'] },
+  sharin: {
+    front: ['..KKKK..', '.KkkkkK.', 'KkkkkkkK', 'KmmmmmmK', 'KmWmmmmK', 'KmmmmmmK', 'KYYYYYYK',
+            'KyYYYYyK', 'KmmmmmmK', 'KmmmmmmK', 'KmmmmmmK', 'KkkkkkkK', '.KkkkkK.', '..KKKK..'],
+    side:  ['.....KKKK.....', '...KKkkkkKK...', '..KkkmmmmkkK..', '.KkmKmmmmKmkK.', '.KkmmKmmKmmkK.', 'KkmmmmKKmmmmkK', 'KkmmmKYYKmmmkK',
+            'KkKKKKYYKKKKkK', 'KkmmmmKKmmmmkK', '.KkmmKmmKmmkK.', '.KkmKmmmmKmkK.', '..KkkmmmmkkK..', '...KKkkkkKK...', '.....KKKK.....'] },
+  tako: {
+    front: ['..KKKKKKKK..', '.KRRWRRRRRK.', 'KRRRRRRRRRrK', 'KRRrRRRrRRrK', 'KRRRRRRRRRrK',
+            'KRRrRRRrRRrK', 'KRRRRRRRRRrK', '.KRRKRRKRrK.', '.KRK.KRK.KRK', '..K...K...K.'],
+    side:  ['..KKKKKKKKKK..', '.KRRWRRRRRRRK.', 'KRRRRRRRRRRRrK', 'KRRrRRrRRrRRrK', 'KRRRRRRRRRRRrK', '.KKKKKKKRRRRrK',
+            '......KRRrRRK.', '......KRRRRrK.', '.......KRRrK..', '.......KRRK...', '......KRRK....', '......KKK.....'] },
+  jet: {
+    front: [[...JET_TOP_F, '..PYWWWWYP..', '..PYYWWYYP..', '...PPYYPP...', '....PPPP....'],
+            [...JET_TOP_F, '...PYWWYP...', '...PYYYYP...', '....PYYP....', '.....PP.....']],
+    side:  [[...JET_TOP_S, '....PYWWWYP...', '....PYYWYYP...', '.....PPYPP....', '......PPP.....'],
+            [...JET_TOP_S, '.....PYWYP....', '.....PYYYP....', '......PYP.....', '......P.......']] },
+};
+const rowsOf = o => Array.isArray(o) ? o : o.rows;
+for (const k in B2ARM) reg(rowsOf(ARMP[k].L), B2ARM[k]);
+for (const k in B2LEG) for (const v of ['front', 'side']) {
+  const o = LEGP[k][v], b = B2LEG[k][v];
+  if (o.frames) o.frames.forEach((f, i) => reg(f, b[i])); else reg(rowsOf(o), b);
+}
+
+// ---------- 飾り（headOver の髪）：房・長い房・一本角。2倍 ----------
+// 元の絵は headOver が式で作るので、同じ式で並びを作って登録する
+const hairOrig = n => { const tail = Array.from({ length: n - 1 }, (_, i) => ('.'.repeat(Math.min(i, 3)) + 'KPPK').padEnd(6, '.').slice(0, 6));
+  return { side: ['KK....', ...tail], back: ['.KK.', ...Array(n).fill('KPPK'), '.KK.'] }; };
+const TASSEL = ['.KPPPPK.', '.KPrPPK.', '.KPPPPK.', '.KPPrPK.'];
+const tasselBack = n => ['..KKKK..', '.KYYYYK.', '.KyyyyK.', ...Array.from({ length: n }, (_, i) => TASSEL[i % 4]), 'KPPPPPPK', '.KKKKKK.'];
+const HAIR2 = [
+  [hairOrig(4).side, ['.KK.........', 'KYYK........', 'KPPPK.......', '.KPPPK......', '..KPPPK.....', '...KPPPPK...', '....KPPPPK..', '.....KKKK...']],   // 房（横・斜め）
+  [hairOrig(6).side, ['.KK.........', 'KYYK........', 'KPPPK.......', '.KPPPK......', '..KPPPK.....', '...KPPPK....', '....KPPPK...',
+                      '.....KPPPK..', '......KPPPK.', '......KPPPK.', '......KPPPPK', '.......KKKK.']],                                         // 長い房（横・斜め）
+  [hairOrig(4).back, tasselBack(7)],    // 房（後ろ）
+  [hairOrig(6).back, tasselBack(11)],   // 長い房（後ろ）
+  [['.K.', 'KWK', 'KWK'], ['..KK..', '.KWWK.', '.KWWK.', 'KWWWWK', 'KWWWWK', 'KWWWWK']],   // 一本角
+];
+for (const [o, b] of HAIR2) reg(o, b);
+
 // ドットの線（刀）：px ドットの大きさで1マスずつ打つ
 function pixLine(c, x0, y0, x1, y1, px, col){
   x0 = Math.round(x0/px); y0 = Math.round(y0/px); x1 = Math.round(x1/px); y1 = Math.round(y1/px);
@@ -2188,32 +2938,76 @@ function pixLine(c, x0, y0, x1, y1, px, col){
   for (let n = 0; n < 200; n++) { c.fillRect(x0*px, y0*px, px, px); if (x0 === x1 && y0 === y1) break; const e2 = 2*e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
 }
 // 武器のドット絵（試合・装備画面・アイコンで共通）。(x0, y0)＝握る位置、ang＝刃の向き、L＝握りから先端までの長さ（画面の単位）
-// 刃の軸に沿って u（前へ）、横へ v のドットで線を引く。先に全部を1ドット下へずらして黒で描き、縁取りにする
+// 刃の軸に沿って u（前へ）、横へ v のドットで線を引く。先に全部を半ドット下へずらして濃い色で描き、縁取りにする
 const shadeOf = hex => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16)*.62).toString(16).padStart(2, '0')).join('');
+// 武器の絵は（種類・刃・白・大きさ・長さ・角度を 1/128 周で区切った物）ごとに1度だけ作って覚え、あとは貼るだけ
+// 小さな canvas を何百枚も持つとブラウザの後片付けで詰まるので、1枚の大きな canvas（WAtlas）に棚のように詰めて並べる
+const WCache = new Map(), WA = { S: 2048, x: 0, y: 0, rowH: 0 };
+const WAtlas = document.createElement('canvas'); WAtlas.width = WAtlas.height = WA.S; const WAx = WAtlas.getContext('2d');
+function atlasPut(img){   // img：ImageData
+  if (WA.x + img.width > WA.S) { WA.x = 0; WA.y += WA.rowH + 1; WA.rowH = 0; }
+  if (WA.y + img.height > WA.S) { WCache.clear(); WAx.clearRect(0, 0, WA.S, WA.S); WA.x = WA.y = WA.rowH = 0; }   // いっぱいになったら全部やり直し
+  const at = { x: WA.x, y: WA.y }; WAx.putImageData(img, at.x, at.y); WA.x += img.width + 1; WA.rowH = Math.max(WA.rowH, img.height); return at;
+}
 function drawWeaponPix(c, x0, y0, ang, wk, px, L, bladeKey, white){
+  const AQ = 128, aq = ((Math.round(ang/(Math.PI*2)*AQ) % AQ) + AQ) % AQ, n = Math.max(4, Math.round(L/px)), dp = px/2;
+  const key = wk + '|' + bladeKey + '|' + white + '|' + px + '|' + n + '|' + aq;
+  let im = WCache.get(key);
+  if (!im) { const m = makeWeaponImg(aq/AQ*Math.PI*2, wk, px, n, bladeKey, white), at = atlasPut(m.img);
+    im = { sx: at.x, sy: at.y, w: m.img.width, h: m.img.height, gx0: m.gx0, gy0: m.gy0 }; WCache.set(key, im); }
+  const bx = Math.round(x0/dp), by = Math.round(y0/dp);
+  c.imageSmoothingEnabled = false; c.drawImage(WAtlas, im.sx, im.sy, im.w, im.h, (bx + im.gx0)*dp, (by + im.gy0)*dp, im.w*dp, im.h*dp);
+}
+// 握る位置を原点にして、半ドットのマス目1つ＝1画素の画素データ（ImageData）を作る
+function makeWeaponImg(ang, wk, px, n, bladeKey, white){
   const w = WEAPONS[wk] || WEAPONS.katana, bs = BLADE[bladeKey] || BLADE.plain, W8 = col => white ? '#FFFFFF' : col;
-  const edge = W8(bladeKey === 'plain' ? w.blade : bs.edge), shade = W8(shadeOf(bladeKey === 'plain' ? w.blade : bs.edge));
-  const grip = W8(bladeKey === 'plain' ? '#3A2A1A' : bs.grip), guard = W8(bs.guard), shaft = W8(w.shaft || '#8B6A45');
-  const ca = Math.cos(ang), sa = Math.sin(ang), n = Math.max(4, Math.round(L/px)), S = [];
-  const seg = (u0, v0, u1, v1, col) => S.push([u0, v0, u1, v1, col]);
-  const band = (u0, u1, v0, v1, col) => { for (let v = v0; v <= v1 + 1e-6; v += .5) seg(u0, v, u1, v, typeof col === 'function' ? col(v) : col); };   // 幅のある所（斜めでも隙間ができないよう半ドットずつ）
-  if (wk === 'spear') {        // 槍：長い柄、金の口金、十字の横刃（十文字槍）、菱形の穂先
-    band(-5, n - 7, 0, .5, shaft); band(n - 7, n - 6, -.5, 1, guard);
+  const eB = bladeKey === 'plain' ? w.blade : bs.edge, gB = bladeKey === 'plain' ? '#3A2A1A' : bs.grip, sB = w.shaft || '#8B6A45';
+  const edge = W8(eB), shade = W8(shadeOf(eB)), hi = W8(mix(eB, '#FFFFFF', .7));
+  const grip = W8(gB), wrap = W8(mix(gB, '#FFFFFF', .32)), guard = W8(bs.guard), guardHi = W8(mix(bs.guard, '#FFFFFF', .45));
+  const shaft = W8(sB), grain = W8(shadeOf(sB));
+  // v0.33：半ドット（dp）のマス目で塗る。形（u・v の数）は前と同じで、細部（柄巻き・照り・木目）を足した
+  // 部品は刃の軸 u（前へ）・横 v の長方形。マス目ごとに中心がどの長方形に入るかを調べて塗る（後の物が上）ので、斜めでも隙間が出ない
+  const ca = Math.cos(ang), sa = Math.sin(ang), R = [], x0 = 0, y0 = 0, dp = px/2;
+  const band = (u0, u1, v0, v1, col) => R.push([Math.min(u0, u1), Math.max(u0, u1), Math.min(v0, v1), Math.max(v0, v1), col]);
+  const seg = (u0, v0, u1, v1, col) => band(u0, u1, v0, v1, col);
+  const wrapOn = (u0, u1) => { for (let u = u0 + .25; u < u1 - .2; u += 1) { seg(u, 0, u, 0, wrap); seg(u + .5, .5, u + .5, .5, wrap); } };   // 柄巻き：ひし形の模様
+  if (wk === 'spear') {        // 槍：長い柄（木目）、金の口金、十字の横刃（十文字槍）、菱形の穂先
+    band(-5, n - 7, 0, .5, shaft); for (let u = -4; u < n - 8; u += 2.5) seg(u, .5, u + .5, .5, grain);
+    band(n - 7, n - 6, -.5, 1, guard); seg(n - 7, -.5, n - 6, -.5, guardHi);
     band(n - 6, n - 5, -4, 4.5, edge); seg(n - 5, -4, n - 4, -4, edge); seg(n - 5, 4.5, n - 4, 4.5, edge);   // 横刃（両端は少し前へ反る）
     band(n - 5, n - 1, -1, -.5, edge); band(n - 5, n - 1, 1, 1.5, shade); band(n - 5, n, 0, .5, edge);
+    seg(n - 4.5, -1, n - 2, -1, hi); seg(n - 6, -3.5, n - 6, -1.5, hi);   // 照り
   } else if (wk === 'great') { // 大剣：太い刃に溝、大きな鍔、柄頭
-    band(-4, 0, 0, .5, grip); band(-5, -4, -.5, 1, guard); band(.5, 1.5, -3, 3.5, guard);
-    band(2, n - 1, -1.5, 2, v => Math.abs(v - .25) < .6 ? shade : edge); band(n - 1, n, -.5, 1, edge);
+    band(-4, 0, 0, .5, grip); wrapOn(-4, 0); band(-5, -4, -.5, 1, guard); band(.5, 1.5, -3, 3.5, guard); seg(.5, -3, 1.5, -3, guardHi);
+    band(2, n - 1, -1.5, 2, v => Math.abs(v - .25) < .6 ? shade : edge); band(n - 1, n, -.5, 1, edge); seg(3, -1.5, n - 2, -1.5, hi);
   } else if (wk === 'dagger') { // 短剣：短い幅広の刃
-    band(-2, 0, 0, .5, grip); band(.5, 1, -1.5, 2, guard);
-    band(1, n - 1, -.5, 0, edge); band(1, n - 1, .5, 1, shade); seg(n - 1, 0, n, .25, edge);
-  } else {                     // 刀：細身の刃に影の筋、角の鍔
-    band(-3, 0, 0, .5, grip); band(.5, 1, -1, 1.5, guard);
-    band(1, n, 0, 0, edge); band(1.5, n - 2, .5, .5, shade);
+    band(-2, 0, 0, .5, grip); wrapOn(-2, 0); band(.5, 1, -1.5, 2, guard); seg(.5, -1.5, 1, -1.5, guardHi);
+    band(1, n - 1, -.5, 0, edge); band(1, n - 1, .5, 1, shade); seg(n - 1, 0, n, .25, edge); seg(1.5, -.5, n - 2, -.5, hi);
+  } else {                     // 刀：細身の刃に影の筋、角の鍔、鎺（はばき）
+    band(-3, 0, 0, .5, grip); wrapOn(-3, 0); band(.5, 1, -1, 1.5, guard); seg(.5, -1, 1, -1, guardHi);
+    band(1, n, 0, 0, edge); band(1.5, n - 2, .5, .5, shade); band(1, 1.5, 0, .5, guard); seg(n*.35, 0, n*.7, 0, hi);
   }
-  const Pt = (u, v) => [x0 + (ca*u - sa*v)*px, y0 + (sa*u + ca*v)*px];
-  for (const [u0, v0, u1, v1] of S) { const a = Pt(u0, v0), b = Pt(u1, v1); pixLine(c, a[0], a[1] + px, b[0], b[1] + px, px, '#000000'); }
-  for (const [u0, v0, u1, v1, col] of S) { const a = Pt(u0, v0), b = Pt(u1, v1); pixLine(c, a[0], a[1], b[0], b[1], px, col); }
+  // 部品ごとに、その長方形が入るマス目の範囲だけを調べて塗る（後の物が上）
+  const P = (u, v) => [(ca*u - sa*v)*px/dp, (sa*u + ca*v)*px/dp], tol = .3, boxes = [];
+  let gx0 = Infinity, gy0 = Infinity, gx1 = -Infinity, gy1 = -Infinity;
+  for (const r of R) {
+    const [u0, u1, v0, v1] = r, pts = [P(u0 - tol, v0 - tol), P(u0 - tol, v1 + tol), P(u1 + tol, v0 - tol), P(u1 + tol, v1 + tol)];
+    const b = [Math.floor(Math.min(...pts.map(q => q[0]))), Math.floor(Math.min(...pts.map(q => q[1]))), Math.ceil(Math.max(...pts.map(q => q[0]))), Math.ceil(Math.max(...pts.map(q => q[1])))];
+    boxes.push(b); gx0 = Math.min(gx0, b[0]); gy0 = Math.min(gy0, b[1]); gx1 = Math.max(gx1, b[2]); gy1 = Math.max(gy1, b[3]);
+  }
+  gx0--; gy0--; gx1++; gy1++;
+  const cw = gx1 - gx0 + 1, chh = gy1 - gy0 + 2, cells = new Array(cw*chh).fill(null);
+  R.forEach(([u0, u1, v0, v1, cl], i) => { const b = boxes[i];
+    for (let gy = b[1]; gy <= b[3]; gy++) for (let gx = b[0]; gx <= b[2]; gx++) {
+      const dx = (gx + .5)*dp, dy = (gy + .5)*dp, u = (ca*dx + sa*dy)/px, v = (-sa*dx + ca*dy)/px;
+      if (u >= u0 - tol && u <= u1 + tol && v >= v0 - tol && v <= v1 + tol) cells[(gy - gy0)*cw + gx - gx0] = typeof cl === 'function' ? cl(v) : cl;
+    } });
+  // 画素にまとめて書く。縁取り：塗ったマスの1つ下が空いていれば濃い色（前と同じく下側の影）
+  const img = new ImageData(cw, chh), d = img.data;
+  const put = (i, hex) => { const k = i*4; d[k] = parseInt(hex.slice(1, 3), 16); d[k + 1] = parseInt(hex.slice(3, 5), 16); d[k + 2] = parseInt(hex.slice(5, 7), 16); d[k + 3] = 255; };
+  for (let i = 0; i < cw*(chh - 1); i++) if (cells[i] && !cells[i + cw]) put(i + cw, '#1A1222');
+  for (let i = 0; i < cells.length; i++) if (cells[i]) put(i, cells[i]);
+  return { img, gx0, gy0 };
 }
 const MECH_BASE = () => ({ footL: [0, -3.5, 0], footR: [0, 3.5, 0], body: [0, 0, 9], head: [0, 0, 18.5], handL: [1, -7, 8.5], handR: [2, 7, 8.5] });
 // 向き F を8つに分ける（0＝右、2＝下＝正面、4＝左、6＝上＝後ろ）。横・斜めの絵は左向きなので、右寄りの向きでは反転
@@ -2227,8 +3021,11 @@ function drawMech(c, x, y, F, skin, team, P, o = {}){
   const Rd = v => Math.round(v/px)*px, list = [];
   const im = rows => mspr(rows, pk, pal, flip, !!o.white);
   // s：絵（配列か {rows, cx, cy}）。基準点 (cx, cy) を部品の位置に合わせる（なければ真ん中）。反転するときは cx も反転
+  // 部品を貼る。目の光（img.glow）があれば加算で重ねる
+  const blit = (img, x0, y0, w, h) => { c.drawImage(img, x0, y0, w, h); const g = img.glow; if (g && !o.white) { const sx = w/g.w, sy = h/g.h;
+    c.save(); c.globalCompositeOperation = 'lighter'; c.imageSmoothingEnabled = true; c.drawImage(g.cv, x0 - g.pad*sx, y0 - g.pad*sy, (g.w + g.pad*2)*sx, (g.h + g.pad*2)*sy); c.restore(); } };
   const place = (img, x0, y0, s) => { const ax = s.cx ?? img.width/2, ay = s.cy ?? img.height/2;
-    c.drawImage(img, Rd(x0 - (flip ? img.width - ax : ax)*px), Rd(y0 - ay*px), img.width*px, img.height*px); };
+    blit(img, Rd(x0 - (flip ? img.width - ax : ax)*px), Rd(y0 - ay*px), img.width*px, img.height*px); };
   const part = (s, pos, dd = 0) => { if (!pos || !s) return; s = spr(s); const q = toS(pos), img = im(s.rows); list.push([q.d + dd, () => place(img, q.x, q.y, s)]); };
   const frontish = view === 'front' || view === 'back', LP = LEGP[skin.legP];
   let foot = LP ? spr(LP[frontish ? 'front' : 'side']) : { rows: frontish ? MSPR.foot_front : MSPR.foot_side };
@@ -2238,7 +3035,7 @@ function drawMech(c, x, y, F, skin, team, P, o = {}){
   part(BP ? pickView(BP, view) : MSPR['body_' + view], P.body);
   if (skin.back && skin.back !== 'none' && P.body) {   // 背負い物は胴の後ろ
     const off = { flag: [-3, 0, 14], flag_kin: [-3, 0, 14], cape: [-2.5, 0, -.5], horo: [-5, 0, 5] }[skin.back];
-    part(MSPR[skin.back], [P.body[0] + off[0], P.body[1] + off[1], P.body[2] + off[2]], -.2);
+    part(BACK2[skin.back] ? { rows: BACK2[skin.back][view] } : MSPR[skin.back], [P.body[0] + off[0], P.body[1] + off[1], P.body[2] + off[2]], -.2);
   }
   const HP = HEADP[skin.head];
   if (P.head && HP) { const q = toS(P.head), s = pickView(HP, view), img = im(s.rows);   // 形の違う頭：下の端をいつもの頭にそろえる。飾りはつけない
@@ -2247,7 +3044,7 @@ function drawMech(c, x, y, F, skin, team, P, o = {}){
     list.push([q.d + .3, () => {
       const hx = Rd(q.x - 5*px), hy = Rd(q.y - 3.5*px), ov = headOver(skin, view);
       const drawOv = ([rows, ox, oy]) => { const w = rows[0].length, img = im(rows); c.drawImage(img, hx + (flip ? 10 - ox - w : ox)*px, hy + oy*px, w*px, rows.length*px); };
-      ov.filter(v => v[3]).forEach(drawOv); c.drawImage(hImg, hx, hy, 10*px, 7*px); ov.filter(v => !v[3]).forEach(drawOv);
+      ov.filter(v => v[3]).forEach(drawOv); blit(hImg, hx, hy, 10*px, 7*px); ov.filter(v => !v[3]).forEach(drawOv);
     }]); }
   part(armSpr(skin, 'L'), P.handL, .1);
   if (o.weapon) list.push([o.weapon.d, o.weapon.fn]);
