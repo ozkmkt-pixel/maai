@@ -1208,9 +1208,10 @@ function update(rdt){
   if (G.phase === 'ko') { stepF(G.p, G.e, dt); stepF(G.e, G.p, dt); if (G.phaseT > 1.6) endRound(); return; }
   G.now += dt;
   const dk = G.mikiriT > 0 ? .4 : 1; if (G.mikiriT > 0) G.mikiriT -= dt;   // 奥義「見切り」：相手だけ遅くなる
-  control(G.p, G.e, readPlayer(), dt);
-  control(G.e, G.p, G.net ? netInput() : aiThink(dt*dk), dt*dk);
-  stepF(G.p, G.e, dt); stepF(G.e, G.p, dt*dk);
+  const slowP = G.net && G.mikiriBy === G.e, dkp = slowP ? dk : 1, dke = slowP ? 1 : dk;   // 通信対戦：相手が見切りを使ったら自分が遅くなる
+  control(G.p, G.e, readPlayer(), dt*dkp);
+  control(G.e, G.p, G.net ? netInput() : aiThink(dt*dke), dt*dke);
+  stepF(G.p, G.e, dt*dkp); stepF(G.e, G.p, dt*dke);
   updateItems(dt);
   // 体の重なりを押し戻す
   const dx = G.e.x - G.p.x, dy = G.e.y - G.p.y, d = Math.hypot(dx, dy), m = G.p.r + G.e.r;
@@ -1830,12 +1831,12 @@ function openPractice(){
 }
 function quitPractice(){ if (!G || !G.practice) return; const {level, eW, eGear} = G; G = null; quitBtn.hidden = true; loadout(level, eW, eGear, true); }
 
-// ================= 通信対戦（v0.34 試作） =================
+// ================= 通信対戦（v0.34 試作、v0.34.1 で仕掛け・v0.34.2 で心臓と鍔玉も自分のもの） =================
 // 2台をコードでつなぐ1対1。PeerJS（WebRTC）で直接つなぎ、仲介は PeerJS の無料サーバー（部屋のコードの受け渡しだけ）
 // 作りはホストが全部を計算する方式：ホストが試合を進め、参加側は入力を送って、届いた様子を描くだけ
 //   参加側の画面は闘技場の中心で180度回して、自分がいつも下（青）に見えるようにする
-// 条件は全員同じ：武器と見た目は自分のもの、仕掛けは最初の型（心眼・鋼ゼンマイ・早歯車）、心臓・鍔玉なし
-const NET_VER = 1, NET_PREFIX = 'maai-v1-', NET_GEAR = { A: 'a2', B: 'b2', C: 'c2' };
+// 武器・見た目・仕掛け・心臓・鍔玉は自分のもの（v0.34.1 で仕掛け、v0.34.2 で心臓・鍔玉）
+const NET_VER = 3, NET_PREFIX = 'maai-v1-', NET_GEAR = { A: 'a2', B: 'b2', C: 'c2' };
 const NET_CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 let NET = null;   // { role:'host'|'guest', peer, conn, opp:{skin,w}, rin, seen, sfx, lastSend, again:{me,opp} }
 
@@ -1856,7 +1857,7 @@ function netScreen(msg){
   netClose(); quitBtn.hidden = true;
   const wBtns = WKEYS.map(k => `<button class="nW${k === myW ? ' on' : ''}" data-w="${k}">${WEAPONS[k].name}</button>`).join('');
   screen('通信対戦', `<div class="nBox">
-    <p class="nNote">2台をコードでつないで1対1（2本先取）。仕掛けは全員同じ（心眼・鋼ゼンマイ・早歯車）、心臓・鍔玉はなし。見た目はそのまま使えます。</p>
+    <p class="nNote">2台をコードでつないで1対1（2本先取）。武器・見た目・仕掛け・心臓・鍔玉は、今の装備のまま使えます。</p>
     <div class="nLbl">使う武器</div><div class="nWs">${wBtns}</div>
     <button id="nHost" class="nBig">部屋を作る<small>コードを相手に伝える</small></button>
     <div class="nLbl">部屋に入る</div>
@@ -1901,7 +1902,7 @@ async function netJoin(code){
     setTimeout(() => { if (NET && NET.conn === conn && !conn.open) netFail('相手に届きませんでした（ネットワークによっては直接つながりません）'); }, 15000); });
 }
 function netWire(conn){
-  conn.on('open', () => { netStatus('つながりました。始めます…'); conn.send({ t: 'hello', v: NET_VER, skin: mySkin, w: myW }); });
+  conn.on('open', () => { netStatus('つながりました。始めます…'); syncGear(); conn.send({ t: 'hello', v: NET_VER, skin: mySkin, w: myW, gear: netGearOut(myGear), heart: myHeart(), orb: myOrb() }); });
   conn.on('data', netRecv);
   conn.on('close', () => { if (NET && NET.conn === conn) netFail('相手との接続が切れました'); });
   conn.on('error', () => { if (NET && NET.conn === conn) netFail('通信でエラーが起きました'); });
@@ -1911,7 +1912,7 @@ function netRecv(m){
   if (m.t === 'full') return netFail('その部屋はもう対戦中です');
   if (m.t === 'hello') {
     if (m.v !== NET_VER) { netSend({ t: 'ver' }); return netFail('相手とゲームの版が違います。どちらも読み込み直してください'); }
-    NET.opp = { skin: { ...DEFAULT_SKIN, ...(m.skin || {}) }, w: WEAPONS[m.w] ? m.w : 'katana' };
+    NET.opp = { skin: { ...DEFAULT_SKIN, ...(m.skin || {}) }, w: WEAPONS[m.w] ? m.w : 'katana', gear: netGearIn(m.gear), heart: netKLv(m.heart, HEARTS), orb: netKLv(m.orb, ORBS) };
     if (NET.role === 'host') netStart();
     return;
   }
@@ -1927,29 +1928,40 @@ function netRecv(m){
 function netStart(){
   if (!NET || !NET.opp) return;
   if (NET.role === 'host') netSend({ t: 'start' });
-  NET.rin = { mx: 0, my: 0, g: false, a: 0, d: 0, th: 0 }; NET.seen = { a: 0, d: 0, th: 0 }; NET.sfx = []; NET.lastSend = 0; NET.again = { me: false, opp: false };
-  NET.inSeq = { a: 0, d: 0, th: 0 }; NET.lastIn = ''; NET.lastInT = 0; NET.overShown = false;
+  NET.rin = { mx: 0, my: 0, g: false, a: 0, d: 0, th: 0, o: 0 }; NET.seen = { a: 0, d: 0, th: 0, o: 0 }; NET.sfx = []; NET.lastSend = 0; NET.again = { me: false, opp: false };
+  NET.inSeq = { a: 0, d: 0, th: 0, o: 0 }; NET.lastIn = ''; NET.lastInT = 0; NET.overShown = false;
   G = { net: NET, level: 0, practice: false, boss: null, count: { parry: 0, taken: 0, given: 0 }, round: 1, pw: 0, ew: 0, now: 0, hitstop: 0, slowT: 0, shake: 0,
         fx: [], texts: [], rings: [], ofx: [], phase: 'intro', phaseT: 0 };
   netRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = 'やめる'; BGM.play('duel');
 }
 function netRound(){
   AR.r = DUEL_R; G.terrain = null; G.zone = null; G.cam = null;
-  G.p = netMk(AR.y + 80, -Math.PI/2, myW, mySkin, 'blue', `あなた（${WEAPONS[myW].name}）`);
-  G.e = netMk(AR.y - 80, Math.PI/2, NET.opp.w, NET.opp.skin, 'red', `相手（${WEAPONS[NET.opp.w].name}）`);
-  G.mikiriT = 0; G.pOugi = 0;
+  const po = G.p ? G.p.ougi : 0, eo = G.e ? G.e.ougi : 0;   // 奥義ゲージは次の1本に持ち越す（試合の始めは G.p がないので0）
+  G.p = netMk(AR.y + 80, -Math.PI/2, myW, mySkin, 'blue', `あなた（${WEAPONS[myW].name}）`, netGearIn(netGearOut(myGear)), myHeart(), myOrb());
+  G.e = netMk(AR.y - 80, Math.PI/2, NET.opp.w, NET.opp.skin, 'red', `相手（${WEAPONS[NET.opp.w].name}）`, NET.opp.gear, NET.opp.heart, NET.opp.orb);
+  G.p.ougi = po; G.e.ougi = eo; G.mikiriT = 0; G.mikiriBy = null; G.pOugi = 0;
   G.phase = 'intro'; G.phaseT = 0; G.fx = []; G.texts = []; G.rings = []; G.ofx = []; G.startSnd = 0;
   G.items = []; G.itemT = rnd(6, 9);
 }
-function netMk(y, face, wk, skin, team, name){
-  const f = mkF(AR.x, y, false, TEAM[team], name, wk, NET_GEAR);   // isAI=false：ふたりともプレイヤー扱い（はじき受付の上乗せも同じ）
-  f.face = face; f.skin = skin; f.team = team; f.heart = null; f.ougi = 0; f.orb = null;
+function netMk(y, face, wk, skin, team, name, gear, heart, orb){
+  const f = mkF(AR.x, y, false, TEAM[team], name, wk, gear);   // isAI=false：ふたりともプレイヤー扱い（はじき受付の上乗せも同じ）
+  f.face = face; f.skin = skin; f.team = team; f.heart = heart || null; f.ougi = 0; f.orb = orb || null;
   return f;
 }
+// 仕掛け：送るのは能力に関わる所だけ。受け取ったものは中身を確かめ、おかしな部位は最初の型にする
+const netGearOut = g => Object.fromEntries(SLOTS.map(s => { const x = asItem(g[s]) || {}; return [s, { s, k: x.k, r: x.r || 0, lv: x.lv || 0, subs: x.subs || [], sp: x.sp || null, set: x.set || null }]; }));
+function netGearIn(g){
+  return Object.fromEntries(SLOTS.map(s => { const x = g && g[s];
+    if (!x || !ARMOR[s].items[x.k]) return [s, NET_GEAR[s]];
+    const subs = (Array.isArray(x.subs) ? x.subs : []).filter(a => Array.isArray(a) && SUBS[a[0]] && typeof a[1] === 'number').slice(0, 4);
+    return [s, { s, k: x.k, r: +x.r || 0, lv: +x.lv || 0, subs, sp: SPECIALS[x.sp] ? x.sp : null, set: SETS[x.set] ? x.set : null }]; }));
+}
+// 心臓・鍔玉：{k, lv}。知らない種類なら持っていない扱い
+const netKLv = (x, table) => x && table[x.k] ? { k: x.k, lv: clamp(Math.round(+x.lv || 0), 0, 5) } : null;
 // ホスト：相手（G.e）の入力。押した回数の数え上げが増えていたら、その操作を1回出す
 function netInput(){
-  const r = NET.rin, s = NET.seen, o = { mx: r.mx || 0, my: r.my || 0, guard: !!r.g, attack: r.a !== s.a, dash: r.d !== s.d, throw: r.th !== s.th, ougi: false };
-  s.a = r.a; s.d = r.d; s.th = r.th; return o;
+  const r = NET.rin, s = NET.seen, o = { mx: r.mx || 0, my: r.my || 0, guard: !!r.g, attack: r.a !== s.a, dash: r.d !== s.d, throw: r.th !== s.th, ougi: (r.o || 0) !== s.o };
+  s.a = r.a; s.d = r.d; s.th = r.th; s.o = r.o || 0; return o;
 }
 function netEndRound(){
   if (G.pw >= 2 || G.ew >= 2) { G.phase = 'over'; netSnap(true); netOver(); return; }
@@ -1961,18 +1973,18 @@ function netTick(){
   if (!G || !G.net || !NET) return;
   const now = performance.now();
   if (NET.role === 'host') {
-    if (G.phase !== 'fight') { const r = NET.rin; NET.seen = { a: r.a, d: r.d, th: r.th }; }   // 戦っていない間に押したものは捨てる
+    if (G.phase !== 'fight') { const r = NET.rin; NET.seen = { a: r.a, d: r.d, th: r.th, o: r.o || 0 }; }   // 戦っていない間に押したものは捨てる
     if (now - NET.lastSend >= 15) { NET.lastSend = now; netSnap(); }
   } else {
     const p = readPlayer(), q = NET.inSeq;
-    if (P.attack) { q.a++; P.attack = false; } if (P.dash) { q.d++; P.dash = false; } if (P.throw) { q.th++; P.throw = false; } P.ougi = false;
+    if (P.attack) { q.a++; P.attack = false; } if (P.dash) { q.d++; P.dash = false; } if (P.throw) { q.th++; P.throw = false; } if (P.ougi) { q.o++; P.ougi = false; }
     // 画面を180度回しているので、スティックの向きも逆にして送る
-    const m = { t: 'in', mx: Math.round(-p.mx*100)/100, my: Math.round(-p.my*100)/100, g: !!p.guard, a: q.a, d: q.d, th: q.th }, key = JSON.stringify(m);
+    const m = { t: 'in', mx: Math.round(-p.mx*100)/100, my: Math.round(-p.my*100)/100, g: !!p.guard, a: q.a, d: q.d, th: q.th, o: q.o }, key = JSON.stringify(m);
     if (key !== NET.lastIn || now - NET.lastInT > 100) { NET.lastIn = key; NET.lastInT = now; netSend(m); }
   }
 }
 // ホスト → ゲスト：試合の様子。新しく出た火花・文字・輪と、鳴らした音はその分だけ送る
-const NET_SKIP = new Set(['w', 'm', 'gear', 'skin', 'name', 'team', 'isAI', 'color', 'heart', 'orb', 'per', 'lastHit', 'heldBy', 'rushTgt', 'burnBy', 'tgt', 'ai']);
+const NET_SKIP = new Set(['w', 'm', 'gear', 'skin', 'name', 'team', 'isAI', 'color', 'heart', 'orb', 'per', 'lastHit', 'heldBy', 'rushTgt', 'burnBy', 'tgt', 'ai', 'fxT', 'auT']);   // fxT・auT：演出の時計（端末ごと）
 const r3 = v => typeof v === 'number' ? Math.round(v*1000)/1000 : v;
 function netPackF(f){
   const o = {};
@@ -1984,9 +1996,9 @@ function netPackF(f){
 }
 function netFresh(arr){ const out = []; for (const o of arr || []) if (!o._n) { o._n = 1; const c = {}; for (const k in o) if (k !== '_n') c[k] = r3(o[k]); out.push(c); } return out; }
 function netSnap(force){
-  const s = { t: 's', ph: G.phase, pt: r3(G.phaseT), rd: G.round, pw: G.pw, ew: G.ew, now: r3(G.now), hs: r3(G.hitstop), sl: r3(G.slowT), sh: r3(G.shake),
+  const s = { t: 's', ph: G.phase, pt: r3(G.phaseT), rd: G.round, pw: G.pw, ew: G.ew, now: r3(G.now), hs: r3(G.hitstop), sl: r3(G.slowT), sh: r3(G.shake), mk: r3(G.mikiriT || 0),
     p: netPackF(G.p), e: netPackF(G.e), it: G.items.map(i => ({ x: r3(i.x), y: r3(i.y), type: i.type, t: r3(i.t) })),
-    fx: netFresh(G.fx), tx: netFresh(G.texts), rg: netFresh(G.rings), sfx: NET.sfx };
+    fx: netFresh(G.fx), tx: netFresh(G.texts), rg: netFresh(G.rings), ofx: netFresh(G.ofx), sfx: NET.sfx };
   NET.sfx = [];
   netSend(s);
 }
@@ -1994,7 +2006,7 @@ function netSnap(force){
 const mX = x => 2*AR.x - x, mY = y => 2*AR.y - y, mA = a => a == null ? a : a + Math.PI;
 function netMirror(o){ if (o.x != null) o.x = mX(o.x); if (o.y != null) o.y = mY(o.y); if (o.vx != null) o.vx = -o.vx; if (o.vy != null) o.vy = -o.vy; return o; }
 function netUnpackF(base, s){
-  const f = { ...s, w: base.w, m: base.m, gear: base.gear, skin: base.skin, name: base.name, team: base.team, isAI: false, color: base.color, heart: null, orb: null };
+  const f = { ...s, w: base.w, m: base.m, gear: base.gear, skin: base.skin, name: base.name, team: base.team, isAI: false, color: base.color, heart: base.heart, orb: base.orb, fxT: base.fxT, auT: base.auT };
   netMirror(f); f.kx = -(s.kx || 0); f.ky = -(s.ky || 0);
   f.face = mA(s.face); f.dashDir = mA(s.dashDir); if (s.rushDir != null) f.rushDir = mA(s.rushDir);
   f.trail = (s.trail || []).map(p => ({ x: mX(p.x), y: mY(p.y) }));
@@ -2003,18 +2015,21 @@ function netUnpackF(base, s){
 const NET_SFX_X = { swing: 2, hit: 1, guard: 0, parry: 0, guardBreak: 0, dash: 0, escape: 0, poke: 0, charge: 0 };
 function netApply(s){
   if (!G || !G.net) return;
-  if (s.rd !== G.round) { G.round = s.rd; G.fx = []; G.texts = []; G.rings = []; G.items = []; }
-  G.phase = s.ph; G.phaseT = s.pt; G.pw = s.ew; G.ew = s.pw; G.now = s.now; G.hitstop = s.hs; G.slowT = s.sl; G.shake = s.sh;
+  if (s.rd !== G.round) { G.round = s.rd; G.fx = []; G.texts = []; G.rings = []; G.items = []; G.ofx = []; }
+  G.phase = s.ph; G.phaseT = s.pt; G.pw = s.ew; G.ew = s.pw; G.now = s.now; G.hitstop = s.hs; G.slowT = s.sl; G.shake = s.sh; G.mikiriT = s.mk || 0;
   G.p = netUnpackF(G.p, s.e); G.e = netUnpackF(G.e, s.p);   // ゲストの自分＝ホストの G.e
   G.items = s.it.map(netMirror);
   for (const q of s.fx) G.fx.push(netMirror(q));
   for (const q of s.tx) G.texts.push(netMirror(q));
   for (const q of s.rg) G.rings.push(netMirror(q));
+  for (const q of s.ofx || []) { q.x = mX(q.x); q.y = mY(q.y); G.ofx.push(q); }   // 鍔玉の粒：位置だけ回す（炎が上へ、しずくが下へ落ちるのはそのまま）
   for (const [k, a] of s.sfx) { const i = NET_SFX_X[k]; if (i != null && typeof a[i] === 'number') a[i] = mX(a[i]); try { NET_SFX_RAW[k](...a); } catch(e) {} }
   if (s.ph === 'over' && !NET.overShown) netOver();
 }
 // ゲストの update：試合は進めず、火花や文字だけ動かす（試合の中身はホストから届く）
 function netGuestUpdate(rdt){
+  for (const q of G.ofx) { q.life -= rdt; q.x += q.vx*rdt; q.y += q.vy*rdt; q.vy += (q.g || 0)*rdt; q.vx *= q.drag || 1; }
+  G.ofx = G.ofx.filter(q => q.life > 0); if (G.ofx.length > 500) G.ofx.splice(0, G.ofx.length - 500);
   for (const t of G.texts) { t.y -= 30*rdt; t.life -= rdt; } G.texts = G.texts.filter(t => t.life > 0);
   let dt = rdt; if (G.hitstop > 0) dt = 0; else if (G.slowT > 0) dt *= .3;
   for (const f of G.fx) { f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= .9; f.vy *= .9; f.life -= dt; } G.fx = G.fx.filter(f => f.life > 0);
@@ -3508,7 +3523,7 @@ function useOugi(f, o){
   if (H.k === 'abura') f.hp = Math.min(f.maxHp, f.hp + 30 + 5*lv);
   else if (H.k === 'teppeki') f.teppeki = 3 + .4*lv;
   else if (H.k === 'migawari') f.migawari = 4 + .5*lv;
-  else if (H.k === 'mikiri') G.mikiriT = 2.2 + .3*lv;
+  else if (H.k === 'mikiri') { G.mikiriT = 2.2 + .3*lv; G.mikiriBy = f; }
   else if (H.k === 'jinrai') { const t = o && o !== f && !o.dead ? o : null; f.rushDir = t ? Math.atan2(t.y - f.y, t.x - f.x) : f.face; f.face = f.dashDir = f.rushDir;
     f.state = 'rush'; f.t = 0; f.iframe = .22; f.guard = false; f.queued = false; f.rushTgt = t; }
 }
