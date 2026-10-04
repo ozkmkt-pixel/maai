@@ -1892,7 +1892,7 @@ function netScreen(msg){
 const netStatus = (html) => { const el = document.getElementById('nSt'); if (el) el.innerHTML = html; };
 function netFail(text){
   if (NET && NET.left) return netClose();
-  if (NET && NET.overShown) { const el = document.getElementById('nAg'); if (el) el.textContent = '相手は対戦を抜けました'; const b = document.getElementById('b1'); if (b && !NET.ran) b.disabled = true; netClose(); return; }   // 勝負がついた後に相手が抜けた
+  if (NET && NET.overShown) { const el = document.getElementById('nAg'); if (el) el.textContent = '相手は対戦を抜けました'; const b = document.getElementById(NET.ran ? 'bA' : 'b1'); if (b) b.disabled = true; netClose(); return; }   // 勝負がついた後に相手が抜けた
   if (NET && NET.ran) return ranFail(text);
   const wasPlaying = G && G.net; netClose(); G = null; quitBtn.hidden = true;
   if (wasPlaying) card(`<h2>通信が切れました</h2><p>${text}</p><button id="b1">タイトルへ</button>`, title); else netStatus(`<span class="ng">${text}</span>`); }
@@ -2081,7 +2081,7 @@ function netOver(){
 function netAgainCheck(){
   if (!NET || !NET.again) return;
   const el = document.getElementById('nAg');
-  if (el) el.textContent = NET.again.me && !NET.again.opp ? '相手を待っています…' : !NET.again.me && NET.again.opp ? '相手は「もう一度」を押しました' : '';
+  if (el) el.textContent = NET.again.me && !NET.again.opp ? '相手を待っています…' : !NET.again.me && NET.again.opp ? (NET.ran ? '相手が再戦を申し込んでいます' : '相手は「もう一度」を押しました') : '';
   if (NET.again.me && NET.again.opp && NET.role === 'host') netStart();
 }
 // 試合中の「やめる」
@@ -2267,13 +2267,17 @@ function ranOver(){
   if (win) { bag.koban += RAN_PAY; saveBag(); SFX.win(); } else SFX.lose();
   const head = host ? (win ? '返り討ち！' : '乱入者に敗れた…') : (win ? '乱入成功！' : '返り討ちにあった…');
   const pay = win ? `<p>小判 +${RAN_PAY}</p>` : '';
+  // v0.36：再戦。ふたりとも「再戦する」を押したら、同じ相手ともう一度（中身は通信対戦の「もう一度」と同じ NET.again）
+  const re = `<button id="bA">再戦する</button><br>`, ag = '<div id="nAg" class="nSt"></div>';
   if (host) {
-    card(`<h2>${head}</h2><p>${G.e.name} に ${G.pw}-${G.ew}</p>${pay}<button id="b1">CPU戦に戻る</button><div id="nAg" class="nSt"></div>`, () => { netBye(); G = null; ranResume(); });
+    card(`<h2>${head}</h2><p>${G.e.name} に ${G.pw}-${G.ew}</p>${pay}${re}<button id="b1" class="sub">CPU戦に戻る</button>${ag}`, () => { netBye(); G = null; ranResume(); });
   } else {
-    card(`<h2>${head}</h2><p>${G.e.name} に ${G.pw}-${G.ew}</p>${pay}<button id="b1">もう一度乱入する</button><br><button id="bT" class="sub">タイトルへ</button><div id="nAg" class="nSt"></div>`,
+    card(`<h2>${head}</h2><p>${G.e.name} に ${G.pw}-${G.ew}</p>${pay}${re}<button id="b1" class="sub">別の相手に乱入する</button><br><button id="bT" class="sub">タイトルへ</button>${ag}`,
       () => { netBye(); G = null; ranScreen(); });
     document.getElementById('bT').onclick = () => { netBye(); G = null; title(); };
   }
+  document.getElementById('bA').onclick = e => { if (!NET) return; NET.again.me = true; netSend({ t: 'again' }); e.target.disabled = true; SFX.coin(); netAgainCheck(); };
+  netAgainCheck();
 }
 function ranFail(text){
   const host = NET.role === 'host', searching = NET.search && !NET.search.chosen;
