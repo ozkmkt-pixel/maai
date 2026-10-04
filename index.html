@@ -296,6 +296,22 @@
   .wTabs button.on{background:#F4E3B5;color:#2A1E08;}
   .kuraSet{margin:10px 12px 4px;font-size:11px;color:#8A93A0;} .kuraSet b{margin-right:8px;font-size:14px;color:var(--sc);}
   .kuraSet em{margin-left:4px;padding:0 5px;border-radius:5px;background:#8C2A22;color:#FFFFFF;font-style:normal;font-size:9px;}
+  .ttNet{border-color:rgba(110,180,255,.6);background:linear-gradient(#173A5A,#0B1C2E);color:#CFE6FF;}
+  .ttNet small{color:#A9C3DD;}
+  .nBox{padding:8px 16px 24px;display:flex;flex-direction:column;gap:10px;color:#EDE6D6;}
+  .nNote{font-size:12px;line-height:1.6;color:#B9B1A0;margin:0;}
+  .nLbl{font-size:12px;color:#8A93A0;margin-top:6px;}
+  .nWs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .nW{padding:10px 0;border-radius:10px;border:1px solid #3A3F49;background:#1E222A;color:#EDE6D6;font-size:14px;}
+  .nW.on{border-color:#E8B23A;background:#3A2E12;color:#FFE7A8;}
+  .nBig{padding:14px;border-radius:14px;border:1px solid rgba(110,180,255,.6);background:linear-gradient(#1F4A72,#0E2236);color:#E6F2FF;font-size:20px;letter-spacing:.2em;}
+  .nBig small{display:block;font-size:11px;letter-spacing:.05em;color:#A9C3DD;margin-top:2px;}
+  .nJoin{display:flex;gap:8px;}
+  .nJoin input{flex:1;min-width:0;padding:12px;border-radius:10px;border:1px solid #3A3F49;background:#0E1014;color:#FFE7A8;font-size:22px;letter-spacing:.4em;text-align:center;text-transform:uppercase;}
+  .nJoin button{padding:0 20px;border-radius:10px;border:1px solid #E8B23A;background:#3A2E12;color:#FFE7A8;font-size:16px;}
+  .nSt{min-height:2em;text-align:center;font-size:13px;line-height:1.6;color:#CFE6FF;}
+  .nSt .ng{color:#FF8A7A;}
+  .nCodeBig{font-family:"Dela Gothic One",sans-serif;font-size:44px;letter-spacing:.25em;color:#FFE7A8;margin:4px 0;}
 </style>
 
 <div id="app">
@@ -413,6 +429,7 @@ const sndLabel = () => SFX.muted ? '🔇' : '🔊';
 sndBtn.onclick = () => { SFX.toggle(); BGM.sync(); sndBtn.textContent = sndLabel(); };
 quitBtn.onclick = () => {   // 練習は準備画面へ。勝負の途中でやめるときは確かめてからタイトルへ（小判はもらえない）
   if (!G) return; if (G.practice) return quitPractice();
+  if (G.net) { if (confirm('通信対戦をやめてタイトルに戻りますか？')) { netSend({ t: 'bye' }); setTimeout(netClose, 200); G = null; quitBtn.hidden = true; title(); } return; }
   if (confirm('勝負をやめてタイトルに戻りますか？（この勝負の小判はもらえません）')) { G = null; quitBtn.hidden = true; title(); } };
 let scale = 1, G = null, bestLv = 1, myW = 'katana', myGear = {A:'a1', B:'b2', C:'c2'};
 try { bestLv = +localStorage.getItem('maai_best') || 1; myW = WEAPONS[localStorage.getItem('maai_weapon')] ? localStorage.getItem('maai_weapon') : 'katana';
@@ -1173,6 +1190,7 @@ function readPlayer(){
 // ================= ループ =================
 function update(rdt){
   if (!G) return;
+  if (G.net && G.net.role === 'guest') return netGuestUpdate(rdt);   // 通信対戦の参加側は試合を進めない（ホストから届く）
   G.shake = Math.max(0, G.shake - rdt);
   for (const t of G.texts) { t.y -= 30*rdt; t.life -= rdt; } G.texts = G.texts.filter(t => t.life > 0);
   if (G.ofx) { for (const q of G.ofx) { q.life -= rdt; q.x += q.vx*rdt; q.y += q.vy*rdt; q.vy += (q.g || 0)*rdt; q.vx *= q.drag || 1; }   // 鍔玉の演出の粒
@@ -1191,7 +1209,7 @@ function update(rdt){
   G.now += dt;
   const dk = G.mikiriT > 0 ? .4 : 1; if (G.mikiriT > 0) G.mikiriT -= dt;   // 奥義「見切り」：相手だけ遅くなる
   control(G.p, G.e, readPlayer(), dt);
-  control(G.e, G.p, aiThink(dt*dk), dt*dk);
+  control(G.e, G.p, G.net ? netInput() : aiThink(dt*dk), dt*dk);
   stepF(G.p, G.e, dt); stepF(G.e, G.p, dt*dk);
   updateItems(dt);
   // 体の重なりを押し戻す
@@ -1199,6 +1217,7 @@ function update(rdt){
   if (d < m && d > 0) { const k = (m - d)/2; G.p.x -= dx/d*k; G.p.y -= dy/d*k; G.e.x += dx/d*k; G.e.y += dy/d*k; }
 }
 function endRound(){
+  if (G.net) return netEndRound();
   if (G.pw >= 2 || G.ew >= 2) {
     const win = G.pw >= 2;
     if (win && G.level + 1 > bestLv) { bestLv = G.level + 1; try { localStorage.setItem('maai_best', bestLv); } catch(e) {} }
@@ -1810,6 +1829,221 @@ function openPractice(){
   loadout(ok ? clamp(+c.level || 1, 1, 10) : 3, ok ? c.eW : 'katana', ok ? c.eGear : {A:'a1', B:'b2', C:'c2'}, true);
 }
 function quitPractice(){ if (!G || !G.practice) return; const {level, eW, eGear} = G; G = null; quitBtn.hidden = true; loadout(level, eW, eGear, true); }
+
+// ================= 通信対戦（v0.34 試作） =================
+// 2台をコードでつなぐ1対1。PeerJS（WebRTC）で直接つなぎ、仲介は PeerJS の無料サーバー（部屋のコードの受け渡しだけ）
+// 作りはホストが全部を計算する方式：ホストが試合を進め、参加側は入力を送って、届いた様子を描くだけ
+//   参加側の画面は闘技場の中心で180度回して、自分がいつも下（青）に見えるようにする
+// 条件は全員同じ：武器と見た目は自分のもの、仕掛けは最初の型（心眼・鋼ゼンマイ・早歯車）、心臓・鍔玉なし
+const NET_VER = 1, NET_PREFIX = 'maai-v1-', NET_GEAR = { A: 'a2', B: 'b2', C: 'c2' };
+const NET_CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+let NET = null;   // { role:'host'|'guest', peer, conn, opp:{skin,w}, rin, seen, sfx, lastSend, again:{me,opp} }
+
+function netLoadLib(){
+  if (window.Peer) return Promise.resolve();
+  return new Promise((ok, ng) => { const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'; s.onload = ok; s.onerror = () => ng(new Error('通信の部品を読み込めませんでした'));
+    document.head.appendChild(s); });
+}
+function netClose(){
+  if (!NET) return; const n = NET; NET = null;
+  try { n.conn && n.conn.close(); } catch(e) {} try { n.peer && n.peer.destroy(); } catch(e) {}
+}
+const netSend = m => { try { if (NET && NET.conn && NET.conn.open) NET.conn.send(m); } catch(e) {} };
+
+// ---------- 画面：部屋を作る／部屋に入る ----------
+function netScreen(msg){
+  netClose(); quitBtn.hidden = true;
+  const wBtns = WKEYS.map(k => `<button class="nW${k === myW ? ' on' : ''}" data-w="${k}">${WEAPONS[k].name}</button>`).join('');
+  screen('通信対戦', `<div class="nBox">
+    <p class="nNote">2台をコードでつないで1対1（2本先取）。仕掛けは全員同じ（心眼・鋼ゼンマイ・早歯車）、心臓・鍔玉はなし。見た目はそのまま使えます。</p>
+    <div class="nLbl">使う武器</div><div class="nWs">${wBtns}</div>
+    <button id="nHost" class="nBig">部屋を作る<small>コードを相手に伝える</small></button>
+    <div class="nLbl">部屋に入る</div>
+    <div class="nJoin"><input id="nCode" maxlength="4" placeholder="コード4文字" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="nJoin">入る</button></div>
+    <div id="nSt" class="nSt">${msg || ''}</div></div>`);
+  document.getElementById('back').onclick = () => { netClose(); title(); };
+  ov.querySelectorAll('.nW').forEach(b => b.onclick = () => { myW = b.dataset.w; try { localStorage.setItem('maai_weapon', myW); } catch(e) {}
+    ov.querySelectorAll('.nW').forEach(x => x.classList.toggle('on', x === b)); SFX.coin(); });
+  document.getElementById('nHost').onclick = netHost;
+  const inp = document.getElementById('nCode');
+  inp.oninput = () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); };
+  document.getElementById('nJoin').onclick = () => netJoin(inp.value);
+}
+const netStatus = (html) => { const el = document.getElementById('nSt'); if (el) el.innerHTML = html; };
+function netFail(text){ const wasPlaying = G && G.net; netClose(); G = null; quitBtn.hidden = true;
+  if (wasPlaying) card(`<h2>通信が切れました</h2><p>${text}</p><button id="b1">タイトルへ</button>`, title); else netStatus(`<span class="ng">${text}</span>`); }
+
+async function netHost(){
+  netClose(); netStatus('準備中…');
+  try { await netLoadLib(); } catch(e) { return netStatus(`<span class="ng">${e.message}</span>`); }
+  const tryOpen = (n) => {
+    const code = Array.from({length: 4}, () => NET_CODE_CH[Math.floor(Math.random()*NET_CODE_CH.length)]).join('');
+    const peer = new Peer(NET_PREFIX + code);
+    NET = { role: 'host', peer, code };
+    peer.on('open', () => netStatus(`部屋のコード<div class="nCodeBig">${code}</div>相手がこのコードで入るのを待っています…`));
+    peer.on('error', err => { if (err.type === 'unavailable-id' && n < 4) { peer.destroy(); tryOpen(n + 1); } else netFail('つながりませんでした（' + (err.type || err) + '）'); });
+    peer.on('connection', conn => {
+      if (NET.conn) { conn.on('open', () => { conn.send({ t: 'full' }); setTimeout(() => conn.close(), 300); }); return; }
+      NET.conn = conn; netWire(conn);
+    });
+  };
+  tryOpen(0);
+}
+async function netJoin(code){
+  code = (code || '').toUpperCase(); if (code.length !== 4) return netStatus('<span class="ng">コードは4文字です</span>');
+  netClose(); netStatus('接続中…');
+  try { await netLoadLib(); } catch(e) { return netStatus(`<span class="ng">${e.message}</span>`); }
+  const peer = new Peer();
+  NET = { role: 'guest', peer, code };
+  peer.on('error', err => netFail(err.type === 'peer-unavailable' ? 'その部屋は見つかりませんでした' : 'つながりませんでした（' + (err.type || err) + '）'));
+  peer.on('open', () => { const conn = peer.connect(NET_PREFIX + code, { reliable: true, serialization: 'json' }); NET.conn = conn; netWire(conn);
+    setTimeout(() => { if (NET && NET.conn === conn && !conn.open) netFail('相手に届きませんでした（ネットワークによっては直接つながりません）'); }, 15000); });
+}
+function netWire(conn){
+  conn.on('open', () => { netStatus('つながりました。始めます…'); conn.send({ t: 'hello', v: NET_VER, skin: mySkin, w: myW }); });
+  conn.on('data', netRecv);
+  conn.on('close', () => { if (NET && NET.conn === conn) netFail('相手との接続が切れました'); });
+  conn.on('error', () => { if (NET && NET.conn === conn) netFail('通信でエラーが起きました'); });
+}
+function netRecv(m){
+  if (!NET || !m) return;
+  if (m.t === 'full') return netFail('その部屋はもう対戦中です');
+  if (m.t === 'hello') {
+    if (m.v !== NET_VER) { netSend({ t: 'ver' }); return netFail('相手とゲームの版が違います。どちらも読み込み直してください'); }
+    NET.opp = { skin: { ...DEFAULT_SKIN, ...(m.skin || {}) }, w: WEAPONS[m.w] ? m.w : 'katana' };
+    if (NET.role === 'host') netStart();
+    return;
+  }
+  if (m.t === 'ver') return netFail('相手とゲームの版が違います。どちらも読み込み直してください');
+  if (m.t === 'in') { NET.rin = m; return; }
+  if (m.t === 'start') return netStart();
+  if (m.t === 's') return netApply(m);
+  if (m.t === 'again') { NET.again.opp = true; netAgainCheck(); return; }
+  if (m.t === 'bye') return netFail('相手が対戦をやめました');
+}
+
+// ---------- 試合の始まり（ホストもゲストも同じ形で G を作る。ゲストは中身を受け取ったもので上書きする） ----------
+function netStart(){
+  if (!NET || !NET.opp) return;
+  if (NET.role === 'host') netSend({ t: 'start' });
+  NET.rin = { mx: 0, my: 0, g: false, a: 0, d: 0, th: 0 }; NET.seen = { a: 0, d: 0, th: 0 }; NET.sfx = []; NET.lastSend = 0; NET.again = { me: false, opp: false };
+  NET.inSeq = { a: 0, d: 0, th: 0 }; NET.lastIn = ''; NET.lastInT = 0; NET.overShown = false;
+  G = { net: NET, level: 0, practice: false, boss: null, count: { parry: 0, taken: 0, given: 0 }, round: 1, pw: 0, ew: 0, now: 0, hitstop: 0, slowT: 0, shake: 0,
+        fx: [], texts: [], rings: [], ofx: [], phase: 'intro', phaseT: 0 };
+  netRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = 'やめる'; BGM.play('duel');
+}
+function netRound(){
+  AR.r = DUEL_R; G.terrain = null; G.zone = null; G.cam = null;
+  G.p = netMk(AR.y + 80, -Math.PI/2, myW, mySkin, 'blue', `あなた（${WEAPONS[myW].name}）`);
+  G.e = netMk(AR.y - 80, Math.PI/2, NET.opp.w, NET.opp.skin, 'red', `相手（${WEAPONS[NET.opp.w].name}）`);
+  G.mikiriT = 0; G.pOugi = 0;
+  G.phase = 'intro'; G.phaseT = 0; G.fx = []; G.texts = []; G.rings = []; G.ofx = []; G.startSnd = 0;
+  G.items = []; G.itemT = rnd(6, 9);
+}
+function netMk(y, face, wk, skin, team, name){
+  const f = mkF(AR.x, y, false, TEAM[team], name, wk, NET_GEAR);   // isAI=false：ふたりともプレイヤー扱い（はじき受付の上乗せも同じ）
+  f.face = face; f.skin = skin; f.team = team; f.heart = null; f.ougi = 0; f.orb = null;
+  return f;
+}
+// ホスト：相手（G.e）の入力。押した回数の数え上げが増えていたら、その操作を1回出す
+function netInput(){
+  const r = NET.rin, s = NET.seen, o = { mx: r.mx || 0, my: r.my || 0, guard: !!r.g, attack: r.a !== s.a, dash: r.d !== s.d, throw: r.th !== s.th, ougi: false };
+  s.a = r.a; s.d = r.d; s.th = r.th; return o;
+}
+function netEndRound(){
+  if (G.pw >= 2 || G.ew >= 2) { G.phase = 'over'; netSnap(true); netOver(); return; }
+  G.round++; netRound();
+}
+
+// ---------- 毎フレーム（loop から） ----------
+function netTick(){
+  if (!G || !G.net || !NET) return;
+  const now = performance.now();
+  if (NET.role === 'host') {
+    if (G.phase !== 'fight') { const r = NET.rin; NET.seen = { a: r.a, d: r.d, th: r.th }; }   // 戦っていない間に押したものは捨てる
+    if (now - NET.lastSend >= 15) { NET.lastSend = now; netSnap(); }
+  } else {
+    const p = readPlayer(), q = NET.inSeq;
+    if (P.attack) { q.a++; P.attack = false; } if (P.dash) { q.d++; P.dash = false; } if (P.throw) { q.th++; P.throw = false; } P.ougi = false;
+    // 画面を180度回しているので、スティックの向きも逆にして送る
+    const m = { t: 'in', mx: Math.round(-p.mx*100)/100, my: Math.round(-p.my*100)/100, g: !!p.guard, a: q.a, d: q.d, th: q.th }, key = JSON.stringify(m);
+    if (key !== NET.lastIn || now - NET.lastInT > 100) { NET.lastIn = key; NET.lastInT = now; netSend(m); }
+  }
+}
+// ホスト → ゲスト：試合の様子。新しく出た火花・文字・輪と、鳴らした音はその分だけ送る
+const NET_SKIP = new Set(['w', 'm', 'gear', 'skin', 'name', 'team', 'isAI', 'color', 'heart', 'orb', 'per', 'lastHit', 'heldBy', 'rushTgt', 'burnBy', 'tgt', 'ai']);
+const r3 = v => typeof v === 'number' ? Math.round(v*1000)/1000 : v;
+function netPackF(f){
+  const o = {};
+  for (const k in f) { if (NET_SKIP.has(k)) continue; const v = f[k]; if (typeof v === 'function') continue;
+    if (Array.isArray(v)) o[k] = v.map(p => (p && typeof p === 'object') ? { x: r3(p.x), y: r3(p.y) } : r3(p));
+    else if (v && typeof v === 'object') { const c = {}; for (const j in v) if (typeof v[j] !== 'object') c[j] = r3(v[j]); o[k] = c; }
+    else o[k] = r3(v); }
+  return o;
+}
+function netFresh(arr){ const out = []; for (const o of arr || []) if (!o._n) { o._n = 1; const c = {}; for (const k in o) if (k !== '_n') c[k] = r3(o[k]); out.push(c); } return out; }
+function netSnap(force){
+  const s = { t: 's', ph: G.phase, pt: r3(G.phaseT), rd: G.round, pw: G.pw, ew: G.ew, now: r3(G.now), hs: r3(G.hitstop), sl: r3(G.slowT), sh: r3(G.shake),
+    p: netPackF(G.p), e: netPackF(G.e), it: G.items.map(i => ({ x: r3(i.x), y: r3(i.y), type: i.type, t: r3(i.t) })),
+    fx: netFresh(G.fx), tx: netFresh(G.texts), rg: netFresh(G.rings), sfx: NET.sfx };
+  NET.sfx = [];
+  netSend(s);
+}
+// ゲスト：届いた様子を、闘技場の中心で180度回して自分の画面に置く
+const mX = x => 2*AR.x - x, mY = y => 2*AR.y - y, mA = a => a == null ? a : a + Math.PI;
+function netMirror(o){ if (o.x != null) o.x = mX(o.x); if (o.y != null) o.y = mY(o.y); if (o.vx != null) o.vx = -o.vx; if (o.vy != null) o.vy = -o.vy; return o; }
+function netUnpackF(base, s){
+  const f = { ...s, w: base.w, m: base.m, gear: base.gear, skin: base.skin, name: base.name, team: base.team, isAI: false, color: base.color, heart: null, orb: null };
+  netMirror(f); f.kx = -(s.kx || 0); f.ky = -(s.ky || 0);
+  f.face = mA(s.face); f.dashDir = mA(s.dashDir); if (s.rushDir != null) f.rushDir = mA(s.rushDir);
+  f.trail = (s.trail || []).map(p => ({ x: mX(p.x), y: mY(p.y) }));
+  return f;
+}
+const NET_SFX_X = { swing: 2, hit: 1, guard: 0, parry: 0, guardBreak: 0, dash: 0, escape: 0, poke: 0, charge: 0 };
+function netApply(s){
+  if (!G || !G.net) return;
+  if (s.rd !== G.round) { G.round = s.rd; G.fx = []; G.texts = []; G.rings = []; G.items = []; }
+  G.phase = s.ph; G.phaseT = s.pt; G.pw = s.ew; G.ew = s.pw; G.now = s.now; G.hitstop = s.hs; G.slowT = s.sl; G.shake = s.sh;
+  G.p = netUnpackF(G.p, s.e); G.e = netUnpackF(G.e, s.p);   // ゲストの自分＝ホストの G.e
+  G.items = s.it.map(netMirror);
+  for (const q of s.fx) G.fx.push(netMirror(q));
+  for (const q of s.tx) G.texts.push(netMirror(q));
+  for (const q of s.rg) G.rings.push(netMirror(q));
+  for (const [k, a] of s.sfx) { const i = NET_SFX_X[k]; if (i != null && typeof a[i] === 'number') a[i] = mX(a[i]); try { NET_SFX_RAW[k](...a); } catch(e) {} }
+  if (s.ph === 'over' && !NET.overShown) netOver();
+}
+// ゲストの update：試合は進めず、火花や文字だけ動かす（試合の中身はホストから届く）
+function netGuestUpdate(rdt){
+  for (const t of G.texts) { t.y -= 30*rdt; t.life -= rdt; } G.texts = G.texts.filter(t => t.life > 0);
+  let dt = rdt; if (G.hitstop > 0) dt = 0; else if (G.slowT > 0) dt *= .3;
+  for (const f of G.fx) { f.x += f.vx*dt; f.y += f.vy*dt; f.vx *= .9; f.vy *= .9; f.life -= dt; } G.fx = G.fx.filter(f => f.life > 0);
+  for (const r of G.rings) r.life -= dt; G.rings = G.rings.filter(r => r.life > 0);
+  if (G.phase !== 'fight') { P.attack = false; P.dash = false; P.throw = false; P.ougi = false; }
+}
+// ホストで鳴った音を記録してゲストへ送る（元の関数は NET_SFX_RAW に取っておく）
+const NET_SFX_RAW = {};
+for (const k of ['swing', 'charge', 'hit', 'poke', 'guard', 'parry', 'guardBreak', 'dash', 'escape', 'pickup', 'ko', 'start']) {
+  const fn = SFX[k]; if (typeof fn !== 'function') continue; NET_SFX_RAW[k] = fn;
+  SFX[k] = (...a) => { if (G && G.net && NET && NET.role === 'host') NET.sfx.push([k, a.map(r3)]); return fn(...a); };
+}
+
+// ---------- 勝負がついた ----------
+function netOver(){
+  NET.overShown = true; quitBtn.hidden = true;
+  const win = G.pw >= 2; if (win) SFX.win(); else SFX.lose();
+  card(`<h2>${win ? '勝利' : '敗北'}</h2><p>${G.e.name} に ${G.pw}-${G.ew} で${win ? '勝ちました' : '負けました'}。</p>
+    <button id="b1">もう一度</button><br><button id="bT" class="sub">やめてタイトルへ</button><div id="nAg" class="nSt"></div>`, () => {
+      NET.again.me = true; netSend({ t: 'again' }); document.getElementById('b1').disabled = true; netAgainCheck(); });
+  document.getElementById('bT').onclick = () => { netSend({ t: 'bye' }); setTimeout(netClose, 200); G = null; title(); };
+  netAgainCheck();
+}
+function netAgainCheck(){
+  if (!NET || !NET.again) return;
+  const el = document.getElementById('nAg');
+  if (el) el.textContent = NET.again.me && !NET.again.opp ? '相手を待っています…' : !NET.again.me && NET.again.opp ? '相手は「もう一度」を押しました' : '';
+  if (NET.again.me && NET.again.opp && NET.role === 'host') netStart();
+}
 
 // ================= 描画 =================
 function draw(){
@@ -3568,7 +3802,7 @@ function drawOugiBtn(){
 }
 
 let last = performance.now();
-function loop(now){ const dt = Math.min(.05, (now - last)/1000); last = now; update(dt); draw(); warmStep(3);
+function loop(now){ const dt = Math.min(.05, (now - last)/1000); last = now; update(dt); draw(); netTick(); warmStep(3);
   const sh = !G || !ov.hidden; if (sndBtn.hidden !== sh) { sndBtn.hidden = sh; sndBtn.textContent = sndLabel(); }   // 音のボタンは試合中だけ
   requestAnimationFrame(loop); }
 
@@ -3587,6 +3821,7 @@ function title(){
       <button id="b1" class="ttGo">勝負<small>装備を選んで戦う</small></button>
       <div class="ttGrid"><button id="bG">ガチャ</button><button id="bS">店</button><button id="bK">蔵</button><button id="b2">練習</button></div>
       <button id="bR" class="ttMelee">乱戦<small>縮む結界の中、8人で最後の1人まで（試作）</small></button>
+      <button id="bN" class="ttMelee ttNet">通信対戦<small>コードで2台をつないで1対1（試作）</small></button>
       <div class="ttSub"><button id="bH">遊び方</button><button id="bM">音 ${SFX.muted ? 'オフ' : 'オン'}</button></div>
     </div></div></div>`;
   ov.hidden = false;
@@ -3595,6 +3830,7 @@ function title(){
   document.getElementById('bG').onclick = gachaScreen; document.getElementById('bS').onclick = () => shopScreen(); document.getElementById('bK').onclick = kuraScreen;
   document.getElementById('bH').onclick = helpScreen;
   document.getElementById('bR').onclick = newMelee;
+  document.getElementById('bN').onclick = () => netScreen();
   document.getElementById('bM').onclick = e => { SFX.toggle(); BGM.sync(); e.target.textContent = `音 ${SFX.muted ? 'オフ' : 'オン'}`; SFX.coin(); };
   // 舞台：自分（青）と相手（赤）が向かい合って浮いている
   const cvs = document.getElementById('ttCv'), x = cvs.getContext('2d'), foe = randSkin(), foeW = WKEYS[Math.floor(Math.random()*WKEYS.length)];
