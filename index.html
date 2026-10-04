@@ -440,7 +440,13 @@ sndBtn.onclick = () => { SFX.toggle(); BGM.sync(); sndBtn.textContent = sndLabel
 quitBtn.onclick = () => {   // 練習は準備画面へ。勝負の途中でやめるときは確かめてからタイトルへ（小判はもらえない）
   if (!G) return; if (G.practice) return quitPractice();
   if (G.net) return netQuit();
-  if (confirm('勝負をやめてタイトルに戻りますか？（この勝負の小判はもらえません）')) { G = null; quitBtn.hidden = true; title(); } };
+  askQuit('勝負をやめてタイトルに戻りますか？<br><small>（この勝負の小判はもらえません）</small>', 'やめる', () => { G = null; quitBtn.hidden = true; title(); }); };
+// やめるかどうかの札。「続ける」で試合に戻る（通信対戦は止められないので、札の裏でも試合は進む）
+function askQuit(text, yes, fn){
+  const g = G; if (g && !g.net) g.paused = true; quitBtn.hidden = true;
+  card(`<h2>やめますか？</h2><p>${text}</p><button id="b1">${yes}</button><br><button id="bQ" class="sub">続ける</button>`, () => { if (g) g.paused = false; fn(); });
+  document.getElementById('bQ').onclick = () => { if (g) g.paused = false; if (G === g && G) { ov.hidden = true; quitBtn.hidden = false; } };
+}
 let scale = 1, G = null, bestLv = 1, myW = 'katana', myGear = {A:'a1', B:'b2', C:'c2'};
 try { bestLv = +localStorage.getItem('maai_best') || 1; myW = WEAPONS[localStorage.getItem('maai_weapon')] ? localStorage.getItem('maai_weapon') : 'katana';
   const g = JSON.parse(localStorage.getItem('maai_gear') || 'null'); if (g && SLOTS.every(s => ARMOR[s].items[g[s]])) myGear = g; } catch(e) {}
@@ -1199,7 +1205,7 @@ function readPlayer(){
 
 // ================= ループ =================
 function update(rdt){
-  if (!G) return;
+  if (!G || G.paused) return;
   if (G.net && G.net.role === 'guest') return netGuestUpdate(rdt);   // 通信対戦の参加側は試合を進めない（ホストから届く）
   G.shake = Math.max(0, G.shake - rdt);
   for (const t of G.texts) { t.y -= 30*rdt; t.life -= rdt; } G.texts = G.texts.filter(t => t.life > 0);
@@ -2080,8 +2086,8 @@ function netAgainCheck(){
 }
 // 試合中の「やめる」
 function netQuit(){
-  if (NET && NET.ran && NET.role === 'host') { if (confirm('乱入者との対戦をやめて、CPU戦に戻りますか？')) { netBye(); ranResume(); } return; }
-  if (confirm('通信対戦をやめてタイトルに戻りますか？')) { netBye(); G = null; quitBtn.hidden = true; title(); }
+  if (NET && NET.ran && NET.role === 'host') return askQuit('乱入者との対戦をやめて、CPU戦に戻りますか？', 'CPU戦に戻る', () => { netBye(); ranResume(); });
+  askQuit('通信対戦をやめてタイトルに戻りますか？', 'やめる', () => { netBye(); G = null; quitBtn.hidden = true; title(); });
 }
 
 // ================= 乱入（v0.35 試作） =================
