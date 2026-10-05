@@ -322,6 +322,43 @@
   @keyframes ranIn{from{transform:scale(1.6);opacity:0}to{transform:scale(1);opacity:1}}
   .ranTag{position:absolute;top:6px;left:50%;transform:translateX(-50%);padding:2px 10px;border-radius:10px;background:rgba(120,30,20,.75);color:#FFD2C4;font-size:11px;letter-spacing:.1em;pointer-events:none;z-index:2;}
   .ranTag[hidden]{display:none;}
+  /* ---------- ガチャの演出（v0.38） ---------- */
+  .gx{position:absolute;inset:0;z-index:20;overflow:hidden;cursor:pointer;animation:gxIn .2s ease-out;}
+  @keyframes gxIn{from{opacity:0}} .gx.out{opacity:0;transition:opacity .18s;}
+  .gxDim{position:absolute;inset:0;background:radial-gradient(circle at 50% 44%,rgba(30,33,42,.9),rgba(6,7,10,.97));transition:background .4s;}
+  .gx.dark .gxDim{background:radial-gradient(circle at 50% 44%,rgba(10,10,14,.97),#000);} .gx.black .gxDim{background:#000;}
+  .gx.rainbow .gxDim{background:radial-gradient(circle at 50% 44%,#5A140A,#0A0000);}
+  .gxRays{position:absolute;left:50%;top:44%;width:900px;height:900px;margin:-450px 0 0 -450px;border-radius:50%;opacity:.25;animation:gcSpin 24s linear infinite;
+    -webkit-mask-image:radial-gradient(circle,#000 10%,transparent 60%);mask-image:radial-gradient(circle,#000 10%,transparent 60%);transition:opacity .4s;}
+  .gx[data-t="0"] .gxRays{opacity:.1;} .gx.dark .gxRays{opacity:0;} .gx.lit .gxRays{opacity:.95;} .gx.fast .gxRays{animation-duration:4s;}
+  .gxCv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .gxBox{position:absolute;left:50%;top:44%;width:120px;height:120px;margin:-60px 0 0 -60px;border:3px solid var(--c);border-radius:18px;background:linear-gradient(#8A2E28,#4A1410);
+    box-shadow:0 0 44px var(--c),inset 0 0 22px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;transition:box-shadow .3s,border-color .3s;}
+  .gx[data-t="0"] .gxBox{box-shadow:0 0 8px rgba(154,163,174,.35),inset 0 0 22px rgba(0,0,0,.55);}
+  .gxBox b{font-family:"Dela Gothic One",sans-serif;font-size:30px;color:#FFE7A8;text-shadow:0 2px 0 #3A0E0A;}
+  .gxLid{position:absolute;left:-7px;right:-7px;top:-12px;height:22px;border-radius:8px;border:3px solid var(--c);background:linear-gradient(#A8382F,#6A1C15);transition:transform .45s cubic-bezier(.2,.8,.3,1),opacity .45s,border-color .3s;}
+  .gxBox.drop{animation:gxDrop .45s cubic-bezier(.3,1.6,.5,1);} @keyframes gxDrop{from{transform:translateY(-340px)}}
+  .gxBox.shake{animation:shake .14s linear infinite;}
+  .gxBox.tremble{animation:gxTrem .06s linear infinite;} @keyframes gxTrem{0%{transform:translate(-3px,1px)}50%{transform:translate(3px,-1px)}100%{transform:translate(-3px,1px)}}
+  .gxBox.open .gxLid{transform:translateY(-150px) rotate(-25deg);opacity:0;}
+  .gxBox.open{animation:gxPop .5s ease-out forwards;} @keyframes gxPop{30%{transform:scale(1.25)}100%{transform:scale(0);opacity:0}}
+  .gxBox.fizzle .gxLid{transform:translateY(-12px) rotate(-6deg);}
+  .gxBox.fizzle{animation:gxFiz .7s ease-in forwards;} @keyframes gxFiz{40%{transform:translateY(4px) scale(1.03,.95)}100%{transform:translateY(10px) scale(.9);opacity:.35;filter:grayscale(1)}}
+  .gxTxt{position:absolute;left:0;right:0;top:44%;margin-top:-62px;text-align:center;pointer-events:none;line-height:1;}
+  .gxTxt span{display:inline-block;font-family:"Dela Gothic One",sans-serif;animation:gxStamp .45s cubic-bezier(.2,1.5,.4,1) both;}
+  @keyframes gxStamp{from{transform:scale(3.2);opacity:0}}
+  .gxTxt .t0{font-size:30px;color:#8A93A0;margin-top:150px;animation:gxSad .8s ease-out both;} @keyframes gxSad{from{transform:translateY(-14px);opacity:0}}
+  .gxTxt .t1{font-size:70px;color:#D6ECFF;text-shadow:0 0 18px #4C9BEA,0 4px 0 #0E2A4A;}
+  .gxTxt .t2{font-size:120px;color:#FFE38A;-webkit-text-stroke:2px #7A4E08;text-shadow:0 0 30px #FFD84A,0 0 60px #E8B23A,0 6px 0 #6A4A08;}
+  .gxTxt .t3{font-size:92px;letter-spacing:.04em;color:#FFF2D0;-webkit-text-stroke:3px #C8180C;text-shadow:0 0 30px #FF4A3A,0 0 70px #FFD84A,0 6px 0 #5A0A04;
+    animation:gxStamp .6s cubic-bezier(.2,1.5,.4,1) both,gxGlow 1.1s ease-in-out .6s infinite alternate;}
+  @keyframes gxGlow{to{text-shadow:0 0 50px #FF4A3A,0 0 110px #FFD84A,0 6px 0 #5A0A04}}
+  .gxTxt .sm{font-size:42px;margin-top:-96px;-webkit-text-stroke:0;}
+  .gxFlash{position:absolute;inset:0;pointer-events:none;animation:gxFl .6s ease-out forwards;} @keyframes gxFl{to{opacity:0}}
+  .gxSkip{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,.35);pointer-events:none;}
+  .shCard.r2{animation:shPop .35s ease-out backwards,gxPulse 1.6s ease-in-out .4s infinite alternate;} @keyframes gxPulse{to{box-shadow:0 0 22px rgba(255,216,74,.9)}}
+  .shCard.r3{background:linear-gradient(145deg,#5A1A10,#1A0806);box-shadow:0 0 18px rgba(255,74,58,.75);animation:shPop .35s ease-out backwards,gxRim 2s linear infinite;}
+  @keyframes gxRim{0%{border-color:#FF4A3A}25%{border-color:#FFD84A}50%{border-color:#6CFF9A}75%{border-color:#4C9BEA}100%{border-color:#FF4A3A}}
 </style>
 
 <div id="app">
@@ -569,7 +606,20 @@ const SFX = (() => {
     rattle(){ for (let i = 0; i < 8; i++) hiss('bandpass', 1800 + Math.random()*800, 1200, 3, .05, .35, i*.085); },          // ガチャの箱を振る：カラカラ
     reveal(r){ if (r === 2) { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone('triangle', f, f, .5, .28, i*.07)); tone('sine', 2093, 2090, 1.2, .18, .45); }
                else if (r === 1) { tone('sine', 1047, 1047, .3, .3); tone('sine', 1568, 1568, .4, .25, .1); } else tone('sine', 880, 880, .25, .3); },
-    coin(){ tone('square', 1976, 1976, .06, .1); tone('square', 2637, 2637, .18, .1, .06); },                                // 買い物：チャリン
+    coin(){ tone('square', 1976, 1976, .06, .1); tone('square', 2637, 2637, .18, .1, .06); },
+    // ガチャの演出（v0.38）：落ちる・ためる（ドロドロ）・昇格・並（ぽすっ）・開ける（上＝ちりん、極＝銅鑼と上がる音、伝＝低い銅鑼とファンファーレ）・雷
+    gxDrop(){ tone('sine', 180, 70, .18, .35); hiss('lowpass', 900, 200, 1, .12, .25); },
+    gxTension(t){ for (let i = 0; i < 6; i++) tone('sine', 90 + t*10, 60, .1, .35, i*.1); hiss('highpass', 3000, 6000, 1, .6, .12 + t*.04); },
+    gxPromote(t){ const b = [0, 523, 659, 784][t] || 784; [1, 1.26, 1.5, 2].forEach((m, i) => tone('square', b*m, b*m, .16, .12, i*.06)); tone('triangle', b*2, b*2, .5, .2, .24); hiss('highpass', 5000, 9000, 1, .4, .15, .05); },
+    gxPon(){ tone('sine', 260, 110, .2, .3); hiss('lowpass', 600, 150, 1, .25, .2); tone('triangle', 196, 185, .35, .12, .25); },
+    gxOpen(r){
+      if (r === 1) { [1047, 1319, 1568].forEach((f, i) => tone('triangle', f, f, .5, .25, i*.07)); tone('sine', 2093, 2090, .8, .12, .25); }
+      else if (r === 2) { tone('sine', 110, 104, 2.2, .55); tone('sine', 220, 216, 1.6, .25); hiss('lowpass', 1500, 200, 1, .8, .35);
+        [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => tone('triangle', f, f, .6, .22, .15 + i*.07)); tone('sine', 2637, 2630, 1.4, .12, .7); }
+      else { tone('sine', 82, 78, 3, .6); tone('sine', 164, 160, 2.4, .3); hiss('lowpass', 1200, 120, 1, 1.4, .4);
+        const ch = (fs, at, d) => fs.forEach(f => { tone('sawtooth', f, f, d, .07, at); tone('triangle', f*2, f*2, d, .1, at); });
+        ch([523, 659, 784], .3, .25); ch([587, 740, 880], .58, .25); ch([659, 830, 988], .86, 1.6); [1319, 1568, 1976, 2637].forEach((f, i) => tone('sine', f, f, 1, .1, 1 + i*.08)); } },
+    gxThunder(){ hiss('lowpass', 3000, 80, 1, 1.1, .7); tone('sine', 70, 40, .6, .4); hiss('highpass', 4000, 1500, 1, .15, .4); },                                // 買い物：チャリン
   };
   const api = { init, get muted(){ return muted; }, get state(){ return ac ? { st: ac.state, t: +ac.currentTime.toFixed(2), rebuilds } : null; },   // 確認用
     _rebuild: () => rebuild(),
@@ -1766,10 +1816,8 @@ function pull(n){
   saveBag();
   const best = Math.max(...res.map(x => x.r));
   // 箱を振る → いちばん良い等級の色で光る → 札が出る
-  const box = document.getElementById('box'); box.classList.add('shake'); SFX.rattle();
   ov.querySelectorAll('button').forEach(b => b.disabled = true);
-  setTimeout(() => { box.classList.add('glow' + best); }, 700);
-  setTimeout(() => showResults(res, n, best), best === 2 ? 1500 : 1100);
+  gachaShow(best, 0, () => showResults(res, n, best));   // v0.38 演出（見た目は並・上・極）
 }
 function showResults(res, n, best){
   const cost = n === 1 ? GACHA.one : GACHA.ten;
@@ -1778,7 +1826,6 @@ function showResults(res, n, best){
       { i, sub: SKINS[it.slot].name, badge: it.dup ? `欠片+${FRAG_GET[it.r]}` : 'NEW', badgeCls: it.dup ? '' : 'new' })).join('')}</div>
     <div class="gcBtns"><button id="again" class="gcBtn ten" ${bag.koban < cost ? 'disabled' : ''}>もう${n === 1 ? '1回' : '10連'}<small>小判 ${cost}</small></button>
       <button id="wear" class="gcBtn sub2">装備へ</button></div>`, best === 2 ? 'kiwami2' : '');
-  SFX.reveal(best);
   document.getElementById('again').onclick = () => { gachaScreen(); pull(n); };
   document.getElementById('wear').onclick = () => loadout(1);
   document.getElementById('back').onclick = gachaScreen;
@@ -1834,14 +1881,15 @@ function openBox(s){
   bag.koban -= BOX.price;
   let x = Math.random()*100, r = 0; for (let i = 0; i < 4; i++) { x -= BOX.w[i]; if (x < 0) { r = i; break; } }
   const it = grantGear([makeGear(r, { s })])[0];
-  SFX.rattle();
+  ov.querySelectorAll('button').forEach(b => b.disabled = true);
+  gachaShow(r, 1, () => {   // v0.38 演出（仕掛けの箱は上・極・伝）
   screen(r >= 2 ? RARE[r].n + 'が出た！' : '箱を開けた', `<div class="gcRes one">${gearCard(it)}</div>${gearInfo(it)}
     <div class="gcBtns"><button id="again" class="gcBtn ten" ${bag.koban < BOX.price ? 'disabled' : ''}>もう1つ<small>小判 ${BOX.price}</small></button>
       <button id="wear" class="gcBtn sub2">装備へ</button></div>`, r >= 2 ? 'kiwami2' : '');
-  SFX.reveal(Math.min(2, r));
   document.getElementById('again').onclick = () => openBox(s);
   document.getElementById('wear').onclick = () => loadout(1);
   document.getElementById('back').onclick = () => shopScreen('armor');
+  });
 }
 // 品の中身（箱の結果など）：主効果・副効果・特殊能力・銘
 function gearInfo(it){
@@ -2317,6 +2365,123 @@ function ranTagSync(){
   if (!ranTagEl) { ranTagEl = document.createElement('div'); ranTagEl.className = 'ranTag'; ranTagEl.textContent = '乱入受付中'; document.getElementById('app').appendChild(ranTagEl); }
   const show = !!(RAN && RAN.open && ranDuel() && ov.hidden);
   if (ranTagEl.hidden === show) ranTagEl.hidden = !show;
+}
+
+// ================= ガチャの演出（v0.38） =================
+// 等級ごとに豪華さを変える：並＝しょぼい（ぽすっ）、上＝青い光、極＝金の光と「極」、伝＝雷・虹・花びら・「伝説」
+// 昇格：箱が下の等級の色で光り始め、震えて「昇格！」で色が変わる（結果は先に決まっているので、出る確率は変わらない）
+// 画面をタップすると飛ばせる。gachaShow(best, floor, done)：best＝出た等級、floor＝そのガチャのいちばん下の等級
+const GX_COL = ['#9AA3AE', '#4C9BEA', '#FFD84A', '#FF4A3A'];
+const GX_TXT = ['並', '上', '極', '伝説'];
+// どの等級の色から始めるか：半分ほどは昇格あり。1段下からが多く、たまに2段以上下から
+function gxStart(best, floor){
+  if (best <= floor || Math.random() < .45) return best;
+  let s = best - 1; while (s > floor && Math.random() < .35) s--;
+  return s;
+}
+function gachaShow(best, floor, done){
+  const app = document.getElementById('app'), start = gxStart(best, floor);
+  const el = document.createElement('div'); el.className = 'gx';
+  el.innerHTML = '<div class="gxDim"></div><div class="gxRays"></div><canvas class="gxCv"></canvas>'
+    + '<div class="gxBox"><div class="gxLid"></div><b>御籤</b></div><div class="gxTxt"></div><div class="gxSkip">タップで飛ばす</div>';
+  app.appendChild(el);
+  const cv = el.querySelector('.gxCv'), cx = cv.getContext('2d'), box = el.querySelector('.gxBox'), rays = el.querySelector('.gxRays'), txt = el.querySelector('.gxTxt');
+  const dpr = devicePixelRatio || 1, Wd = el.clientWidth, Hd = el.clientHeight;
+  cv.width = Wd*dpr; cv.height = Hd*dpr; cx.scale(dpr, dpr);
+  const CXp = Wd/2, CYp = Hd*.44;
+  // ---- 飛ばす：待っているものを全部すぐ終わらせる ----
+  let skip = false, over = false; const waiters = [];
+  const wait = ms => new Promise(r => { if (skip) return r(); const t = setTimeout(r, ms); waiters.push(() => { clearTimeout(t); r(); }); });
+  el.addEventListener('click', () => { if (skip) return; skip = true; waiters.splice(0).forEach(f => f()); });
+  // ---- 粒（火花・煙・花びら・雷） ----
+  const parts = [];
+  const burst = (n, col, sp, o = {}) => { for (let i = 0; i < n; i++) { const a = Math.random()*Math.PI*2, v = sp*(.35 + Math.random()*.65);
+    parts.push({ x: o.x ?? CXp, y: o.y ?? CYp, vx: Math.cos(a)*v, vy: Math.sin(a)*v - (o.up || 0), g: o.g ?? 160, life: o.life ?? (.6 + Math.random()*.6), t: 0,
+      col: Array.isArray(col) ? col[Math.floor(Math.random()*col.length)] : col, sz: o.sz ?? (2 + Math.random()*3), kind: o.kind || 'sq', rot: Math.random()*6, vr: (Math.random() - .5)*8 }); } };
+  const bolt = () => { const pts = [[CXp + (Math.random() - .5)*Wd*.6, -10]]; while (pts[pts.length - 1][1] < CYp - 20) { const [x, y] = pts[pts.length - 1]; pts.push([x + (CXp - x)*.18 + (Math.random() - .5)*60, y + 30 + Math.random()*30]); }
+    pts.push([CXp, CYp]); parts.push({ kind: 'bolt', pts, life: .22, t: 0 }); };
+  let last = performance.now();
+  const tick = now => {
+    if (over) return;
+    const dt = Math.min(.05, (now - last)/1000); last = now;
+    cx.clearRect(0, 0, Wd, Hd);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i]; p.t += dt; if (p.t >= p.life) { parts.splice(i, 1); continue; }
+      const k = 1 - p.t/p.life;
+      if (p.kind === 'bolt') {
+        cx.save(); cx.globalAlpha = k; cx.strokeStyle = '#FFF6D0'; cx.shadowColor = '#FF6A3A'; cx.shadowBlur = 18; cx.lineWidth = 4; cx.beginPath();
+        p.pts.forEach(([x, y], j) => j ? cx.lineTo(x, y) : cx.moveTo(x, y)); cx.stroke(); cx.lineWidth = 1.5; cx.strokeStyle = '#FFFFFF'; cx.stroke(); cx.restore(); continue;
+      }
+      p.vy += p.g*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.rot += p.vr*dt;
+      if (p.kind === 'smoke') { p.vx *= .96; p.vy *= .96; }
+      cx.save(); cx.globalAlpha = p.kind === 'smoke' ? k*.5 : Math.min(1, k*1.6); cx.fillStyle = p.col; cx.translate(p.x, p.y); cx.rotate(p.rot);
+      if (p.kind === 'smoke') { cx.beginPath(); cx.arc(0, 0, p.sz*(1.6 - k), 0, Math.PI*2); cx.fill(); }
+      else if (p.kind === 'petal') { cx.beginPath(); cx.ellipse(0, 0, p.sz*1.4, p.sz*.7, 0, 0, Math.PI*2); cx.fill(); }
+      else if (p.kind === 'star') { const s = p.sz*1.6; cx.fillRect(-s/2, -.8, s, 1.6); cx.fillRect(-.8, -s/2, 1.6, s); }
+      else cx.fillRect(-p.sz/2, -p.sz/2, p.sz, p.sz);
+      cx.restore();
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  // ---- 見た目の部品 ----
+  const tier = t => { el.dataset.t = t; box.style.setProperty('--c', GX_COL[t]);
+    rays.style.background = t === 3 ? 'repeating-conic-gradient(#FF4A3A66 0deg 6deg, #FFD84A55 6deg 12deg, #6CFF9A44 12deg 18deg, #4C9BEA55 18deg 24deg, #C86CFF55 24deg 30deg, transparent 30deg 36deg)'
+      : `repeating-conic-gradient(${GX_COL[t]}${t ? '55' : '22'} 0deg 8deg, transparent 8deg 16deg)`; };
+  const cls = (e, c, ms) => { e.classList.remove(c); void e.offsetWidth; e.classList.add(c); if (ms) setTimeout(() => e.classList.remove(c), ms); };
+  const stamp = (s, t, small) => { txt.innerHTML = `<span class="t${t}${small ? ' sm' : ''}">${s}</span>`; };
+  const flash = col => { const f = document.createElement('div'); f.className = 'gxFlash'; f.style.background = col; el.appendChild(f); setTimeout(() => f.remove(), 700); };
+  const quake = (px, ms) => { try { el.animate([0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ transform: `translate(${(Math.random() - .5)*px*2}px,${(Math.random() - .5)*px*2}px)` })).concat([{ transform: 'none' }]), { duration: ms }); } catch(e) {} };
+
+  (async () => {
+    tier(start); SFX.gxDrop();
+    cls(box, 'drop'); await wait(450);
+    // 振る
+    box.classList.add('shake'); SFX.rattle(); await wait(start === 0 && best === 0 ? 450 : 800);
+    box.classList.remove('shake');
+    // 昇格
+    for (let t = start + 1; t <= best && !skip; t++) {
+      box.classList.add('tremble'); SFX.gxTension(t); await wait(650); box.classList.remove('tremble');
+      if (skip) break;
+      tier(t); flash(GX_COL[t] + 'AA'); burst(40 + t*20, [GX_COL[t], '#FFFFFF'], 260 + t*60, { g: 120, kind: 'star' }); quake(4 + t*2, 300);
+      stamp('昇格！', t, true); SFX.gxPromote(t); await wait(750);
+      txt.innerHTML = '';
+    }
+    // 開ける：等級ごとに豪華さを変える
+    if (!skip) {
+      if (best === 0) {   // 並：ぽすっ。灰色の煙が少し
+        box.classList.add('fizzle'); SFX.gxPon(); burst(10, ['#6E7785', '#9AA3AE'], 40, { kind: 'smoke', g: -20, sz: 10, life: 1 });
+        stamp(GX_TXT[0], 0); await wait(750);
+      } else if (best === 1) {   // 上：青い光と火花、ちりん
+        el.classList.add('lit'); box.classList.add('open'); flash('#4C9BEA66'); burst(50, ['#4C9BEA', '#BFE0FF', '#FFFFFF'], 300, { kind: 'star', g: 80 });
+        SFX.gxOpen(1); stamp(GX_TXT[1], 1); await wait(1000);
+      } else if (best === 2) {   // 極：暗くなって金の光が回り、箱がはじけ、白く光って「極」
+        el.classList.add('dark'); box.classList.add('tremble'); SFX.gxTension(3); await wait(500);
+        box.classList.remove('tremble'); el.classList.add('lit', 'fast'); box.classList.add('open'); flash('#FFFFFF'); quake(10, 500);
+        burst(120, ['#FFD84A', '#FFF2B0', '#FFFFFF', '#E8B23A'], 420, { kind: 'star', g: 60 }); burst(60, ['#FFD84A', '#E8B23A'], 200, { g: 220, sz: 4 });
+        SFX.gxOpen(2); stamp(GX_TXT[2], 2); await wait(400);
+        for (let i = 0; i < 6 && !skip; i++) { burst(12, ['#FFD84A', '#FFFFFF'], 180, { kind: 'star', g: -30, x: CXp + (Math.random() - .5)*Wd*.8, y: CYp + (Math.random() - .5)*200 }); await wait(160); }
+        await wait(500);
+      } else {   // 伝：真っ暗→赤い雷2回→虹の光・花びらが舞い上がる→「伝説」
+        el.classList.add('dark', 'black'); box.classList.add('tremble'); SFX.gxTension(3); await wait(500);
+        bolt(); flash('#FF4A3A88'); quake(8, 250); SFX.gxThunder(); await wait(380);
+        bolt(); bolt(); flash('#FFFFFFAA'); quake(12, 300); SFX.gxThunder(); await wait(420);
+        box.classList.remove('tremble'); el.classList.remove('black'); el.classList.add('lit', 'fast', 'rainbow'); box.classList.add('open'); flash('#FFFFFF'); quake(16, 700);
+        burst(160, ['#FF4A3A', '#FFD84A', '#6CFF9A', '#4C9BEA', '#C86CFF', '#FFFFFF'], 520, { kind: 'star', g: 40 });
+        burst(70, ['#FF4A3A', '#FF8A5A', '#FFD84A'], 260, { g: 260, sz: 5 });
+        SFX.gxOpen(3); stamp(GX_TXT[3], 3); await wait(300);
+        for (let i = 0; i < 14 && !skip; i++) {   // 花びらが下から舞い上がる
+          for (let j = 0; j < 4; j++) parts.push({ x: Math.random()*Wd, y: Hd + 10, vx: (Math.random() - .5)*40, vy: -120 - Math.random()*120, g: 0, life: 2.4, t: 0,
+            col: ['#FF8AB0', '#FFD0DE', '#FFD84A', '#FF4A3A'][Math.floor(Math.random()*4)], sz: 4 + Math.random()*3, kind: 'petal', rot: Math.random()*6, vr: (Math.random() - .5)*6 });
+          if (i % 4 === 0) burst(18, ['#FFD84A', '#FFFFFF'], 220, { kind: 'star', g: -20, x: CXp + (Math.random() - .5)*Wd*.7, y: CYp + (Math.random() - .5)*220 });
+          await wait(110);
+        }
+        await wait(700);
+      }
+    }
+    over = true; el.classList.add('out'); await new Promise(r => setTimeout(r, skip ? 0 : 180));
+    el.remove(); done();
+  })();
 }
 
 // ================= 描画 =================
