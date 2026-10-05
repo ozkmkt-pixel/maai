@@ -475,19 +475,40 @@ let sfxMute = false;   // 乱戦：画面の外の出来事の音は鳴らさな
 const SFX = (() => {
   let ac = null, out = null, noise = null, muted = false;
   try { muted = localStorage.getItem('maai_mute') === '1'; } catch(e) {}
+  let lastCt = -1, lastWall = 0, healT = 0, rebuilds = 0;
   function init(){
-    if (ac) { if (ac.state !== 'running') { ac.resume(); unlock(); } return; }
+    if (ac) { if (ac.state !== 'running' || stalled()) heal(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     // iPhone：マナーモード（消音スイッチ）でも鳴るように、音の種類を「再生」にする（iOS 17 以降）
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e) {}
-    ac = new AC(); unlock(); out = ac.createGain(); out.gain.value = muted ? 0 : .7;
-    const comp = ac.createDynamicsCompressor(); out.connect(comp); comp.connect(ac.destination);
-    noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
-    // 録音の mp3 を音のデータにしておく（iPhone の古い Safari でも動くよう、コールバックの形で）
+    make(AC);
+    // 録音の mp3 を音のデータにしておく（iPhone の古い Safari でも動くよう、コールバックの形で）。音のデータは作り直した後もそのまま使える
     if (typeof SFX_DATA !== 'undefined') for (const k in SFX_DATA) {
       try { const bin = atob(SFX_DATA[k]), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
         ac.decodeAudioData(u8.buffer, b => { bufs[k] = b; }, e => console.warn('SFX decode', k, e)); } catch(e) { console.warn('SFX decode', k, e); }
     }
+  }
+  function make(AC){
+    ac = new AC(); unlock(); out = ac.createGain(); out.gain.value = muted ? 0 : .7;
+    const comp = ac.createDynamicsCompressor(); out.connect(comp); comp.connect(ac.destination);
+    if (!noise) { noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1; }
+    lastCt = -1; lastWall = 0;
+  }
+  // 「running」なのに時計（currentTime）が進んでいない：前に触れたときから0.5秒以上たっても同じ値
+  function stalled(){
+    const now = performance.now(), ct = ac.currentTime, st = ac.state === 'running' && lastWall > 0 && now - lastWall > 500 && ct === lastCt;
+    lastCt = ct; lastWall = now; return st;
+  }
+  function heal(){
+    const now = performance.now(); if (now - healT < 400) return; healT = now;   // 1回のタップで何度も呼ばれるので間引く
+    const old = ac; try { old.resume(); } catch(e) {} unlock();
+    const t0 = old.currentTime;
+    setTimeout(() => { if (ac === old && !document.hidden && (old.state !== 'running' || old.currentTime === t0)) rebuild(); }, 400);
+  }
+  function rebuild(){
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    try { ac.close(); } catch(e) {}
+    rebuilds++; make(AC);
   }
   const bufs = {};
   // iPhone の Safari は、指を離した瞬間などの操作の中で音を1回鳴らすと、それ以降も音が出せるようになる → 無音を一瞬鳴らす
@@ -550,7 +571,8 @@ const SFX = (() => {
                else if (r === 1) { tone('sine', 1047, 1047, .3, .3); tone('sine', 1568, 1568, .4, .25, .1); } else tone('sine', 880, 880, .25, .3); },
     coin(){ tone('square', 1976, 1976, .06, .1); tone('square', 2637, 2637, .18, .1, .06); },                                // 買い物：チャリン
   };
-  const api = { init, get muted(){ return muted; },
+  const api = { init, get muted(){ return muted; }, get state(){ return ac ? { st: ac.state, t: +ac.currentTime.toFixed(2), rebuilds } : null; },   // 確認用
+    _rebuild: () => rebuild(),
     toggle(){ muted = !muted; try { localStorage.setItem('maai_mute', muted ? '1' : '0'); } catch(e) {} init(); if (out) out.gain.value = muted ? 0 : .7; return muted; } };
   for (const k in S) api[k] = (...a) => { if (ready() && !sfxMute) try { S[k](...a); } catch(e) { console.warn('SFX', k, e); } };
   return api;
@@ -2488,7 +2510,7 @@ const TEAM = { blue: '#3E8EDE', red: '#E0493E', green: '#4FC872', yellow: '#E8C5
 // v0.18：頭・胴・腕・脚は形ごと変わる部品（HEADP・BODYP・ARMP・LEGP）。色（金属・胴の色）は別に選ぶ
 const SKINS = {
   head:   { name: '頭',     list: { none: ['鍬形', -1], hachi: ['鉢巻', 0], hachi_aka: ['赤い鉢巻', 0], kasa: ['陣笠', 0], kabuto: ['大鍬形', 1], menpo: ['面頬', 1], kitsune: ['狐面', 2], kabuto_kin: ['金の兜', 2],
-                                    oni: ['鬼の角', 0], dokuro: ['どくろ', 1], tengu: ['天狗', 1], shishi: ['獅子頭', 2], chochin: ['提灯お化け', 2] } },
+                                    oni: ['鬼の角', 0], dokuro: ['どくろ', 1], tengu: ['天狗', 1], shishi: ['獅子頭', 2], chochin: ['提灯お化け', 2], kid: ['花ハート', -1] } },
   bodyP:  { name: '胴',     list: { std: ['いつもの胴', -1], hosomi: ['細身', 0], taru: ['樽', 0], hoe: ['法衣', 1], juso: ['重装甲', 1], tokei: ['からくり時計', 2] } },
   armP:   { name: '腕',     list: { std: ['いつもの手', -1], kobushi: ['大拳', 0], tsume: ['かぎ爪', 1], ogi: ['扇', 1], kusari: ['鎖分銅', 2] } },
   legP:   { name: '脚',     list: { std: ['いつもの足', -1], geta: ['一本下駄', 0], sharin: ['車輪', 1], tako: ['たこ足', 1], jet: ['ジェット', 2] } },
@@ -2562,6 +2584,7 @@ const HEADP = {
     side:  ['..KKKKKK..', '..KYYYYK..', '.KRRRRRRK.', 'KRkkkkkkRK', 'KEKRRRRRRK', 'KKkkkkkkRK', 'PPKRRRRRRK', '.KRkkkkRK.', '..KYYYYK..', '..KKKKKK..'],
     bdiag: ['..KKKKKK..', '..KYYYYK..', '.KRRRRRRK.', 'KRkkkkkkRK', 'KKRRRRRRRK', 'KKkkkkkkRK', 'KRRRRRRRRK', '.KRkkkkRK.', '..KYYYYK..', '..KKKKKK..'],
     back:  ['..KKKKKK..', '..KYYYYK..', '.KRRRRRRK.', 'KRkkkkkkRK', 'KRRRRRRRRK', 'KRkkkkkkRK', 'KRRRRRRRRK', '.KRkkkkRK.', '..KYYYYK..', '..KKKKKK..'] },
+  kid: {"front": ["..............", "......KK......", "...KKKKKKKK...", "..KKUUKKUUKK..", ".KYYKK..KKYYK.", "..KKKHHHHHKK..", ".KUUKHHHHKUUK.", ".KKK.KHHK.KKK.", "..KYK.HH.KYK..", "..KYKKKKKKYK..", "...KNKKKKNK...", "..KKOOOOOOKK..", "..KOkkOOkkkK..", "..KOkkOOkkOK..", "..KOKKKKKKOK..", "...KCCCCCKK...", "....KKKKKK....", ".....KKKK....."], "fdiag": ["..............", "......KK......", "...KKKKKKKK...", "..KKUUKKUUKK..", "..KYKK..KKYK..", "..KKKHHHHKKK..", ".KUUKHHHHKUUK.", ".KKK.KHHK.KKK.", "..KYK.HH.KYK..", "..KYKKKKKKYK..", "...KKKKNNNK...", "..KOOOOOKNNK..", "..KOOkkkOKNK..", "..kOOkkkOKNK..", "..KKKKKOOKNK..", "...CCCKOONN...", "....KKKKNN....", ".....KKKK....."], "side": ["..............", "......KK......", "....KKKKKK....", "...KKUKKUKK...", "..KYKKKKKKYK..", "...KKHHHHKK...", "..KUKHHHHKUK..", "..KKKKHHKKKK..", "...KK.KK.KK...", "...YKKKKKKYK..", "...KKNNNNNK...", "..KOOONNNNNK..", "..KkkOONNNNK..", "..KkkOOKNNNK..", "..KKKOOKNNNK..", "...CKOKNNNN...", "....KKNNNN....", ".....KKKK....."], "bdiag": ["..............", "......KK......", "....KKKKKK....", "...KKUKKUKK...", "..KYKK..KKYK..", "..KKKHHHHKKK..", "..UUKHHHHKUU..", "..KKKKHHKKKK..", "...YK.KK.KY...", "..KYKKKKKKYK..", "...KNNNNNNK...", "..KNNNNNNNNK..", "..KNNNNNNNNK..", "..KNNNNNNNNK..", "..KNNNNNNNNK..", "...NNNNNNNN...", "....NNNNNN....", ".....KKKK....."], "back": ["..............", "......KK......", "...KKKKKKKK...", "..KKUUKKUUKK..", ".KYYKK..KKYYK.", "..KKKHHHHHKK..", ".KUUKHHHHKUUK.", ".KKK.KHHK.KKK.", "..KYK.HH.KYK..", "..KYKKKKKKYK..", "...KNNNNNNK...", "..KNNNNNNNNK..", "..KNNNNNNNNK..", "..KNNNNNNNNK..", "..KNNNNNNNNK..", "...NNNNNNNN...", "....NNNNNN....", ".....KKKK....."]},   // 子供が描いた頭（v0.37）
 };
 // 胴の形。T（紋）は敵味方の色なので、どの形にも入れる
 const BODYP = {
@@ -2657,7 +2680,7 @@ function headOver(skin, view){
 }
 function mechPal(skin, team){
   const met = METAL[skin.head === 'kabuto_kin' ? 'gold' : skin.hairC] || METAL['#2A2522'], bod = BODYC[skin.outfit] || BODYC.kimono;
-  return { K: '#000000', W: '#FCFCFC', Y: '#F8B800', y: '#AC7C00', R: '#D82800', r: '#881400', P: '#F83800', U: '#6844FC', u: '#4428BC', k: '#383838', m: '#686868',
+  return { K: '#000000', W: '#FCFCFC', Y: '#F8B800', y: '#AC7C00', R: '#D82800', r: '#881400', P: '#F83800', U: '#6844FC', u: '#4428BC', k: '#383838', m: '#686868', N: '#F878A8', O: '#FC8A2A', C: '#C8184C', H: '#F0508C',
            L: met[0], M: met[1], B: bod[0], b: bod[1], T: MTEAM[team][0], E: MTEAM[team][1] };
 }
 // ---------- v0.33 キャラの絵：2倍の細かさ（B）＋自動の陰影 ----------
@@ -3251,6 +3274,7 @@ const OVER2 = [
     'KWWWWWWWWWWWWWWWWK', '.KWWWKKWWWWWWWWWK.', '..KKKKKKKKKKKKKK..']],
   [['KWWWWK', 'KRRWWK', '.KWWK.'], ['KWWWWWWWWWWK', 'KRRRWWWWWWWK', 'KWRRRWWWWWWK', 'KWWWWWWWWWWK', 'KKWWWWWWWWK.', '.KKKKKKKKK..']],
 ];
+H2.kid = {"front": ["............................", "............................", ".............KK.............", "............KYYK............", ".......KKKK.KYYK.KKKK.......", ".......KUUUKKYYK.KUUK.......", ".......KUUUUKYYKKUUUK.......", "....KKKKUUUUKKKKUUUUKKKK....", "...KYYYYKKKK....KKKKYYYYK...", "...KYYYYKHHHK..KHHHKYYYYK...", "....KYYYKHHHHKKHHHHHKYYK....", "....KKKKKHHHHHHHHHHHKKKK....", "..KKUUUUKHHHHHHHHHHKUUUUKK..", "..KUUUUUKHHHHHHHHHHKUUUUUK..", "..KUUUUK.KKHHHHHHKK.KUUUUK..", "...KKKKK...KHHHHK...KKKKK...", ".....KYYK..KHHHHK..KYYK.....", "....KYYYK...KHHK...KYYYK....", "....KYYYK.KKKKKKKK.KYYYK....", "....KYYYKKNNNNNNNNKKYYYK....", ".....KYKNNNNNKKNNNNNKYK.....", "......KNNKKKKOOKKKKNNK......", ".....KNKKOOOOOOOOOOKKNK.....", ".....KKOOOOOOOOOOOOOOKK.....", "....KKOOmkkOOOOOOmkkOOKK....", "....KKOOmkkOOOOOOkkkkOKK....", "....KKOOkkkOOOOOOkkkOOKK....", "....KKOOOOOOOOOOOOOOOOKK....", "....KKOOOOOOOOOOOOOOOOKK....", ".....KOKKKKKKKKKKKKKOOK.....", ".....KKKCCWCCWWCCCWKOKK.....", "......KKKWCCCCCWCKKOKK......", ".......KKKKKKKKKKOKKK.......", "........KNKKKKKKKKNK........", ".........KKKNNNNKKK.........", "............KKKK............"], "fdiag": ["............................", "............................", ".............KK.............", "............KYYK............", ".......KKKK.KYYK.KKKK.......", ".......KUUUKKYYKKUUUK.......", ".......KUUUUKYYKUUUUK.......", "....KKK.KUUK.KKKUUUK.KKK....", "....KYYKKKKK....KKKKKYYK....", "....KYYYKHHHK..KHHHKYYYK....", "....KYYYKHHHHKKHHHHKYYYK....", ".....KKKKHHHHHHHHHHKKKK.....", "...KKUUUKHHHHHHHHHHKUUUKK...", "...KUUUUKKHHHHHHHHKKUUUUUK..", "...KUUUK..KHHHHHHK..KUUUK...", "...KKKKYK..KHHHHK..KYKKKK...", ".....KYYYK.KHHHHK.KYYYK.....", ".....KYYYK..KHHK..KYYYYK....", "....KYYYYKKKKKKKKKKYYYYK....", "....KKYYKNNNNNNNNNNKYYKK....", "......KKNKKNNNNNNNNNKK......", "......KKKOOKKKKNNNNNNK......", ".....KOOOOOOOOOKKNNNNNK.....", ".....KOOOOOOOOOOOKNNNNK.....", ".....KOOOOOmkkkOOOKNNNNK....", ".....KOOOOOkkkkOOOKNNNNK....", "....KkOOOOOkkkkOOOOKNNNK....", "....KOOOOOOOOOOOOOOKNNNK....", "....KOOOOOOOOOOOOOOKNNNK....", ".....KKKKKKKKKKOOOKNNNK.....", ".....KWCWCCWCKOOOOKNNNK.....", "......KCCCWCKKOOOKNNNK......", ".......KKKKKOOOKKNNNK.......", "........KKKKKKKNNNNK........", ".........KKKNNNNKKK.........", "............KKKK............"], "side": ["............................", "............................", ".............KK.............", "............KYYK............", "........KKK.KYYK.KKK........", "........KUUKKYYKKUUK........", "........KUUUKYYKUUUK........", ".....KKKKUUK.KK.KUUKKKK.....", ".....KYYYKKKK..KKKKYYYK.....", ".....KYYYKHHK..KHHKYYYK.....", ".....KYYYKHHHKKHHHKYYYK.....", "......KKKKHHHHHHHHHKKK......", "....KKUUUKHHHHHHHHKUUUKK....", "....KUUUUKHHHHHHHHKUUUUK....", "....KUUUK.KHHHHHHK.KUUUK....", ".....KKKK..KHHHHK..KKKK.....", "......KYYK..KHHK..KYYK......", "......KYYK..KHHK..KYYK......", ".....KYYYYKKKKKKKKYYYYK.....", "......KYKKNNNNNNNNKKYYK.....", "......KKNNNNNNNNNNNNKK......", "......KOKKKNNNNNNNNNNK......", ".....KOOOOOKNNNNNNNNNNK.....", ".....KOOOOOOKNNNNNNNNNK.....", "....KOOmkkOOOKNNNNNNNNNK....", "....KOOkkkOOOOKNNNNNNNNK....", "....KOOkkkOOOOKNNNNNNNNK....", "....KOOOOOOOOOKNNNNNNNNK....", "....KOOOOOOOOOKNNNNNNNNK....", ".....KKKKKOOOOKNNNNNNNK.....", ".....KCWCKOOOKNNNNNNNNK.....", "......KCCKOOOKNNNNNNNK......", ".......KKOOKKNNNNNNNK.......", "........KOKNNNNNNNNK........", ".........KKKNNNNKKK.........", "............KKKK............"], "bdiag": ["............................", "............................", ".............KK.............", "............KYYK............", "........KKK.KYYK.KKK........", "........KUUKKYYKKUUUK.......", "........KUUUKYYKUUUK........", ".....KKKKUUK.KKKUUUKKKK.....", "....KYYYYKKK....KKKYYYYK....", "....KYYYYKHHK..KHHHKYYYK....", ".....KYYKHHHHKKHHHHKYYK.....", ".....KKKKHHHHHHHHHHKKKK.....", "....KUUUKHHHHHHHHHHKUUUK....", "...KUUUUUKHHHHHHHHKUUUUUK...", "...KUUUUK.KHHHHHHK.KUUUUK...", "....KKKKK..KHHHHK..KKKKK....", "......KYYK..KHHK..KYYK......", ".....KYYYK..KHHK..KYYYK.....", ".....KYYYKKKNKKNKKKYYYK.....", ".....KYKKNNNNKKNNNNKKYK.....", "......KNNNNNNNNNNNNNNK......", "......KNNNNNNNNNNNNNNK......", ".....KNNNNNNNNNNNNNNNNK.....", ".....KNNNNNNNNNNNNNNNNK.....", "....KNNNNNNNNNNNNNNNNNNK....", "....KNNNNNNNNNNNNNNNNNNK....", "....KKNNNNNNNNNNNNNNNNNK....", "....KKNNNNNNNNNNNNNNNNNK....", "....KKNNNNNNNNNNNNNNNNNK....", ".....KNNNNNNNNNNNNNNNNK.....", ".....KNNNNNNNNNNNNNNNNK.....", "......KNNNNNNNNNNNNNNK......", ".......KNNNNNNNNNNNNK.......", "........KNNNNNNNNNNK........", ".........KKKNNNNKKK.........", "............KKKK............"], "back": ["............................", "............................", ".............KK.............", "............KYYK............", ".......KKKK.KYYK.KKKK.......", ".......KUUUKKYYK.KUUK.......", ".......KUUUUKYYKKUUUK.......", "....KKKKUUUUKKKKUUUUKKKK....", "...KYYYYKKKK....KKKKYYYYK...", "...KYYYYKHHHK..KHHHKYYYYK...", "....KYYYKHHHHKKHHHHHKYYK....", "....KKKKKHHHHHHHHHHHKKKK....", "..KKUUUUKHHHHHHHHHHKUUUUKK..", "..KUUUUUKHHHHHHHHHHKUUUUUK..", "..KUUUUK.KKHHHHHHKK.KUUUUK..", "...KKKKK...KHHHHK...KKKKK...", ".....KYYK..KHHHHK..KYYK.....", "....KYYYK...KHHK...KYYYK....", "....KYYYK.KKNKKNKK.KYYYK....", "....KYYKNKNNNKKNNNKNKYYK....", ".....KKNNNNNNNNNNNNNNKK.....", "......KNNNNNNNNNNNNNNK......", ".....KNNNNNNNNNNNNNNNNK.....", ".....KNNNNNNNNNNNNNNNNK.....", "....KNNNNNNNNNNNNNNNNNNK....", "....KNNNNNNNNNNNNNNNNNNK....", "....KNNNNNNNNNNNNNNNNNNK....", "....KNNNNNNNNNNNNNNNNNNK....", "....KNNNNNNNNNNNNNNNNNNK....", ".....KNNNNNNNNNNNNNNNNK.....", ".....KNNNNNNNNNNNNNNNNK.....", "......KNNNNNNNNNNNNNNK......", ".......KNNNNNNNNNNNNK.......", "........KNNNNNNNNNNK........", ".........KKKNNNNKKK.........", "............KKKK............"]};
 for (const k in H2) for (const v in H2[k]) { const o = HEADP[k][v]; if (o) reg(Array.isArray(o) ? o : o.rows, H2[k][v]); else console.warn('頭の向きがない', k, v); }
 for (const [o, b] of OVER2) reg(o, b);
 
