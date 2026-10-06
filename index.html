@@ -514,6 +514,11 @@
   .gx:not([data-t="0"]) .gxBox.mk{filter:drop-shadow(0 0 16px var(--c));}
   .gxBox.mk.open{animation:gxMkOpen 1s ease-out forwards;}
   @keyframes gxMkOpen{15%{transform:scale(1.12)}55%{transform:scale(1.08);opacity:1}100%{transform:scale(1.45);opacity:0}}
+  /* 装備画面の下（次の相手・性格）の文字を濃く大きく（v0.40.1） */
+  .eqLab .eqVs{color:#E6EEF8;font-size:12px;}
+  .eqLab .eqVs small.per,.eqLab .eqVs.boss small{font-size:11px;line-height:1.5;color:#FFFFFF;font-weight:800;text-shadow:0 1px 0 #000,0 0 4px rgba(0,0,0,.9);}
+  .eqLab .eqFoot{background:rgba(8,12,22,.85);border:3px solid #000;border-radius:14px;margin:0 8px 8px;padding:10px;}
+  .earn small{color:#3A2E10;font-weight:800;}
 
 </style>
 
@@ -1935,7 +1940,7 @@ function loadout(level, eW, eGear, practice){
     const sw = WEAPONS[myW].len/34, tick = () => {
       if (!cvs.isConnected) return;
       const t = performance.now()/1000, P = MECH_BASE(), b = Math.sin(t*2.6)*.7;
-      P.body[2] += b*.6; P.head[2] += b; P.handL[2] += Math.sin(t*2.6 + 1)*.7; P.handR[2] += Math.sin(t*2.6 + .5)*.5;
+      P.body[2] += b*.6; P.head[2] += b; P.handL[2] += Math.sin(t*2.6 + 1)*.7; P.handR[2] += b*.6;   // 武器を持つ右手は胴と一緒に上下（v0.41.2）
       cx.clearRect(0, 0, cvs.width, cvs.height); cx.imageSmoothingEnabled = false;
       const g = cx.createRadialGradient(200, 412, 10, 200, 412, 150); g.addColorStop(0, 'rgba(232,178,58,.35)'); g.addColorStop(1, 'rgba(232,178,58,0)');
       cx.fillStyle = g; cx.fillRect(0, 280, 400, 240);
@@ -3821,33 +3826,34 @@ function wPage(w, h){
   }
   const at = { pg: p, sx: p.x, sy: p.y }; p.x += w + 1; p.rowH = Math.max(p.rowH, h); return at;
 }
-const wKey = (wk, bladeKey, white, px, n) => wk + '|' + bladeKey + '|' + white + '|' + px + '|' + n;
-function wCombo(wk, bladeKey, white, px, n){
-  const key = wKey(wk, bladeKey, white, px, n); let cb = WCombos.get(key);
-  if (!cb) { cb = { wk, bladeKey, white, px, n, imgs: new Array(AQ) }; WCombos.set(key, cb);
+// kq：刃の面の向き（見本で体と一緒に回すとき、刃の横幅が何倍に見えるか -1〜1。null＝試合の絵＝そのまま）
+const wKey = (wk, bladeKey, white, px, n, kq = null) => wk + '|' + bladeKey + '|' + white + '|' + px + '|' + n + '|' + kq;
+function wCombo(wk, bladeKey, white, px, n, kq = null){
+  const key = wKey(wk, bladeKey, white, px, n, kq); let cb = WCombos.get(key);
+  if (!cb) { cb = { wk, bladeKey, white, px, n, kq, imgs: new Array(AQ) }; WCombos.set(key, cb);
     const fam = wk + '|' + bladeKey + '|' + white + '|' + px;   // 長さ違い（重い攻撃のため）・白（被弾）・アイコンなどの大きさ違いは予約しない
-    if (px === MECH_PX && !white && !WFam.has(fam)) { WFam.add(fam); for (const a of AQ_ORDER) WARM.push(() => wMake(cb, a)); } }
+    if (px === MECH_PX && !white && kq === null && !WFam.has(fam)) { WFam.add(fam); for (const a of AQ_ORDER) WARM.push(() => wMake(cb, a)); } }
   return cb;
 }
 function wMake(cb, a){
   if (cb.imgs[a]) return cb.imgs[a];
-  const m = makeWeaponImg(a/AQ*Math.PI*2, cb.wk, cb.px, cb.n, cb.bladeKey, cb.white), at = wPage(m.img.width, m.img.height);
+  const m = makeWeaponImg(a/AQ*Math.PI*2, cb.wk, cb.px, cb.n, cb.bladeKey, cb.white, cb.kq), at = wPage(m.img.width, m.img.height);
   at.pg.c.putImageData(m.img, at.sx, at.sy);
   return cb.imgs[a] = { cv: at.pg.cv, sx: at.sx, sy: at.sy, w: m.img.width, h: m.img.height, gx0: m.gx0, gy0: m.gy0 };
 }
 function wNear(cb, a){
-  for (const dn of [0, -1, 1, -2, 2, -3, 3]) { const o = dn ? WCombos.get(wKey(cb.wk, cb.bladeKey, cb.white, cb.px, cb.n + dn)) : cb; if (!o) continue;
+  for (const dn of [0, -1, 1, -2, 2, -3, 3]) { const o = dn ? WCombos.get(wKey(cb.wk, cb.bladeKey, cb.white, cb.px, cb.n + dn, cb.kq)) : cb; if (!o) continue;
     for (let d = 0; d <= 3; d++) { const i1 = o.imgs[(a + d) % AQ]; if (i1) return i1; const i2 = o.imgs[(a - d + AQ) % AQ]; if (i2) return i2; } }
   return null;
 }
 // 装備画面で、これから使う武器の絵を先に作り始める
 const weaponPrewarm = (wk, bladeKey) => { if (WEAPONS[wk]) wCombo(wk, bladeKey || 'plain', false, MECH_PX, Math.max(4, Math.round((WEAPONS[wk].len + (WEAPONS[wk].shaft ? 10 : 0))/MECH_PX))); };
-function drawWeaponPix(c, x0, y0, ang, wk, px, L, bladeKey, white){
+function drawWeaponPix(c, x0, y0, ang, wk, px, L, bladeKey, white, kq = null){
   const a = ((Math.round(ang/(Math.PI*2)*AQ) % AQ) + AQ) % AQ, n = Math.max(4, Math.round(L/px)), dp = px/2;
-  const cb = wCombo(wk, bladeKey, white, px, n);
+  const cb = wCombo(wk, bladeKey, white, px, n, kq);
   let im = cb.imgs[a];
   if (!im) {   // まだない角度：近い絵で代わりに描き、ちょうどの絵は予約。被弾の白は、なければ普通の絵で代わりに
-    const nw = white && WCombos.get(wKey(wk, bladeKey, false, px, n));
+    const nw = white && WCombos.get(wKey(wk, bladeKey, false, px, n, kq));
     im = wNear(cb, a) || (nw && (nw.imgs[a] || wNear(nw, a)));
     if (im) { if (!cb.queued) cb.queued = new Set(); if (!cb.queued.has(a)) { cb.queued.add(a); WARM.push(() => wMake(cb, a)); } }
     else im = wMake(cb, a);
@@ -3856,7 +3862,7 @@ function drawWeaponPix(c, x0, y0, ang, wk, px, L, bladeKey, white){
   c.imageSmoothingEnabled = false; c.drawImage(im.cv, im.sx, im.sy, im.w, im.h, (bx + im.gx0)*dp, (by + im.gy0)*dp, im.w*dp, im.h*dp);
 }
 // 握る位置を原点にして、半ドットのマス目1つ＝1画素の画素データ（ImageData）を作る
-function makeWeaponImg(ang, wk, px, n, bladeKey, white){
+function makeWeaponImg(ang, wk, px, n, bladeKey, white, kq = null){
   const w = WEAPONS[wk] || WEAPONS.katana, bs = BLADE[bladeKey] || BLADE.plain, W8 = col => white ? '#FFFFFF' : col;
   const eB = bladeKey === 'plain' ? w.blade : bs.edge, gB = bladeKey === 'plain' ? '#3A2A1A' : bs.grip, sB = w.shaft || '#8B6A45';
   const edge = W8(eB), shade = W8(shadeOf(eB)), hi = W8(mix(eB, '#FFFFFF', .7));
@@ -3874,17 +3880,35 @@ function makeWeaponImg(ang, wk, px, n, bladeKey, white){
     band(n - 6, n - 5, -4, 4.5, edge); seg(n - 5, -4, n - 4, -4, edge); seg(n - 5, 4.5, n - 4, 4.5, edge);   // 横刃（両端は少し前へ反る）
     band(n - 5, n - 1, -1, -.5, edge); band(n - 5, n - 1, 1, 1.5, shade); band(n - 5, n, 0, .5, edge);
     seg(n - 4.5, -1, n - 2, -1, hi); seg(n - 6, -3.5, n - 6, -1.5, hi);   // 照り
-  } else if (wk === 'great') { // 大剣：太い刃に溝、大きな鍔、柄頭
-    band(-4, 0, 0, .5, grip); wrapOn(-4, 0); band(-5, -4, -.5, 1, guard); band(.5, 1.5, -3, 3.5, guard); seg(.5, -3, 1.5, -3, guardHi);
-    band(2, n - 1, -1.5, 2, v => Math.abs(v - .25) < .6 ? shade : edge); band(n - 1, n, -.5, 1, edge); seg(3, -1.5, n - 2, -1.5, hi);
-  } else if (wk === 'dagger') { // 短剣：短い幅広の刃
-    band(-2, 0, 0, .5, grip); wrapOn(-2, 0); band(.5, 1, -1.5, 2, guard); seg(.5, -1.5, 1, -1.5, guardHi);
-    band(1, n - 1, -.5, 0, edge); band(1, n - 1, .5, 1, shade); seg(n - 1, 0, n, .25, edge); seg(1.5, -.5, n - 2, -.5, hi);
-  } else {                     // 刀：細身の刃に影の筋、角の鍔、鎺（はばき）
-    band(-3, 0, 0, .5, grip); wrapOn(-3, 0); band(.5, 1, -1, 1.5, guard); seg(.5, -1, 1, -1, guardHi);
-    band(1, n, 0, 0, edge); band(1.5, n - 2, .5, .5, shade); band(1, 1.5, 0, .5, guard); seg(n*.35, 0, n*.7, 0, hi);
+  } else {
+    // v0.41 刃：先をとがらせ、刃（明るい）・地・峰（暗い）を分ける。f：刃の幅の行数の多さ（試合の絵は細め、見本は全部。見本の幅は kq で縮める）
+    const f = kq === null ? .4 : 1, mid = W8(mix(eB, '#FFFFFF', .4));
+    // u から u+.5 の1列を rs 行の帯で塗る。いちばん v が大きい行＝刃（c0）、いちばん小さい行＝峰（shade）、間＝地（edge、溝 groove なら真ん中も shade）
+    const col = (u, rs, off, c0, groove) => { const h2 = (rs - 1)/2;
+      for (let k = 0; k < rs; k++) { const v = off + .25 + (h2 - k)*.5;
+        seg(u, v, u + .5, v, k === 0 ? c0 : k === rs - 1 && rs > 1 ? shade : groove && Math.abs(k - h2) < .6 ? shade : edge); } };
+    if (wk === 'great') {      // 大剣：幅広の刃、中に溝、先は左右からとがる。大きな鍔と柄頭
+      band(-3, 2.5, 0, .5, grip); wrapOn(-3, 2.5); band(-4, -3, -.5, 1, guard); band(2.5, 3.5, -3, 3.5, guard); seg(2.5, -3, 3.5, -3, guardHi);   // v0.41.2 鍔は手の外（u 2.5〜）
+      const rows = 3 + Math.round(2*f);
+      for (let u = 3.5; u < n; u += .5) { const cut = u >= n - 2 ? Math.floor((u - (n - 2))/.5) + 1 : 0;
+        col(u, Math.max(1, rows - cut), 0, u > n - 2.5 ? hi : mid, u < n - 2.5 && rows >= 4); }
+    } else if (wk === 'dagger') { // 短剣：木の葉の形（根元が細く、真ん中が太く、先がとがる）
+      band(-1, 2, 0, .5, grip); wrapOn(-1, 2); band(2, 2.5, -1.5, 2, guard); seg(2, -1.5, 2.5, -1.5, guardHi);   // v0.41.3 鍔は手の外
+      const rows = 2 + Math.round(f);
+      for (let u = 2.5; u < n; u += .5) { const t = (u - 2.5)/(n - 2.5), w = t < .35 ? .75 + t : t > .7 ? (1 - t)/.3 : 1;
+        col(u, Math.max(1, Math.round(rows*w)), 0, t > .7 ? hi : mid); }
+    } else {                   // 刀：細身で、峰の側へ反る。刃の行に刃文（白い波）、先は峰の側から斜めに落ちる（切っ先）
+      band(-2, 2.5, 0, .5, grip); wrapOn(-2, 2.5); band(2.5, 3, -1, 1.5, guard); seg(2.5, -1, 3, -1, guardHi); band(3, 3.5, 0, .5, guard);   // v0.41.3 鍔は手の外
+      const rows = 2 + Math.round(f), L = n - 3.5;
+      for (let u = 3.5; u < n; u += .5) { const t = (u - 3.5)/L, off = -1.6*t*t, cut = u >= n - 1.5 ? Math.floor((u - (n - 1.5))/.5) + 1 : 0;
+        const rs = Math.max(1, rows - cut), wave = Math.floor(u*2) % 3 !== 1, h2 = (rs - 1)/2;
+        for (let k = 0; k < rs; k++) { const v = off + .25 + (h2 - k)*.5 + (rows - rs)*.25;   // 切っ先は峰の側から削る
+          seg(u, v, u + .5, v, k === 0 ? (wave ? hi : mid) : k === rs - 1 && rs > 1 ? shade : edge); } }
+    }
   }
   // 部品ごとに、その長方形が入るマス目の範囲だけを調べて塗る（後の物が上）
+  const K = kq === null ? 1 : kq;   // 刃の面の向き：横幅を K 倍（負なら裏返し）
+  for (const r of R) { const a = r[2]*K, b = r[3]*K; r[2] = Math.min(a, b); r[3] = Math.max(a, b); }
   const P = (u, v) => [(ca*u - sa*v)*px/dp, (sa*u + ca*v)*px/dp], tol = .3, boxes = [];
   let gx0 = Infinity, gy0 = Infinity, gx1 = -Infinity, gy1 = -Infinity;
   for (const r of R) {
@@ -3949,7 +3973,14 @@ function drawMech(c, x, y, F, skin, team, P, o = {}){
   else if (P.handR) {
     part(armSpr(skin, 'R'), P.handR, .1);
     if (o.sword) { const h = toS(P.handR), sw = o.sword, t = toS([P.handR[0] + sw[0], P.handR[1] + sw[1], P.handR[2] + sw[2]]);   // o.wk：武器の種類（なければ刀）
-      list.push([h.d + .05, () => drawWeaponPix(c, h.x, h.y, Math.atan2(t.y - h.y, t.x - h.x), o.wk || 'katana', px, Math.hypot(t.x - h.x, t.y - h.y), skin.blade, !!o.white)]); }
+      // 刃の面の向き（v0.41）：体の前 [1,0,0] から刃の軸の成分を引いた D を画面に写し、画面の刃の軸と直交する割合
+      const al = Math.hypot(...sw), Ad = sw.map(v => v/al), B0 = [1, 0, 0], dd = Ad[0], D = [B0[0] - dd*Ad[0], B0[1] - dd*Ad[1], B0[2] - dd*Ad[2]], dl = Math.hypot(...D) || 1;
+      const scr = ([f, s2, u]) => [f*cf + s2*cr, (f*sf + s2*sr)*.5 - u], a2 = [t.x - h.x, t.y - h.y], d2 = scr(D.map(v => v/dl)), a2l = Math.hypot(...a2) || 1;
+      const kq = Math.max(-1, Math.min(1, Math.round((a2[0]*d2[1] - a2[1]*d2[0])/a2l*4)/4));
+      // v0.41.2 握る位置：手の絵は place で 1ドットのマス目にそろえて置かれるので、武器も同じ所から描く（ずれると上下のたびに手と武器が別々に動く）
+      const hs = spr(armSpr(skin, 'R')), hImg = im(hs.rows), hax = (flip ? hImg.width - (hs.cx ?? hImg.width/2) : (hs.cx ?? hImg.width/2))*px, hay = (hs.cy ?? hImg.height/2)*px;
+      const gx = Rd(h.x - hax) + hax, gy = Rd(h.y - hay) + hay;
+      list.push([h.d + .05, () => drawWeaponPix(c, gx, gy, Math.atan2(t.y - h.y, t.x - h.x), o.wk || 'katana', px, Math.hypot(t.x - h.x, t.y - h.y), skin.blade, !!o.white, kq)]); }
   }
   list.sort((a, b) => a[0] - b[0]).forEach(([, fn]) => fn());
 }
@@ -4482,7 +4513,7 @@ const HM_MODES = {
 let hmMode = 'duel';
 try { const m = localStorage.getItem('maai_mode'); if (HM_MODES[m]) hmMode = m; } catch(e) {}
 function title(){
-  G = null; quitBtn.hidden = true; BGM.play('title');
+  G = null; quitBtn.hidden = true; BGM.play('loadout');   // v0.41.1 ホームも装備画面と同じ曲（切り替えても途切れない）
   const md = HM_MODES[hmMode];
   // 到達Lvの道：3つで1区切り、3つ目が強敵
   const a = Math.floor((bestLv - 1)/3)*3 + 1;
@@ -4534,9 +4565,9 @@ function title(){
     if (!lab || lab.stale()) lab = hmLab($('hmBg'), cvs); lab.draw(t);
     const F = Math.PI/2 - .45 + Math.sin(t*.45)*.55;
     x.clearRect(0, 0, cvs.width, cvs.height); x.imageSmoothingEnabled = false;
-    const P = MECH_BASE(); P.body[2] += b*.6; P.head[2] += b; P.handL[2] += Math.sin(t*2.4 + 1)*.7; P.handR[2] += Math.sin(t*2.4 + .5)*.5;
+    const P = MECH_BASE(); P.body[2] += b*.6; P.head[2] += b; P.handL[2] += Math.sin(t*2.4 + 1)*.7; P.handR[2] += b*.6;   // 武器を持つ右手は胴と一緒に上下
     x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(170, 306, 88 - b*3, 20, 0, 0, Math.PI*2); x.fill();
-    drawMech(x, 170, 300, F, mySkin, 'blue', P, { px: 9, sword: [4 + 3*sw, 3, 3 + 3*sw], wk: myW });
+    drawMech(x, 170, 300, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW });   // 装備画面と同じ構え（体の横で上へ立てる）
     requestAnimationFrame(tick); };
   tick();
 }
