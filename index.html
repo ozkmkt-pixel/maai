@@ -523,6 +523,48 @@
   .card .nSt{color:#14233C;font-weight:800;font-size:14px;}
   .card .nSt .ng{color:#B8231A;}
 
+  /* ===== ステージ（v0.43） ===== */
+  .stWrap{display:flex;flex-direction:column;gap:8px;padding:8px 12px 16px;}
+  .stCh{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:rgba(8,12,22,.85);border:3px solid #000;box-shadow:0 4px 0 #000;color:#fff;text-align:left;}
+  .stCh>div{flex:1;display:flex;flex-direction:column;line-height:1.35;}
+  .stCh b{font-family:"M PLUS Rounded 1c",sans-serif;font-weight:900;font-size:20px;color:#FFC93A;text-shadow:0 2px 0 #000;}
+  .stCh span{font-size:14px;font-weight:900;}
+  .stCh small{font-size:12px;font-weight:800;color:#E6EEF8;}
+  .stCh em{font-style:normal;font-weight:900;font-size:16px;color:#FFC93A;white-space:nowrap;text-shadow:0 2px 0 #000;}
+  .stMap{position:relative;height:290px;border-radius:14px;background:rgba(8,12,22,.55);border:3px solid #000;}
+  .stPath{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+  .stPath polyline{fill:none;stroke:#000;stroke-width:5px;vector-effect:non-scaling-stroke;stroke-dasharray:2 8;stroke-linecap:round;}
+  .stNode{position:absolute;left:var(--x);transform:translate(-50%,-50%);margin:0;padding:0;width:52px;height:52px;border-radius:50%;z-index:1;
+    background:#3A4A7A;border:3px solid #000;box-shadow:0 4px 0 #000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;}
+  .stNode:nth-child(1){top:92%;} .stNode:nth-child(2){top:75.2%;} .stNode:nth-child(3){top:58.4%;} .stNode:nth-child(4){top:41.6%;} .stNode:nth-child(5){top:24.8%;} .stNode:nth-child(6){top:8%;}
+  .stNode b{font-family:"M PLUS Rounded 1c",sans-serif;font-weight:900;font-size:17px;color:#fff;text-shadow:0 2px 0 #000;line-height:1;}
+  .stNode.done{background:#2F7FD8;} .stNode.lock{background:#2A2F3A;opacity:.75;box-shadow:0 2px 0 #000;}
+  .stNode.boss{width:64px;height:64px;background:#7A1C1C;} .stNode.boss b{font-size:28px;} .stNode.boss.done{background:#B8322A;}
+  .stNode.sel{box-shadow:0 0 0 4px #FFC93A,0 4px 0 #000,0 0 16px rgba(255,201,58,.7);}
+  .stS{display:flex;gap:0;margin-top:3px;} .stS i{font-style:normal;font-size:12px;color:#1A1F2A;text-shadow:0 0 1px #000;line-height:1;}
+  .stS i.on{color:#FFC93A;text-shadow:0 1px 0 #000;}
+  .stInfo{padding:12px 14px;border-radius:14px;background:var(--paper);color:#23252B;border:3px solid #000;box-shadow:0 4px 0 #000;text-align:left;}
+  .stInfo.boss{background:#FBE3DC;}
+  .stIH{display:flex;align-items:center;gap:8px;} .stIH b{flex:1;font-size:16px;font-weight:900;color:#23252B;} .stIH small{font-weight:900;font-size:14px;color:#23252B;}
+  .stTag{display:inline-block;background:#23252B;color:#FFC93A;border-radius:8px;padding:1px 8px;font-weight:900;font-size:13px;margin-right:6px;}
+  .stInfo p{margin:6px 0;font-size:13px;line-height:1.5;font-weight:800;}
+  .stPer::first-line{} .stPer{color:#23252B;border-left:6px solid var(--pc);padding-left:8px;}
+  .stTip{color:#3A3020;background:#FFF6D8;border-radius:8px;padding:6px 8px;}
+  .stGoals{list-style:none;padding:0 !important;margin:8px 0 !important;font-size:13px;font-weight:900;}
+  .stGoals li{display:flex;align-items:center;gap:6px;color:#3A3E46;} .stGoals li i{font-style:normal;font-size:18px;color:#B9B2A0;}
+  .stGoals li.on i{color:#E8A21A;text-shadow:0 1px 0 #6A4A00;}
+  .stGo{display:block;width:100%;margin-top:8px;background:#FFC93A;color:#2A1A00;font-size:20px;font-weight:900;border:3px solid #000;box-shadow:0 5px 0 #000;}
+  .eqVs .stTag{font-size:11px;padding:0 6px;}
+  .eqLab .eqVs small.stGoal{display:block;font-size:11px;color:#FFC93A;font-weight:900;text-shadow:0 1px 0 #000;}
+  .stRes{display:flex;flex-direction:column;gap:4px;margin:10px 0;text-align:left;}
+  .stRes div{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;background:#E9E1CD;font-size:13px;font-weight:900;color:#5A5E66;animation:stPop .4s both;}
+  .stRes div.on{background:#FFF0B8;color:#23252B;}
+  .stRes i{font-style:normal;font-size:22px;color:#B9B2A0;line-height:1;} .stRes .on i{color:#E8A21A;text-shadow:0 1px 0 #6A4A00;}
+  .stRes span{flex:1;} .stRes em{font-style:normal;margin-left:6px;background:#B8322A;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;}
+  @keyframes stPop{0%{transform:scale(.6);opacity:0;}70%{transform:scale(1.06);opacity:1;}100%{transform:scale(1);}}
+  .card .stUnlock{color:#1A5FB0;}
+  .card .stHint{font-size:12px !important;font-weight:800;color:#3A3020;background:#FFF6D8;border-radius:8px;padding:6px 8px;text-align:left;}
+
 </style>
 
 <div id="app">
@@ -641,6 +683,7 @@ sndBtn.onclick = () => { SFX.toggle(); BGM.sync(); sndBtn.textContent = sndLabel
 quitBtn.onclick = () => {   // 練習は準備画面へ。勝負の途中でやめるときは確かめてからタイトルへ（小判はもらえない）
   if (!G) return; if (G.practice) return quitPractice();
   if (G.net) return netQuit();
+  if (G.stage) return askQuit('この面をやめて、面の選択に戻りますか？<br><small>（この勝負の小判はもらえません）</small>', 'やめる', () => { const st = G.stage; G = null; quitBtn.hidden = true; stageScreen(st); });
   askQuit('勝負をやめてタイトルに戻りますか？<br><small>（この勝負の小判はもらえません）</small>', 'やめる', () => { G = null; quitBtn.hidden = true; title(); }); };
 // やめるかどうかの札。「続ける」で試合に戻る（通信対戦は止められないので、札の裏でも試合は進む）
 function askQuit(text, yes, fn){
@@ -835,7 +878,7 @@ function mkF(x, y, isAI, color, name, wk, gear){
 }
 function newMatch(level, eW, eGear, practice){
   eW = eW || WKEYS[Math.floor(Math.random()*WKEYS.length)]; eGear = eGear || randomGear();
-  G = { level, eW, eGear, practice:!!practice, boss: practice ? null : bossForLevel(level), count:{parry:0, taken:0, given:0}, round:1, pw:0, ew:0, now:0, hitstop:0, slowT:0, shake:0, fx:[], texts:[], phase:'intro', phaseT:0 };
+  G = { level, eW, eGear, practice:!!practice, boss: practice ? null : CUR_STAGE ? stBoss(CUR_STAGE) : bossForLevel(level), stage: practice ? null : CUR_STAGE, count:{parry:0, taken:0, given:0}, round:1, pw:0, ew:0, now:0, hitstop:0, slowT:0, shake:0, fx:[], texts:[], phase:'intro', phaseT:0 };
   newRound(); ov.hidden = true; quitBtn.hidden = false; quitBtn.textContent = G.practice ? '練習をやめる' : 'やめる'; BGM.play('duel');
 }
 function newRound(){
@@ -1105,6 +1148,7 @@ function slam(att, def){
   const a = Math.atan2(def.y - att.y, def.x - att.x);   // 叩きつけた向き（投げた側の背中側）へ少し滑る。崖のそばなら落ちる
   def.kx = Math.cos(a)*THROW.knock*.55*def.m.knock; def.ky = Math.sin(a)*THROW.knock*.55*def.m.knock;
   if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
+  if (att === G.p) G.count.thr = (G.count.thr || 0) + 1;
   gainOugi(att, OUGI_GAIN.throw); gainOugi(def, OUGI_GAIN.taken);
   spark(def.x, def.y + 6, '#C9B48A', 22, 260); spark(def.x, def.y, '#FFFFFF', 8, 200);
   (G.rings = G.rings || []).push({x: def.x, y: def.y + 8, life: .4, max: .4});
@@ -1219,7 +1263,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   if (blocked(att, def)) { if (seen(att) && (att === G.p || def === G.p)) { say('柱', att.x + dx*.5, att.y + dy*.5 - 20, '#C9C2B0', 13, .5); SFX.guard(att.x); } return; }
   def.lastHit = att;
   const hx = (att.x+def.x)/2, hy = (att.y+def.y)/2, nx = dx/(d||1), ny = dy/(d||1);
-  if (def.iframe > 0) { say('回避！', def.x, def.y - 32, '#8FE3FF', 16); return; }
+  if (def.iframe > 0) { say('回避！', def.x, def.y - 32, '#8FE3FF', 16); if (def === G.p) G.count.dodge = (G.count.dodge || 0) + 1; return; }
   if (def.guard && def.state === 'idle') {
     if (parryOpen(def)) {           // はじき：攻撃側に大きな隙
       att.state = 'stun'; att.stunKind = 'parry'; att.stunT = .95; att.t = 0; att.queued = false;
@@ -1255,6 +1299,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   if (!G.practice) def.hp -= dmg;   // 練習では体力が減らない
   gainOugi(att, A.heavy ? OUGI_GAIN.heavy : OUGI_GAIN.hit); gainOugi(def, OUGI_GAIN.taken);
   def.flash = .12; if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
+  if (att === G.p && A.heavy) G.count.heavy = (G.count.heavy || 0) + 1;
   def.kx += nx*(A.heavy ? 330 : 170)*def.m.knock; def.ky += ny*(A.heavy ? 330 : 170)*def.m.knock;
   spark(hx, hy, '#FF6B5E', A.heavy ? 20 : 10, A.heavy ? 320 : 220);
   say(String(dmg), def.x + rnd(-8,8), def.y - 34, A.heavy ? '#FF9F43' : '#FFFFFF', A.heavy ? 24 : 18);
@@ -1473,6 +1518,7 @@ function endRound(){
   if (G.net) return netEndRound();
   if (G.pw >= 2 || G.ew >= 2) {
     const win = G.pw >= 2;
+    if (G.stage) return stageEnd(win);   // v0.43 ステージ
     if (win && G.level + 1 > bestLv) { bestLv = G.level + 1; try { localStorage.setItem('maai_best', bestLv); } catch(e) {} }
     G.phase = 'over';
     // 負けたら同じ相手（武器・防具とも）ともう一度。勝ったら新しい相手
@@ -1753,7 +1799,8 @@ function loadout(level, eW, eGear, practice){
         return { x: r.left + r.width/2, y: r.top + r.height/2 + (318 - 260)*k }; }); cvEl = bg; } room.draw(performance.now()/1000 - t0); requestAnimationFrame(lt); };
     requestAnimationFrame(lt); }
   if (!eGear) { foeSkin = randSkin(); foePer = pickOne(PER_KEYS); }   // 新しい相手は見た目と性格も新しく
-  const boss = practice ? null : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
+  if (practice) CUR_STAGE = null; else if (CUR_STAGE) foePer = CUR_STAGE.per;   // v0.43 面の性格
+  const boss = practice ? null : CUR_STAGE ? stBoss(CUR_STAGE) : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
   eW = boss ? boss.wk : eW || WKEYS[Math.floor(Math.random()*WKEYS.length)];
   eGear = eGear || (practice ? randomGear() : aiGear(level, boss ? { boss: 1, set: boss.set } : {}));
   let bulk = null, bulkArm = false;   // 一括分解：選んだ等級（Set）、確かめ中
@@ -1890,8 +1937,8 @@ function loadout(level, eW, eGear, practice){
         <button id="stDet" class="eqLink">${showDet ? '閉じる' : '詳細 ▾'}</button></div>
       <div class="eqFoot">${practice
         ? `<button id="foeBtn" class="eqVs btn">練習相手<b>${WEAPONS[eW].title} Lv${level} ›</b></button>`
-        : boss ? `<div class="eqVs boss" style="--bc:${boss.c}">強敵<b>${boss.n}（${WEAPONS[eW].name}） Lv${level}</b><small>倒すと銘「${SETS[boss.set].n}」の仕掛け・性格「${PERSONA[BOSS_PER[boss.set]].n}」</small></div>`
-        : `<div class="eqVs">次の相手<b>${WEAPONS[eW].title} Lv${level}</b><small class="per" style="--pc:${PERSONA[foePer].c}">性格「${PERSONA[foePer].n}」${PERSONA[foePer].d}</small></div>`}
+        : boss ? `<div class="eqVs boss" style="--bc:${boss.c}">${stHead('強敵')}<b>${boss.n}（${WEAPONS[eW].name}） Lv${level}</b><small>倒すと銘「${SETS[boss.set].n}」の仕掛け・性格「${PERSONA[BOSS_PER[boss.set]].n}」</small>${stGoalLine()}</div>`
+        : `<div class="eqVs">${stHead('次の相手')}<b>${WEAPONS[eW].title} Lv${level}</b><small class="per" style="--pc:${PERSONA[foePer].c}">性格「${PERSONA[foePer].n}」${PERSONA[foePer].d}</small>${stGoalLine()}</div>`}
         <button id="go" class="eqGo">${practice ? '練習' : '勝負'}</button></div>
       </div>${sheet ? sheetHtml() : ''}${bulk ? bulkHtml() : ''}</div>`;
     ov.hidden = false;
@@ -1934,7 +1981,7 @@ function loadout(level, eW, eGear, practice){
     document.getElementById('stDet').onclick = () => { showDet = !showDet; render(); };
     const fb = document.getElementById('foeBtn'); if (fb) fb.onclick = () => { sheet = sheet === 'foe' ? null : 'foe'; render(); };
     document.getElementById('go').onclick = () => newMatch(level, eW, eGear, practice);
-    document.getElementById('back').onclick = title;
+    document.getElementById('back').onclick = () => CUR_STAGE ? stageScreen(CUR_STAGE) : title();
     // 真ん中のキャラ：ふわふわ浮いて、横になぞると向きが変わる
     const cvs = document.getElementById('eqChar'), cx = cvs.getContext('2d'); let drag = null;
     cvs.onpointerdown = e => { drag = e.clientX; try { cvs.setPointerCapture(e.pointerId); } catch(err) {} };
@@ -3835,7 +3882,7 @@ function wCombo(wk, bladeKey, white, px, n, kq = null){
   const key = wKey(wk, bladeKey, white, px, n, kq); let cb = WCombos.get(key);
   if (!cb) { cb = { wk, bladeKey, white, px, n, kq, imgs: new Array(AQ) }; WCombos.set(key, cb);
     const fam = wk + '|' + bladeKey + '|' + white + '|' + px;   // 長さ違い（重い攻撃のため）・白（被弾）・アイコンなどの大きさ違いは予約しない
-    if (px === MECH_PX && !white && kq === null && !WFam.has(fam)) { WFam.add(fam); for (const a of AQ_ORDER) WARM.push(() => wMake(cb, a)); } }
+    if (px === MECH_PX && !white && (kq === null || kq === 'auto') && !WFam.has(fam)) { WFam.add(fam); for (const a of AQ_ORDER) WARM.push(() => wMake(cb, a)); } }
   return cb;
 }
 function wMake(cb, a){
@@ -3850,7 +3897,7 @@ function wNear(cb, a){
   return null;
 }
 // 装備画面で、これから使う武器の絵を先に作り始める
-const weaponPrewarm = (wk, bladeKey) => { if (WEAPONS[wk]) wCombo(wk, bladeKey || 'plain', false, MECH_PX, Math.max(4, Math.round((WEAPONS[wk].len + (WEAPONS[wk].shaft ? 10 : 0))/MECH_PX))); };
+const weaponPrewarm = (wk, bladeKey) => { if (WEAPONS[wk]) wCombo(wk, bladeKey || 'plain', false, MECH_PX, Math.max(4, Math.round((WEAPONS[wk].len + (WEAPONS[wk].shaft ? 10 : 0))/MECH_PX)), 'auto'); };
 function drawWeaponPix(c, x0, y0, ang, wk, px, L, bladeKey, white, kq = null){
   const a = ((Math.round(ang/(Math.PI*2)*AQ) % AQ) + AQ) % AQ, n = Math.max(4, Math.round(L/px)), dp = px/2;
   const cb = wCombo(wk, bladeKey, white, px, n, kq);
@@ -3910,7 +3957,7 @@ function makeWeaponImg(ang, wk, px, n, bladeKey, white, kq = null){
     }
   }
   // 部品ごとに、その長方形が入るマス目の範囲だけを調べて塗る（後の物が上）
-  const K = kq === null ? 1 : kq;   // 刃の面の向き：横幅を K 倍（負なら裏返し）
+  const K = kq === null ? 1 : kq === 'auto' ? Math.round(Math.cos(ang)*8)/8 : kq;   // 刃の面の向き：横幅を K 倍（負なら裏返し）。試合（auto）は刃を立てて持つ：横向きで広い面、上下向きで細い面、刃はいつも下
   for (const r of R) { const a = r[2]*K, b = r[3]*K; r[2] = Math.min(a, b); r[3] = Math.max(a, b); }
   const P = (u, v) => [(ca*u - sa*v)*px/dp, (sa*u + ca*v)*px/dp], tol = .3, boxes = [];
   let gx0 = Infinity, gy0 = Infinity, gx1 = -Infinity, gy1 = -Infinity;
@@ -4327,7 +4374,7 @@ function drawF(f){
     const px = MECH_PX, wht = f.flash > 0;
     ctx.save(); if (bs.glow && !wht) { ctx.shadowColor = bs.edge; ctx.shadowBlur = 8; }
     if (f.orb && !wht) { ctx.shadowColor = ORBS[f.orb.k].c; ctx.shadowBlur = 10; }   // 鍔玉：刃が属性の色に光る
-    drawWeaponPix(ctx, hx, hy, ba, f.wk, px, len + (Wp.shaft ? 10 : 0), f.skin.blade, wht);   // 槍は穂先が届く所より先まで
+    drawWeaponPix(ctx, hx, hy, ba, f.wk, px, len + (Wp.shaft ? 10 : 0), f.skin.blade, wht, 'auto');   // 槍は穂先が届く所より先まで
     ctx.restore();
     if (f.orb && !wht) orbBlade(f, hx, hy, ba, len + (Wp.shaft ? 10 : 0));   // 鍔玉：刃のまわりの属性の演出
     const hs0 = armSpr(f.skin, 'R'), hand = mspr(hs0.rows, f.skin.hairC + (f.skin.head === 'kabuto_kin' ? 'g' : ''), mechPal(f.skin, f.team), false, wht);
@@ -4414,7 +4461,7 @@ function drawHUD(){
   pips(18, G.pw, '#E8B23A', 1); pips(W - 18, G.ew, '#E8B23A', -1);
   buffIcons0(G.p, 54, 1); buffIcons0(G.e, W - 54, -1);
   ctx.textAlign = 'center'; ctx.fillStyle = '#8A93A0'; ctx.font = '800 11px "M PLUS Rounded 1c", sans-serif';
-  ctx.fillText(G.practice ? `練習　はじき${G.count.parry}　被弾${G.count.taken}　命中${G.count.given}` : '先に2本取った方が勝ち', W/2, 66);
+  ctx.fillText(G.practice ? `練習　はじき${G.count.parry}　被弾${G.count.taken}　命中${G.count.given}` : (G.stage ? stHud() : '先に2本取った方が勝ち'), W/2, 66);
   const Pe = PERSONA[G.e.per]; if (Pe && !G.practice) { ctx.textAlign = 'right'; ctx.fillStyle = Pe.c; ctx.font = '800 11px "M PLUS Rounded 1c", sans-serif'; ctx.fillText(Pe.n, W - 46, 66); }
 }
 function drawControls(){
@@ -4503,11 +4550,115 @@ function title(){
     requestAnimationFrame(tick); };
   tick();
 }
+// ================= ステージ（v0.43、第1章） =================
+// 章ごとに6面、6面目が強敵。勝てば次の面が開く。負けても同じ面をすぐやり直せる。進み具合は localStorage maai_stage
+// 星3つ：★1 勝つ／★2 面のお題／★3 体力を半分以上残して勝つ（星は挑むたびに足していく）
+// お題 goal：k＝数える物（G.count の名前）、n＝回数、max＝「n 回以下」で勝つ
+const CHAPTERS = [
+  { n: '第1章', place: '地下1階「見習い場」', d: '操作を1つずつ覚える', stages: [
+    { id: '1-1', wk: 'katana', per: 'tosshin', lv: 1, goal: { k: 'heavy', h: '重い一撃', n: 1, t: '最後の段（重い一撃）を当てる', s: '最後の段を当てて勝つ' }, tip: '攻撃を続けて押すと、3段目まで出る。3段目は重い一撃' },
+    { id: '1-2', wk: 'dagger', per: 'shincho', lv: 1, goal: { k: 'thr', h: '投げ', n: 1, t: '投げを1回決める', s: '投げを決めて勝つ' }, tip: 'ガードの固い相手は「投げ」で崩す' },
+    { id: '1-3', wk: 'katana', per: 'kaeshi', lv: 1, goal: { k: 'parry', h: 'はじき', n: 1, t: 'はじきを1回決める', s: 'はじきを決めて勝つ' }, tip: '連打するとはじかれる。相手の攻撃に合わせてガードを押すと「はじき」' },
+    { id: '1-4', wk: 'great', per: 'tosshin', lv: 2, goal: { k: 'dodge', h: '回避', n: 3, t: '回避で3回かわす', s: '回避で3回かわして勝つ' }, tip: '大剣の重い一撃は、ガードより回避でかわす' },
+    { id: '1-5', wk: 'spear', per: 'nigeru', lv: 2, goal: { k: 'taken', h: '被弾', n: 5, max: 1, t: '被弾5回以下', s: '被弾5回以下で勝つ' }, tip: '槍は遠くから届く。懐に入れば柄しか当たらない' },
+    { id: '1-6', boss: 'onimaru', per: 'tosshin', lv: 3, goal: { k: 'parry', h: 'はじき', n: 3, t: 'はじきを3回決める', s: 'はじきを3回決めて勝つ' }, tip: '初めての強敵。体力が多く、攻めが激しい' },
+  ] },
+];
+const STAGE_LIST = CHAPTERS.flatMap((c, ci) => c.stages.map((s, i) => ({ ...s, ch: ci, i })));
+let CUR_STAGE = null, stProg = {};   // stProg[id] = [★1, ★2, ★3]
+try { stProg = JSON.parse(localStorage.getItem('maai_stage')) || {}; } catch(e) {}
+const stSave = () => { try { localStorage.setItem('maai_stage', JSON.stringify(stProg)); } catch(e) {} };
+const stCleared = id => !!(stProg[id] && stProg[id][0]);
+const stStars = id => (stProg[id] || []).filter(Boolean).length;
+const stOpen = st => st.ch === 0 && st.i === 0 || (() => { const p = STAGE_LIST[STAGE_LIST.indexOf(st) - 1]; return p && stCleared(p.id); })();
+const stNext = () => STAGE_LIST.find(s => !stCleared(s.id)) || STAGE_LIST[STAGE_LIST.length - 1];   // 次に挑む面（全部クリアなら最後の面）
+const stBoss = st => st.boss ? BOSSES.find(b => b.set === st.boss) : null;
+const stWk = st => st.boss ? stBoss(st).wk : st.wk;
+const stCount = k => (G && G.count[k]) || 0;
+const stGoalOk = g => g.max ? stCount(g.k) <= g.n : stCount(g.k) >= g.n;
+// 試合の上の帯に出す文：面とお題の進み具合
+function stHud(){
+  const st = G.stage, g = st.goal, c = stCount(g.k);
+  return `お題 ${g.h} ${g.max ? `${c}回（${g.n}回まで）` : `${Math.min(c, g.n)}/${g.n}`}${stGoalOk(g) && !g.max ? ' ✓' : ''}`;
+}
+// 装備画面の下：面の名前とお題
+const stHead = def => CUR_STAGE ? `<span class="stTag">${CUR_STAGE.id}</span>${def}` : def;
+const stGoalLine = () => CUR_STAGE ? `<small class="stGoal">★お題：${CUR_STAGE.goal.t}</small>` : '';
+// 面に挑む（装備画面へ）。again：負けた相手（防具）をそのまま
+function stGo(st, again){ CUR_STAGE = st; loadout(st.lv, stWk(st), again || null); }
+
+// ---- 面の選択画面 ----
+function stageScreen(sel){
+  CUR_STAGE = null;
+  const ch = CHAPTERS[0], list = STAGE_LIST.filter(s => s.ch === 0);
+  sel = sel || stNext(); if (!stOpen(sel)) sel = stNext();
+  const total = list.reduce((a, s) => a + stStars(s.id), 0);
+  const star = (on) => `<i class="${on ? 'on' : ''}">★</i>`;
+  const node = (s, k) => { const open = stOpen(s), cl = stCleared(s.id), pr = stProg[s.id] || [];
+    return `<button class="stNode${s.boss ? ' boss' : ''}${open ? '' : ' lock'}${cl ? ' done' : ''}${s === sel ? ' sel' : ''}" data-st="${s.id}" style="--x:${[18, 50, 82, 62, 30, 50][k]}%" ${open ? '' : 'disabled'}>
+      <b>${open ? (s.boss ? '👹' : s.id) : '🔒'}</b><span class="stS">${[0, 1, 2].map(j => star(pr[j])).join('')}</span></button>`; };
+  const B = stBoss(sel), P = PERSONA[sel.per], pr = stProg[sel.id] || [];
+  const foe = B ? `強敵 ${B.n}（${WEAPONS[B.wk].name}）` : `${WEAPONS[sel.wk].title}`;
+  screen('ステージ', `<div class="stWrap">
+    <div class="stCh"><div><b>${ch.n}</b><span>${ch.place}</span><small>${ch.d}</small></div><em>★ ${total}/${list.length*3}</em></div>
+    <div class="stMap">${list.map(node).join('')}<svg class="stPath" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${[18, 50, 82, 62, 30, 50].map((x, k) => `${x},${92 - k*16.8}`).join(' ')}"/></svg></div>
+    <div class="stInfo${B ? ' boss' : ''}">
+      <div class="stIH"><span class="stTag">${sel.id}</span><b>${foe}</b><small>Lv${sel.lv}</small></div>
+      <p class="stPer" style="--pc:${P.c}">性格「${P.n}」${P.d}</p>
+      <p class="stTip">${sel.tip}</p>
+      <ul class="stGoals"><li class="${pr[0] ? 'on' : ''}">${star(pr[0])}勝つ</li><li class="${pr[1] ? 'on' : ''}">${star(pr[1])}${sel.goal.s}</li><li class="${pr[2] ? 'on' : ''}">${star(pr[2])}体力を半分以上残して勝つ</li></ul>
+      <button class="stGo" id="stGo">${stCleared(sel.id) ? 'もう一度挑む' : '挑む'}</button>
+    </div></div>`, 'stScr');
+  document.getElementById('back').onclick = title;
+  ov.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { SFX.coin(); stageScreen(STAGE_LIST.find(s => s.id === b.dataset.st)); });
+  document.getElementById('stGo').onclick = () => { SFX.coin(); stGo(sel); };
+  // 下から積み上がるので、選んだ面が見える所まで流す
+  const m = ov.querySelector('.stMap'); if (m) m.scrollIntoView({ block: 'nearest' });
+}
+
+// ---- 勝負がついたとき（endRound から） ----
+function stageEnd(win){
+  const st = G.stage, g = st.goal, first = win && !stCleared(st.id);
+  G.phase = 'over';
+  const now = [win, win && stGoalOk(g), win && G.p.hp >= G.p.maxHp/2], old = stProg[st.id] || [false, false, false];
+  const newStar = now.map((v, j) => v && !old[j]);
+  stProg[st.id] = old.map((v, j) => !!(v || now[j])); stSave();
+  if (win && st.lv + 1 > bestLv) { bestLv = st.lv + 1; try { localStorage.setItem('maai_best', bestLv); } catch(e) {} }
+  // 小判：1本ごとに5、勝てば 30＋Lv×5、初めてのクリア 60＋Lv×20、新しい星1つに 20、はじき1回に1（10まで）
+  const ns = newStar.filter(Boolean).length;
+  const pay = [['1本×' + G.pw, G.pw*5], ['勝利', win ? 30 + st.lv*5 : 0], ['初クリア', first ? 60 + st.lv*20 : 0], ['新しい★×' + ns, ns*20], ['はじき×' + Math.min(10, G.count.parry), Math.min(10, G.count.parry)]].filter(x => x[1] > 0);
+  const total = pay.reduce((a, x) => a + x[1], 0);
+  if (win) bag.cleared = Math.max(bag.cleared, st.lv);
+  bag.koban += total; saveBag(); if (win) SFX.win(); else SFX.lose();
+  // 仕掛け：勝てば1つ（強敵ならその銘の極以上）、負けても1本取っていれば3割で1つ
+  const drops = win ? [G.boss ? bossDrop(G.boss) : makeGear(dropGrade(st.lv/2))] : G.pw && Math.random() < .3 ? [makeGear(dropGrade(0))] : [];
+  // 章の最後の強敵を初めて倒したら、心臓か鍔玉を必ず1つ（どちらも全部持っていれば小判）
+  let hd = null, od = null;
+  if (win && G.boss) { hd = heartDrop(); od = orbDrop();
+    if (first && !hd && !od) { const uh = HEART_KEYS.filter(k => bag.hearts[k] == null), uo = ORB_KEYS.filter(k => bag.orbs[k] == null);
+      if (uh.length) { hd = pickOne(uh); bag.hearts[hd] = 0; } else if (uo.length) { od = pickOne(uo); bag.orbs[od] = 0; } saveBag(); } }
+  const got = dropHtml(grantGear(drops), win && G.boss) + (hd ? `<div class="dropT">からくり心臓「${HEARTS[hd].n}」を手に入れた！</div>` : '') + (od ? `<div class="dropT">${ORBS[od].i} ${ORBS[od].n}を手に入れた！</div>` : '');
+  const earn = `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
+  const lbl = [`勝つ`, g.s, '体力を半分以上残して勝つ'];
+  const stars = `<div class="stRes">${now.map((v, j) => `<div class="${v ? 'on' : ''}${newStar[j] ? ' new' : ''}" style="animation-delay:${.15 + j*.25}s"><i>★</i><span>${lbl[j]}${newStar[j] ? '<em>NEW</em>' : ''}</span></div>`).join('')}</div>`;
+  const nx = STAGE_LIST[STAGE_LIST.indexOf(st) + 1], chEnd = win && !nx;
+  const name = G.boss ? `強敵 ${G.boss.n}` : G.e.name;
+  card(win ? `<h2>${st.id} クリア！</h2><p>${name} を ${G.pw}-${G.ew} で倒しました。${first && nx ? `<br><b class="stUnlock">${nx.id} が開きました</b>` : ''}${chEnd && first ? `<br><b class="stUnlock">${CHAPTERS[st.ch].n} クリア！ 続きはお楽しみに</b>` : ''}</p>${stars}${earn}${got}
+       ${nx ? `<button id="b1">次の面へ（${nx.id}）</button>` : `<button id="b1">面の選択へ</button>`}<button id="stRe" class="sub">もう一度</button>`
+     : `<h2>敗北</h2><p>${name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p><p class="stHint">ヒント：${st.tip}</p>${earn}${got}<button id="b1">もう一度挑む</button>`,
+    () => win ? (nx ? stGo(nx) : stageScreen()) : stGo(st, G.eGear));
+  paintThumbs();
+  quitBtn.hidden = true;
+  const c = ov.querySelector('.card');
+  if (win) { const eG = G.eGear; document.getElementById('stRe').onclick = () => stGo(st, eG); }
+  if (!win || nx) { c.insertAdjacentHTML('beforeend', '<br><button id="stSel" class="sub">面の選択へ</button>'); document.getElementById('stSel').onclick = () => stageScreen(st); }
+}
+
 // ================= ホーム画面（v0.39、ブロスタ風） =================
 // 真ん中に自分のからくり武者、上に持ち物と到達Lv、左右に店・ガチャなどの丸いボタン、下に「モード」と大きな「勝負」。
 // 前の title() はそのまま残してあり、この title() が後ろにあるので上書きになる
 const HM_MODES = {
-  duel:  { n: '1対1',    ic: '⚔️', d: '装備を選んで、一騎打ち',          c: '#E0493E', go: () => loadout(1) },
+  duel:  { n: 'ステージ', ic: '🗺️', d: '章を進めて、強敵を倒す',          c: '#E0493E', go: () => stageScreen() },
   melee: { n: '乱戦',    ic: '🔥', d: '縮む結界の中、8人で最後の1人まで', c: '#E8A21A', go: () => newMelee() },
   ran:   { n: '乱入',    ic: '💥', d: 'CPU戦中の誰かに挑む',            c: '#D8452E', go: () => ranScreen() },
   net:   { n: '通信対戦', ic: '📡', d: 'コードで2台をつなぐ',            c: '#2F7FD8', go: () => netScreen() },
@@ -4516,12 +4667,13 @@ const HM_MODES = {
 let hmMode = 'duel';
 try { const m = localStorage.getItem('maai_mode'); if (HM_MODES[m]) hmMode = m; } catch(e) {}
 function title(){
-  G = null; quitBtn.hidden = true; BGM.play('loadout');   // v0.41.1 ホームも装備画面と同じ曲（切り替えても途切れない）
+  G = null; CUR_STAGE = null; quitBtn.hidden = true; BGM.play('loadout');   // v0.41.1 ホームも装備画面と同じ曲（切り替えても途切れない）
   const md = HM_MODES[hmMode];
   // 到達Lvの道：3つで1区切り、3つ目が強敵
-  const a = Math.floor((bestLv - 1)/3)*3 + 1;
-  const road = [a, a + 1, a + 2].map(l => `<i class="${l < bestLv ? 'done' : l === bestLv ? 'now' : ''}${l % 3 === 0 ? ' boss' : ''}">${l % 3 === 0 ? '👹' : l}</i>`).join('<u></u>');
-  const toBoss = a + 2 - bestLv;
+  // v0.43 ステージの道：今の章の6面（6面目が強敵）
+  const sn = stNext(), cl = STAGE_LIST.filter(s => s.ch === sn.ch), stAll = cl.every(s => stCleared(s.id));
+  const road = cl.map(s => `<i class="${stCleared(s.id) ? 'done' : s === sn ? 'now' : ''}${s.boss ? ' boss' : ''}">${s.boss ? '👹' : s.i + 1}</i>`).join('<u></u>');
+  const toBoss = cl.length - 1 - cl.filter(s => stCleared(s.id)).length;
   ov.innerHTML = `<div class="eq hm">
     <canvas class="hmBg" id="hmBg"></canvas><div class="hmTop">
       <div class="hmProf"><canvas id="hmFace" width="56" height="56"></canvas><div><b>からくり武者</b><span>到達 Lv${bestLv}</span></div></div>
@@ -4536,7 +4688,7 @@ function title(){
       </div>
       <div class="hmSide"><button id="hH"><i>📜</i>遊び方</button><button id="hU" class="${ranPref ? '' : 'off'}"><i>🛡️</i>乱入受付<br>${ranPref ? 'オン' : 'オフ'}</button><button id="hM" class="${SFX.muted ? 'off' : ''}"><i>${SFX.muted ? '🔇' : '🔊'}</i>音</button></div>
     </div>
-    <div class="hmRoad"><span>${toBoss > 0 ? `強敵まで あと<b>${toBoss}</b>勝` : '次は<b>強敵</b>！'}</span><div class="hmNodes">${road}</div></div>
+    <div class="hmRoad" id="hRoad"><span>${stAll ? `${CHAPTERS[sn.ch].n} <b>クリア</b>` : toBoss > 0 ? `強敵まで あと<b>${toBoss}</b>面` : '次は<b>強敵</b>！'}</span><div class="hmNodes">${road}</div></div>
     <div class="hmBot">
       <button id="hMode" class="hmMode" style="--mc:${md.c}"><i>${md.ic}</i><span><small>モード</small>${md.n}</span></button>
       <button id="hPlay" class="hmPlay">勝負！</button>
@@ -4548,7 +4700,8 @@ function title(){
   ov.hidden = false;
   const $ = id => document.getElementById(id);
   $('hS').onclick = () => shopScreen(); $('hG').onclick = gachaScreen; $('hK').onclick = kuraScreen; $('hH').onclick = helpScreen;
-  $('hStage').onclick = () => loadout(1);
+  $('hStage').onclick = () => stGo(stNext());   // 装備画面（次の面の相手）
+  $('hRoad').onclick = () => { SFX.coin(); stageScreen(); };
   $('hPlay').onclick = () => { SFX.coin(); HM_MODES[hmMode].go(); };
   $('hU').onclick = () => { ranPref = !ranPref; try { localStorage.setItem('maai_ran', ranPref ? '1' : '0'); } catch(x) {} SFX.coin(); title(); };
   $('hM').onclick = () => { SFX.toggle(); BGM.sync(); SFX.coin(); title(); };
