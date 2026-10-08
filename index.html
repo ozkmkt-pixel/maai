@@ -4621,6 +4621,12 @@ const STAGE_LIST = CHAPTERS.flatMap((c, ci) => c.stages.map((s, i) => ({ ...s, c
 let CUR_STAGE = null, stProg = {};   // stProg[id] = [★1, ★2, ★3]
 try { stProg = JSON.parse(localStorage.getItem('maai_stage')) || {}; } catch(e) {}
 const stSave = () => { try { localStorage.setItem('maai_stage', JSON.stringify(stProg)); } catch(e) {} };
+// テスト用（v0.49）：アドレスの最後に ?kaihou=1 をつけて開くと、全部の面をクリア済み（★1）にする。取った星は残す。開いたらアドレスから消す
+try { if (/[?&]kaihou=1/.test(location.search)) { STAGE_LIST.forEach(s => { const o = stProg[s.id] || []; stProg[s.id] = [true, !!o[1], !!o[2]]; }); stSave();
+  history.replaceState(null, '', location.pathname); setTimeout(() => alertCard('全章を開放しました（テスト用）'), 300); } } catch(e) {}
+function alertCard(t){ const d = document.createElement('div'); d.textContent = t;
+  d.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:99999;background:#FFC93A;color:#2A1A00;font-weight:900;padding:12px 18px;border:3px solid #000;border-radius:14px;box-shadow:0 4px 0 #000;font-size:15px;';
+  document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 const stCleared = id => !!(stProg[id] && stProg[id][0]);
 const stStars = id => (stProg[id] || []).filter(Boolean).length;
 const stOpen = st => st.ch === 0 && st.i === 0 || (() => { const p = STAGE_LIST[STAGE_LIST.indexOf(st) - 1]; return p && stCleared(p.id); })();
