@@ -531,7 +531,7 @@
   .stCh span{font-size:14px;font-weight:900;}
   .stCh small{font-size:12px;font-weight:800;color:#E6EEF8;}
   .stCh em{font-style:normal;font-weight:900;font-size:16px;color:#FFC93A;white-space:nowrap;text-shadow:0 2px 0 #000;}
-  .stMap{position:relative;height:290px;border-radius:14px;background:rgba(8,12,22,.55);border:3px solid #000;}
+  .stMap{position:relative;height:250px;border-radius:14px;background:rgba(8,12,22,.55);border:3px solid #000;}
   .stPath{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;}
   .stPath polyline{fill:none;stroke:#000;stroke-width:5px;vector-effect:non-scaling-stroke;stroke-dasharray:2 8;stroke-linecap:round;}
   .stNode{position:absolute;left:var(--x);transform:translate(-50%,-50%);margin:0;padding:0;width:52px;height:52px;border-radius:50%;z-index:1;
@@ -564,6 +564,13 @@
   @keyframes stPop{0%{transform:scale(.6);opacity:0;}70%{transform:scale(1.06);opacity:1;}100%{transform:scale(1);}}
   .card .stUnlock{color:#1A5FB0;}
   .card .stHint{font-size:12px !important;font-weight:800;color:#3A3020;background:#FFF6D8;border-radius:8px;padding:6px 8px;text-align:left;}
+  /* v0.44 章の切り替え・章ごとの地図の色 */
+  .stArr{flex:none;margin:0;padding:0;width:34px;height:40px;border-radius:10px;background:#2F7FD8;color:#fff;font-size:24px;font-weight:900;border:3px solid #000;box-shadow:0 3px 0 #000;line-height:1;}
+  .stArr:disabled{background:#2A2F3A;color:#8A93A0;box-shadow:none;font-size:15px;}
+  .stMap.ch1{background:rgba(70,40,16,.7);}
+  .stGim{color:#23252B;background:#E8D8B8;border-radius:8px;padding:6px 8px;border:2px dashed #8A6A3A;}
+  .stMap.ch2{background:rgba(80,20,8,.72);}
+  .stMap.ch3{background:rgba(10,40,32,.72);} .stMap.ch4{background:rgba(30,16,24,.78);}
 
 </style>
 
@@ -885,12 +892,14 @@ function newRound(){
   AR.r = DUEL_R; G.terrain = null;   // 乱戦で広げた闘技場を戻す
   G.p = mkF(AR.x, AR.y + 80, false, '#3E8EDE', `あなた（${WEAPONS[myW].name}）`, myW, myGear);
   G.p.heart = myHeart(); G.p.ougi = G.pOugi || 0; G.mikiriT = 0; G.p.orb = myOrb();   // 奥義ゲージは次の1本に持ち越す
+  if (G.stage && G.stage.wkSeq) G.eW = G.stage.wkSeq[(G.round - 1) % G.stage.wkSeq.length];   // v0.47 将軍：1本ごとに持ちかえ
   G.e = mkF(AR.x, AR.y - 80, true, '#E0493E', `${WEAPONS[G.eW].title} Lv${G.level}`, G.eW, G.eGear);
   G.e.per = G.boss ? BOSS_PER[G.boss.set] : foePer;
   if (G.boss) { makeBoss(G.e, G.boss, 0, 1.15); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
   G.ai = {heat:0, seenWind:-1, guardAt:0, releaseAt:0, dashAt:0, attackAt:0, comboLeft:0, strafe:1, strafeT:0, backoff:0};
   G.phase = 'intro'; G.phaseT = 0; G.fx = []; G.texts = []; G.startSnd = 0;
   G.items = []; G.itemT = rnd(6, 9);
+  if (G.stage) { stRoundInit(); stRoundSay(); }   // v0.47 章ごとの1本の準備
 }
 function spawnItem(){
   let x, y;
@@ -1149,6 +1158,7 @@ function slam(att, def){
   def.kx = Math.cos(a)*THROW.knock*.55*def.m.knock; def.ky = Math.sin(a)*THROW.knock*.55*def.m.knock;
   if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
   if (att === G.p) G.count.thr = (G.count.thr || 0) + 1;
+  if (def === G.p) G.count.thrown = (G.count.thrown || 0) + 1;
   gainOugi(att, OUGI_GAIN.throw); gainOugi(def, OUGI_GAIN.taken);
   spark(def.x, def.y + 6, '#C9B48A', 22, 260); spark(def.x, def.y, '#FFFFFF', 8, 200);
   (G.rings = G.rings || []).push({x: def.x, y: def.y + 8, life: .4, max: .4});
@@ -1260,6 +1270,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
   const inArc = Math.abs(angDiff(Math.atan2(dy, dx), att.face)) < A.arc/2 + (d < 36 ? .5 : 0);
   if (d > A.reach + A.lunge*.5 + def.r || !inArc) { if (!quiet && d < 160) say('空振り', att.x, att.y - 30, '#9AA3AE', 13, .6); return; }
   if (def.migawari > 0 && def.iframe <= 0) { migawariDodge(def, att); return; }   // 奥義「身代わり」
+  if (blocked(att, def) && def === G.p) G.count.pblock = (G.count.pblock || 0) + 1;
   if (blocked(att, def)) { if (seen(att) && (att === G.p || def === G.p)) { say('柱', att.x + dx*.5, att.y + dy*.5 - 20, '#C9C2B0', 13, .5); SFX.guard(att.x); } return; }
   def.lastHit = att;
   const hx = (att.x+def.x)/2, hy = (att.y+def.y)/2, nx = dx/(d||1), ny = dy/(d||1);
@@ -1274,7 +1285,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
       att.kx -= nx*160; att.ky -= ny*160;
       spark(hx, hy, '#FFFFFF', 22, 320); spark(hx, hy, '#FFE08A', 10, 200);
       say('はじき！', hx, hy - 26, '#FFE08A', 26, 1.1); SFX.parry(hx);
-      if (def === G.p) G.count.parry++;
+      if (def === G.p) G.count.parry++; else if (att === G.p) G.count.parried = (G.count.parried || 0) + 1;
       G.hitstop = .12; G.slowT = .45; G.shake = .18;
       return;
     }
@@ -1284,6 +1295,7 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
     G.hitstop = .04;
     if (def.st <= 0) {
       def.st = 0; def.guard = false; def.state = 'stun'; def.stunKind = 'break'; def.stunT = 1.1; def.t = 0;
+      if (att === G.p) G.count.gbreak = (G.count.gbreak || 0) + 1;
       say('ガードブレイク！', def.x, def.y - 36, '#FF9F43', 20, 1.1); G.shake = .2; G.hitstop = .1; SFX.guardBreak(hx);
     }
     return;
@@ -1295,11 +1307,13 @@ function resolveHit(att, def, quiet){   // quiet：乱戦では外れても「�
     return;
   }
   const counter = def.state === 'throw' && !def.thr;   // 投げの出かかりを斬った
+  if (counter && att === G.p) G.count.counter = (G.count.counter || 0) + 1;
   if (counter) { const ex = Math.round(dmg*.3); if (!G.practice) def.hp -= ex; say('カウンター', def.x, def.y - 52, '#FFB347', 16, .9); }
   if (!G.practice) def.hp -= dmg;   // 練習では体力が減らない
   gainOugi(att, A.heavy ? OUGI_GAIN.heavy : OUGI_GAIN.hit); gainOugi(def, OUGI_GAIN.taken);
   def.flash = .12; if (def === G.p) G.count.taken++; else if (att === G.p) G.count.given++;
   if (att === G.p && A.heavy) G.count.heavy = (G.count.heavy || 0) + 1;
+  if (att === G.p && G.terrain && inBush(att)) G.count.ambush = (G.count.ambush || 0) + 1;
   def.kx += nx*(A.heavy ? 330 : 170)*def.m.knock; def.ky += ny*(A.heavy ? 330 : 170)*def.m.knock;
   spark(hx, hy, '#FF6B5E', A.heavy ? 20 : 10, A.heavy ? 320 : 220);
   say(String(dmg), def.x + rnd(-8,8), def.y - 34, A.heavy ? '#FF9F43' : '#FFFFFF', A.heavy ? 24 : 18);
@@ -1332,7 +1346,7 @@ const PERSONA = {
   nigeru:  { n: '逃げ回り', c: '#C9B8FF', d: '斬ったらすぐ離れる。回避が多い',            agg: .9,  parry: .8,  block: .8,  thr: .4,  keep: .7, dodge: 1.8, hitrun: 1, hide: 1 },
   gyofu:   { n: '漁夫',     c: '#B8E07A', d: '弱った相手・戦っている相手を狙う。隠れる',   agg: 1,   parry: 1,   block: 1,   thr: .8,  keep: .3, dodge: 1, vulture: 1, hide: 1 },
 };
-const PER_KEYS = Object.keys(PERSONA), BOSS_PER = { onimaru: 'tosshin', tsukikage: 'nigeru', raiden: 'shincho' };
+const PER_KEYS = Object.keys(PERSONA), BOSS_PER = { onimaru: 'tosshin', tsukikage: 'nigeru', raiden: 'shincho', kagebo: 'kaeshi', shogun: 'shincho' };
 let foePer = 'tosshin';   // 1対1の次の相手の性格（loadout で決める）
 function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：その相手（乱戦では一番近い相手）、ai：そのAIの覚え書き
   const L = 1 + ((e.lv || G.level) - 1)*.7, now = G.now;   // e.lv：強敵（ボス）は強さが上。v0.31.1：Lvが上がっても強くなりすぎないよう、上がり方を0.7倍に
@@ -1508,6 +1522,7 @@ function update(rdt){
   const slowP = G.net && G.mikiriBy === G.e, dkp = slowP ? dk : 1, dke = slowP ? 1 : dk;   // 通信対戦：相手が見切りを使ったら自分が遅くなる
   control(G.p, G.e, readPlayer(), dt*dkp);
   control(G.e, G.p, G.net ? netInput() : aiThink(dt*dke), dt*dke);
+  if (G.stage) stGimmick(dt);   // v0.45 闘技場のギミック
   stepF(G.p, G.e, dt*dkp); stepF(G.e, G.p, dt*dke);
   updateItems(dt);
   // 体の重なりを押し戻す
@@ -1981,7 +1996,7 @@ function loadout(level, eW, eGear, practice){
     document.getElementById('stDet').onclick = () => { showDet = !showDet; render(); };
     const fb = document.getElementById('foeBtn'); if (fb) fb.onclick = () => { sheet = sheet === 'foe' ? null : 'foe'; render(); };
     document.getElementById('go').onclick = () => newMatch(level, eW, eGear, practice);
-    document.getElementById('back').onclick = () => CUR_STAGE ? stageScreen(CUR_STAGE) : title();
+    document.getElementById('back').onclick = title;
     // 真ん中のキャラ：ふわふわ浮いて、横になぞると向きが変わる
     const cvs = document.getElementById('eqChar'), cx = cvs.getContext('2d'); let drag = null;
     cvs.onpointerdown = e => { drag = e.clientX; try { cvs.setPointerCapture(e.pointerId); } catch(err) {} };
@@ -2726,7 +2741,7 @@ function draw(){
   ctx.save();
   if (G.shake > 0) ctx.translate(rnd(-4,4)*G.shake*5, rnd(-4,4)*G.shake*5);
   if (G.cam) ctx.translate(AR.x - G.cam.x, AR.y - G.cam.y);   // 乱戦：自分が画面の真ん中に来るようにずらす
-  drawLabArena();   // v0.40 地下闘技場（床・台・まわりの飾り）
+  stArena();   // v0.40 地下闘技場（床・台・まわりの飾り）。v0.44 ステージは章ごとの闘技場
   if (G.melee) drawGround();
   if (G.terrain) for (const c of G.terrain.pits) drawPit(c);
   if (G.zone) drawZone(G.zone);
@@ -4093,6 +4108,8 @@ const SETS = {
   onimaru:   { n: '鬼丸', c: '#FF7A5A', boss: 1, d: '攻撃力+12%・ガードの上から削るスタミナ+30%', mods: { atk: 1.12, chip: 1.3 } },
   tsukikage: { n: '月影', c: '#C9B8FF', boss: 1, d: '回避の無敵+0.04秒・回避のスタミナ-3', mods: { dashIf: .04, dashSt: -3 } },
   raiden:    { n: '雷電', c: '#FFE14A', boss: 1, d: 'スタミナ回復+20%・速さ+5%', mods: { stRegen: 1.2, speed: 1.05 } },
+  kagebo:    { n: '影法師', c: '#9A9AC8', boss: 1, d: 'はじき受付+0.04秒・攻撃力+6%', mods: { parry: .04, atk: 1.06 } },
+  shogun:    { n: '将軍', c: '#FFD040', boss: 1, d: '体力+25・攻撃力+10%', mods: { hp: 25, atk: 1.1 } },
 };
 const NORMAL_SETS = Object.keys(SETS).filter(k => !SETS[k].boss);
 const START_SUBS = [1, 2, 2, 3], MAX_LV = [2, 3, 4, 5], SCRAP = [10, 30, 80, 200], GEAR_CAP = 100;
@@ -4199,7 +4216,7 @@ function gainOugi(f, n){
   if (f.ougi >= 100) { say('奥義 準備よし', f.x, f.y - 58, '#FFE08A', 15, 1.1); SFX.pickup(); }
 }
 function useOugi(f, o){
-  const H = f.heart, lv = H.lv, D = HEARTS[H.k]; f.ougi = 0;
+  const H = f.heart, lv = H.lv, D = HEARTS[H.k]; f.ougi = 0; if (f === G.p) G.count.ougi = (G.count.ougi || 0) + 1;
   say(D.o + '！', f.x, f.y - 52, D.c, 24, 1.2); spark(f.x, f.y, D.c, 24, 260); (G.rings = G.rings || []).push({x: f.x, y: f.y + 8, life: .45, max: .45});
   SFX.parry(f.x); G.hitstop = .08;
   if (H.k === 'abura') f.hp = Math.min(f.maxHp, f.hp + 30 + 5*lv);
@@ -4248,6 +4265,8 @@ const BOSSES = [
   { n: '鬼丸', wk: 'great', set: 'onimaru', c: '#FF7A5A' },
   { n: '月影', wk: 'dagger', set: 'tsukikage', c: '#C9B8FF' },
   { n: '雷電', wk: 'spear', set: 'raiden', c: '#FFE14A' },
+  { n: '影法師', wk: 'katana', set: 'kagebo', c: '#9A9AC8' },
+  { n: 'からくり将軍', wk: 'great', set: 'shogun', c: '#FFD040' },
 ];
 const bossForLevel = lv => lv % 3 === 0 ? BOSSES[(lv/3 - 1) % BOSSES.length] : null;
 function makeBoss(f, b, lvUp, hpMul){   // AIの武者を強敵にする
@@ -4556,14 +4575,48 @@ function title(){
 // お題 goal：k＝数える物（G.count の名前）、n＝回数、max＝「n 回以下」で勝つ
 const CHAPTERS = [
   { n: '第1章', place: '地下1階「見習い場」', d: '操作を1つずつ覚える', stages: [
-    { id: '1-1', wk: 'katana', per: 'tosshin', lv: 1, goal: { k: 'heavy', h: '重い一撃', n: 1, t: '最後の段（重い一撃）を当てる', s: '最後の段を当てて勝つ' }, tip: '攻撃を続けて押すと、3段目まで出る。3段目は重い一撃' },
-    { id: '1-2', wk: 'dagger', per: 'shincho', lv: 1, goal: { k: 'thr', h: '投げ', n: 1, t: '投げを1回決める', s: '投げを決めて勝つ' }, tip: 'ガードの固い相手は「投げ」で崩す' },
-    { id: '1-3', wk: 'katana', per: 'kaeshi', lv: 1, goal: { k: 'parry', h: 'はじき', n: 1, t: 'はじきを1回決める', s: 'はじきを決めて勝つ' }, tip: '連打するとはじかれる。相手の攻撃に合わせてガードを押すと「はじき」' },
+    { id: '1-1', wk: 'katana', per: 'tosshin', lv: 1, goal: { k: 'heavy', h: '重い一撃', n: 1, t: '最後の段（重い一撃）を当てる', s: '最後の段を当てて勝つ' }, tip: '攻撃ボタンを続けて押すと3段目まで出る。3段目は重い一撃で、途中で斬られても止まらない' },
+    { id: '1-2', wk: 'dagger', per: 'shincho', lv: 1, goal: { k: 'thr', h: '投げ', n: 1, t: '投げを1回決める', s: '投げを決めて勝つ' }, tip: '「投げ」はガードの上からでも決まる。相手の目の前で投げボタン' },
+    { id: '1-3', wk: 'katana', per: 'kaeshi', lv: 1, goal: { k: 'parry', h: 'はじき', n: 1, t: 'はじきを1回決める', s: 'はじきを決めて勝つ' }, tip: '相手が構えると自分のまわりの輪が縮む。金色で「今」と出たらガードを押すと「はじき」。はじいた後は斬り放題' },
     { id: '1-4', wk: 'great', per: 'tosshin', lv: 2, goal: { k: 'dodge', h: '回避', n: 3, t: '回避で3回かわす', s: '回避で3回かわして勝つ' }, tip: '大剣の重い一撃は、ガードより回避でかわす' },
     { id: '1-5', wk: 'spear', per: 'nigeru', lv: 2, goal: { k: 'taken', h: '被弾', n: 5, max: 1, t: '被弾5回以下', s: '被弾5回以下で勝つ' }, tip: '槍は遠くから届く。懐に入れば柄しか当たらない' },
-    { id: '1-6', boss: 'onimaru', per: 'tosshin', lv: 3, goal: { k: 'parry', h: 'はじき', n: 3, t: 'はじきを3回決める', s: 'はじきを3回決めて勝つ' }, tip: '初めての強敵。体力が多く、攻めが激しい' },
+    { id: '1-6', boss: 'onimaru', per: 'tosshin', lv: 3, goal: { k: 'parry', h: 'はじき', n: 3, t: 'はじきを3回決める', s: 'はじきを3回決めて勝つ' }, tip: '体力の多い大剣の強敵。重い一撃は振り終わりに大きな隙がある。そこを斬る' },
+  ] },
+  { n: '第2章', place: '地下2階「からくり工房」', d: '武器ごとの癖を知る', arena: 'kobo', gim: 'belt', gimT: '床のベルトコンベアに乗ると流される。流れは9秒ごとに逆になる（矢印が赤く光ったら合図）', stages: [
+    { id: '2-1', wk: 'dagger', per: 'tosshin', lv: 3, goal: { k: 'parry', h: 'はじき', n: 2, t: 'はじきを2回決める', s: 'はじきを2回決めて勝つ' }, tip: '短剣は出が速い。見てからではなく、間合いに入る前からガードの準備を' },
+    { id: '2-2', wk: 'spear', per: 'shincho', lv: 3, goal: { k: 'thr', h: '投げ', n: 2, t: '投げを2回決める', s: '投げを2回決めて勝つ' }, tip: '槍の先が届く距離にいると一方的に突かれる。回避で一気に懐へ飛び込む' },
+    { id: '2-3', wk: 'katana', per: 'nage', lv: 3, goal: { k: 'thrown', h: '投げられた', n: 0, max: 1, t: '一度も投げられない', s: '一度も投げられずに勝つ' }, tip: 'つかみに来た所を斬れば投げは止まる（カウンター）。相手が寄ってきたら先に手を出す' },
+    { id: '2-4', wk: 'great', per: 'kaeshi', lv: 4, goal: { k: 'heavy', h: '重い一撃', n: 2, t: '最後の段を2回当てる', s: '最後の段を2回当てて勝つ' }, tip: '大剣は振りが遅い。こちらからは手を出さず、相手の重い一撃をかわしてから3段斬り返す' },
+    { id: '2-5', wk: 'dagger', per: 'kaeshi', lv: 4, goal: { k: 'taken', h: '被弾', n: 4, max: 1, t: '被弾4回以下', s: '被弾4回以下で勝つ' }, tip: '短剣は間合いが短い。届かない距離を保ち、相手が踏み込んできた所を迎え撃つ' },
+    { id: '2-6', boss: 'tsukikage', per: 'nigeru', lv: 5, goal: { k: 'ougi', h: '奥義', n: 1, t: '奥義を1回使う', s: '奥義を使って勝つ' }, tip: '奥義のゲージは、はじきを決めると大きくたまる。たまったら、相手が離れる前に使う' },
+  ] },
+  { n: '第3章', place: '地下3階「炉の間」', d: '性格を読む', arena: 'ro', gim: 'fire', gimT: '赤く光った床板は1.5秒後に2秒間火を噴く。上にいると体力が減る（相手も同じ）', stages: [
+    { id: '3-1', wk: 'spear', per: 'kaeshi', lv: 5, goal: { k: 'parried', h: 'はじかれた', n: 0, max: 1, t: '一度もはじかれない', s: '一度もはじかれずに勝つ' }, tip: '槍は突きが長く、構えが見えやすい。手を出すのは、相手の突きをかわした直後だけにする' },
+    { id: '3-2', wk: 'great', per: 'shincho', lv: 5, goal: { k: 'gbreak', h: 'ガードブレイク', n: 1, t: 'ガードブレイクさせる', s: 'ガードブレイクさせて勝つ' }, tip: 'ガードの上から当て続けるとスタミナが尽きて崩れる。3段目の重い一撃がよく削る' },
+    { id: '3-3', wk: 'dagger', per: 'nage', lv: 5, goal: { k: 'counter', h: 'カウンター', n: 1, t: 'カウンターを1回決める', s: 'カウンターを決めて勝つ' }, tip: 'つかみに来る出かかりを斬ると「カウンター」。投げを止めて、ダメージも増える' },
+    { id: '3-4', wk: 'katana', per: 'tosshin', lv: 6, goal: { k: 'burn', h: '火で焼く', n: 2, t: '相手を火で2回焼く', s: '相手を火で2回焼いて勝つ' }, tip: '投げや重い一撃で吹き飛ばして、火を噴く床の上へ送り込む' },
+    { id: '3-5', wk: 'katana', per: 'nigeru', lv: 6, goal: { k: 'taken', h: '被弾', n: 3, max: 1, t: '被弾3回以下', s: '被弾3回以下で勝つ' }, tip: '逃げる先が赤く光ったら、そこで足が止まる。火で逃げ道をふさいでから詰める' },
+    { id: '3-6', boss: 'raiden', per: 'shincho', lv: 7, goal: { k: 'thr', h: '投げ', n: 2, t: '投げを2回決める', s: '投げを2回決めて勝つ' }, tip: '強敵 雷電。槍の突きが速く体力も多い。突きの戻りに懐へ入り、投げで崩す' },
+  ] },
+  { n: '第4章', place: '地下4階「蒸気の迷路」', d: '地形を使う', arena: 'joki', gim: 'steam', gimT: '鉄柱をはさむと攻撃も投げも届かない。床の噴き出し口が光ったら、その線に蒸気が噴いて吹き飛ばされる', stages: [
+    { id: '4-1', wk: 'katana', per: 'kaeshi', lv: 7, goal: { k: 'heavy', h: '重い一撃', n: 3, t: '最後の段を3回当てる', s: '最後の段を3回当てて勝つ' }, tip: '柱のかげで相手に空振りさせ、出てきた所に3段斬りを合わせる' },
+    { id: '4-2', wk: 'dagger', per: 'nigeru', lv: 7, goal: { k: 'taken', h: '被弾', n: 3, max: 1, t: '被弾3回以下', s: '被弾3回以下で勝つ' }, tip: '逃げる先に蒸気が噴くと足が止まる。追い回さず、噴く線の手前で待ち構える' },
+    { id: '4-3', wk: 'great', per: 'nage', lv: 7, goal: { k: 'counter', h: 'カウンター', n: 2, t: 'カウンターを2回決める', s: 'カウンターを2回決めて勝つ' }, tip: '大剣の相手は動きが重い。つかみに来る出かかりを、間合いの外から斬る' },
+    { id: '4-4', wk: 'spear', per: 'shincho', lv: 8, goal: { k: 'pblock', h: '柱で防ぐ', n: 3, t: '柱で攻撃を3回防ぐ', s: '柱で3回防いで勝つ' }, tip: '槍の突きは柱をはさめば届かない。柱を盾にして、横から回り込む' },
+    { id: '4-5', wk: 'katana', per: 'tosshin', lv: 8, goal: { k: 'steamed', h: '蒸気に当てる', n: 2, t: '相手を蒸気に2回当てる', s: '相手を蒸気に2回当てて勝つ' }, tip: '噴き出し口が光った線の上へ、投げや重い一撃で押し込む。よろめいた所を斬る' },
+    { id: '4-6', boss: 'kagebo', per: 'kaeshi', lv: 9, goal: { k: 'parry', h: 'はじき', n: 4, t: 'はじきを4回決める', s: 'はじきを4回決めて勝つ' }, tip: '強敵 影法師。刀の名手。柱を盾にスタミナを戻しながら、はじきの機会を待つ' },
+  ] },
+  { n: '第5章', place: '最上階「からくり天守」', d: '総仕上げ', arena: 'tenshu', gim: 'edge', gimT: '時間がたつと外側から床が抜ける（赤く点滅したら合図）。落ちたら1本取られる。端で重い一撃や投げを受けても落ちる', stages: [
+    { id: '5-1', wk: 'great', per: 'tosshin', lv: 9, goal: { k: 'ringout', h: '落とす', n: 1, t: '相手を床の外へ落とす', s: '相手を落として勝つ' }, tip: '相手を端に追い込み、重い一撃か投げで床の外へ' },
+    { id: '5-2', wk: 'spear', per: 'nigeru', lv: 9, goal: { k: 'taken', h: '被弾', n: 3, max: 1, t: '被弾3回以下', s: '被弾3回以下で勝つ' }, tip: '床が抜けるほど逃げ場は減る。狭くなるまでは無理に追わない' },
+    { id: '5-3', wk: 'dagger', per: 'kaeshi', lv: 9, goal: { k: 'parried', h: 'はじかれた', n: 0, max: 1, t: '一度もはじかれない', s: '一度もはじかれずに勝つ' }, tip: '短剣の速さに焦って手を出さない。端を背負わない位置に立つ' },
+    { id: '5-4', boss: 'onimaru', per: 'tosshin', lv: 9, goal: { k: 'ougi', h: '奥義', n: 0, max: 1, t: '奥義を使わない', s: '奥義を使わずに勝つ' }, tip: '再戦の鬼丸。重い一撃で端から落とされないよう、真ん中で戦う' },
+    { id: '5-5', boss: 'raiden', per: 'shincho', lv: 10, goal: { k: 'gbreak', h: 'ガードブレイク', n: 2, t: 'ガードブレイクを2回', s: 'ガードブレイクを2回させて勝つ' }, tip: '再戦の雷電。固いガードを重い一撃で削り切る' },
+    { id: '5-6', boss: 'shogun', per: 'shincho', lv: 10, wkSeq: ['great', 'spear', 'katana'], goal: { k: 'parry', h: 'はじき', n: 5, t: 'はじきを5回決める', s: 'はじきを5回決めて勝つ' }, tip: '最後の強敵 からくり将軍。1本ごとに大剣→槍→刀と持ちかえる。武器ごとの間合いを思い出す' },
   ] },
 ];
+const ARENA_BY = { kobo: () => drawKoboArena(), ro: () => drawRoArena(), joki: () => drawJokiArena(), tenshu: () => drawTenshuArena() };   // 章ごとの闘技場（なければ地下闘技場）
+const stArena = () => { const a = G && G.stage && CHAPTERS[G.stage.ch].arena; return a && ARENA_BY[a] ? ARENA_BY[a]() : drawLabArena(); };
 const STAGE_LIST = CHAPTERS.flatMap((c, ci) => c.stages.map((s, i) => ({ ...s, ch: ci, i })));
 let CUR_STAGE = null, stProg = {};   // stProg[id] = [★1, ★2, ★3]
 try { stProg = JSON.parse(localStorage.getItem('maai_stage')) || {}; } catch(e) {}
@@ -4590,8 +4643,10 @@ function stGo(st, again){ CUR_STAGE = st; loadout(st.lv, stWk(st), again || null
 // ---- 面の選択画面 ----
 function stageScreen(sel){
   CUR_STAGE = null;
-  const ch = CHAPTERS[0], list = STAGE_LIST.filter(s => s.ch === 0);
   sel = sel || stNext(); if (!stOpen(sel)) sel = stNext();
+  const ch = CHAPTERS[sel.ch], list = STAGE_LIST.filter(s => s.ch === sel.ch);
+  const chOpen = i => CHAPTERS[i] && stOpen(STAGE_LIST.find(s => s.ch === i && s.i === 0));
+  const chPick = i => { const L = STAGE_LIST.filter(s => s.ch === i); return L.find(s => stOpen(s) && !stCleared(s.id)) || L.filter(stOpen).pop(); };
   const total = list.reduce((a, s) => a + stStars(s.id), 0);
   const star = (on) => `<i class="${on ? 'on' : ''}">★</i>`;
   const node = (s, k) => { const open = stOpen(s), cl = stCleared(s.id), pr = stProg[s.id] || [];
@@ -4600,18 +4655,21 @@ function stageScreen(sel){
   const B = stBoss(sel), P = PERSONA[sel.per], pr = stProg[sel.id] || [];
   const foe = B ? `強敵 ${B.n}（${WEAPONS[B.wk].name}）` : `${WEAPONS[sel.wk].title}`;
   screen('ステージ', `<div class="stWrap">
-    <div class="stCh"><div><b>${ch.n}</b><span>${ch.place}</span><small>${ch.d}</small></div><em>★ ${total}/${list.length*3}</em></div>
-    <div class="stMap">${list.map(node).join('')}<svg class="stPath" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${[18, 50, 82, 62, 30, 50].map((x, k) => `${x},${92 - k*16.8}`).join(' ')}"/></svg></div>
+    <div class="stCh"><button class="stArr" id="stPrev" ${chOpen(sel.ch - 1) ? '' : 'disabled'} aria-label="前の章">‹</button><div><b>${ch.n}</b><span>${ch.place}</span><small>${ch.d}</small></div><em>★ ${total}/${list.length*3}</em>
+      <button class="stArr" id="stNextCh" ${chOpen(sel.ch + 1) ? '' : 'disabled'} aria-label="次の章">${CHAPTERS[sel.ch + 1] && !chOpen(sel.ch + 1) ? '🔒' : '›'}</button></div>
+    <div class="stMap ch${sel.ch}">${list.map(node).join('')}<svg class="stPath" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${[18, 50, 82, 62, 30, 50].map((x, k) => `${x},${92 - k*16.8}`).join(' ')}"/></svg></div>
     <div class="stInfo${B ? ' boss' : ''}">
       <div class="stIH"><span class="stTag">${sel.id}</span><b>${foe}</b><small>Lv${sel.lv}</small></div>
       <p class="stPer" style="--pc:${P.c}">性格「${P.n}」${P.d}</p>
-      <p class="stTip">${sel.tip}</p>
+      <p class="stTip">${sel.tip}</p>${ch.gimT ? `<p class="stGim">⚙ ${ch.gimT}</p>` : ''}
       <ul class="stGoals"><li class="${pr[0] ? 'on' : ''}">${star(pr[0])}勝つ</li><li class="${pr[1] ? 'on' : ''}">${star(pr[1])}${sel.goal.s}</li><li class="${pr[2] ? 'on' : ''}">${star(pr[2])}体力を半分以上残して勝つ</li></ul>
       <button class="stGo" id="stGo">${stCleared(sel.id) ? 'もう一度挑む' : '挑む'}</button>
     </div></div>`, 'stScr');
   document.getElementById('back').onclick = title;
   ov.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { SFX.coin(); stageScreen(STAGE_LIST.find(s => s.id === b.dataset.st)); });
   document.getElementById('stGo').onclick = () => { SFX.coin(); stGo(sel); };
+  document.getElementById('stPrev').onclick = () => { if (chOpen(sel.ch - 1)) { SFX.coin(); stageScreen(chPick(sel.ch - 1)); } };
+  document.getElementById('stNextCh').onclick = () => { if (chOpen(sel.ch + 1)) { SFX.coin(); stageScreen(chPick(sel.ch + 1)); } };
   // 下から積み上がるので、選んだ面が見える所まで流す
   const m = ov.querySelector('.stMap'); if (m) m.scrollIntoView({ block: 'nearest' });
 }
@@ -4643,7 +4701,7 @@ function stageEnd(win){
   const stars = `<div class="stRes">${now.map((v, j) => `<div class="${v ? 'on' : ''}${newStar[j] ? ' new' : ''}" style="animation-delay:${.15 + j*.25}s"><i>★</i><span>${lbl[j]}${newStar[j] ? '<em>NEW</em>' : ''}</span></div>`).join('')}</div>`;
   const nx = STAGE_LIST[STAGE_LIST.indexOf(st) + 1], chEnd = win && !nx;
   const name = G.boss ? `強敵 ${G.boss.n}` : G.e.name;
-  card(win ? `<h2>${st.id} クリア！</h2><p>${name} を ${G.pw}-${G.ew} で倒しました。${first && nx ? `<br><b class="stUnlock">${nx.id} が開きました</b>` : ''}${chEnd && first ? `<br><b class="stUnlock">${CHAPTERS[st.ch].n} クリア！ 続きはお楽しみに</b>` : ''}</p>${stars}${earn}${got}
+  card(win ? `<h2>${st.id} クリア！</h2><p>${name} を ${G.pw}-${G.ew} で倒しました。${first && nx ? `<br><b class="stUnlock">${nx.ch !== st.ch ? `${CHAPTERS[nx.ch].n}「${CHAPTERS[nx.ch].place.replace(/^.*「|」$/g, '')}」が開きました` : `${nx.id} が開きました`}</b>` : ''}${chEnd && first ? `<br><b class="stUnlock">すべての章をクリア！ おみごと</b>` : ''}</p>${stars}${earn}${got}
        ${nx ? `<button id="b1">次の面へ（${nx.id}）</button>` : `<button id="b1">面の選択へ</button>`}<button id="stRe" class="sub">もう一度</button>`
      : `<h2>敗北</h2><p>${name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p><p class="stHint">ヒント：${st.tip}</p>${earn}${got}<button id="b1">もう一度挑む</button>`,
     () => win ? (nx ? stGo(nx) : stageScreen()) : stGo(st, G.eGear));
@@ -4652,6 +4710,446 @@ function stageEnd(win){
   const c = ov.querySelector('.card');
   if (win) { const eG = G.eGear; document.getElementById('stRe').onclick = () => stGo(st, eG); }
   if (!win || nx) { c.insertAdjacentHTML('beforeend', '<br><button id="stSel" class="sub">面の選択へ</button>'); document.getElementById('stSel').onclick = () => stageScreen(st); }
+}
+
+// ---- 闘技場のギミック（v0.45）：第2章＝ベルトコンベア ----
+// 台の左右に縦のベルト2本（左は下へ・右は上へ流れる）。乗っている者は流される（宙に浮いている・つかまれている間はなし）
+// 流れは9秒ごとに逆になり、変わる1.2秒前に矢印が赤く点滅する。強敵の面は速い。update の stepF の前に呼ぶ（闘技場の外に出ないのは stepF が直す）
+const BELTS = [[-60, 1], [60, -1]], BELT_HW = 18, BELT_PER = 9, BELT_WARN = 1.2;
+function stGimmick(dt){
+  const gm = CHAPTERS[G.stage.ch].gim;
+  if (gm === 'fire') return stFire(dt);
+  if (gm === 'steam') return stSteam(dt);
+  if (gm === 'edge') return stEdge(dt);
+  if (gm !== 'belt') return;
+  const B = G.belt || (G.belt = { dir: 1, t: 0, off: 0 });
+  B.t += dt; if (B.t >= BELT_PER) { B.t -= BELT_PER; B.dir *= -1; say('流れが逆に！', AR.x, AR.y - 30, '#FFC93A', 18, 1); SFX.dash(AR.x); }
+  const v = (G.stage.boss ? 66 : 50)*B.dir; B.off += v*dt;
+  for (const f of [G.p, G.e]) { if (!f || f.z || f.state === 'held' || f.dead) continue;
+    for (const [bx, sg] of BELTS) if (Math.abs(f.x - (AR.x + bx)) < BELT_HW) f.y += v*sg*dt; }
+}
+// 工房の台の上にベルトを描く（drawKoboArena の中、台の円で切り抜いた中から呼ぶ）
+function drawBelts(cx, cy, r){
+  const B = (G && G.belt) || { dir: 1, t: 0, off: 0 }, warn = B.t > BELT_PER - BELT_WARN && Math.floor(B.t*8) % 2 === 0;
+  for (const [bx, sg] of BELTS) { const x0 = cx + bx - BELT_HW, w = BELT_HW*2, d = B.dir*sg;
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(x0 - 3, cy - r, w + 6, r*2);
+    ctx.fillStyle = '#231C16'; ctx.fillRect(x0, cy - r, w, r*2);
+    ctx.fillStyle = '#B8862E'; ctx.fillRect(x0 - 2, cy - r, 2, r*2); ctx.fillRect(x0 + w, cy - r, 2, r*2);   // 真鍮の枠
+    ctx.fillStyle = '#F0D088'; ctx.fillRect(x0 - 1, cy - r, 1, r*2);
+    const off = ((B.off*sg) % 12 + 12) % 12;
+    ctx.fillStyle = '#3A3028'; for (let y = cy - r - 12 + off; y < cy + r; y += 12) ctx.fillRect(x0 + 1, Math.round(y), w - 2, 3);   // 桟
+    ctx.strokeStyle = warn ? '#FF6A3A' : 'rgba(255,200,110,.55)'; ctx.lineWidth = 3; ctx.lineCap = 'round';   // 流れの向きの矢印
+    const aoff = ((B.off*sg) % 36 + 36) % 36;
+    for (let y = cy - r - 36 + aoff; y < cy + r + 36; y += 36) { ctx.beginPath(); ctx.moveTo(x0 + 8, y - 5*d); ctx.lineTo(x0 + w/2, y + 5*d); ctx.lineTo(x0 + w - 8, y - 5*d); ctx.stroke(); }
+    ctx.lineCap = 'butt'; }
+}
+
+// ---- 第3章：火を噴く床（v0.46） ----
+// 台の鉄板（arena_ro.js の firePlates）から数枚を選び、予告（赤く点滅）1.5秒 → 火 2秒 → 冷める 1秒。少しずつずらして次々に選ぶ
+// 火の上（宙に浮いていない）にいると毎秒12減る。相手が火に入るたびにお題の「焼く」を数える
+// AIは立っているとき（idle）だけ、予告・火の板から外へ逃げる（よろめき・投げられた後は逃げられない＝押し込むと焼ける）
+const FIRE_WARN = 1.5, FIRE_ON = 2, FIRE_COOL = 1, FIRE_DPS = 12;
+function stFire(dt){
+  const P = firePlates(), F = G.fire || (G.fire = { st: [], next: 1.5 }), boss = !!G.stage.boss;
+  F.next -= dt;
+  if (F.next <= 0) { F.next = boss ? 2.4 : 3; const free = P.map((_, i) => i).filter(i => !F.st[i]);
+    for (let k = 0; k < (boss ? 4 : 3) && free.length; k++) { const i = free.splice(Math.floor(Math.random()*free.length), 1)[0]; F.st[i] = { k: 'warn', t: 0 }; } }
+  F.st.forEach((s, i) => { if (!s) return; s.t += dt;
+    if (s.k === 'warn' && s.t >= FIRE_WARN) { s.k = 'fire'; s.t = 0; }
+    else if (s.k === 'fire' && s.t >= FIRE_ON) { s.k = 'cool'; s.t = 0; }
+    else if (s.k === 'cool' && s.t >= FIRE_COOL) F.st[i] = null; });
+  const on = f => P.findIndex(p => Math.abs(f.x - (AR.x + p.x)) < FIRE_S/2 && Math.abs(f.y - (AR.y + p.y)) < FIRE_S/2);
+  for (const f of [G.p, G.e]) { if (!f || f.dead) continue;
+    const i = on(f), s = i >= 0 ? F.st[i] : null, hot = s && s.k === 'fire' && !f.z;
+    if (hot) { if (!f.inFire) { f.inFire = true; say('熱っ！', f.x, f.y - 42, '#FF8A3A', 16, .7); if (f === G.e) G.count.burn = (G.count.burn || 0) + 1; }
+      f.hp -= FIRE_DPS*dt; f.fireFx = (f.fireFx || 0) + dt; if (f.fireFx > .12) { f.fireFx = 0; spark(f.x, f.y, '#FF8A3A', 3, 90); }
+      if (f.hp <= 0 && G.phase === 'fight') { f.hp = 0; ko(f); } }
+    else f.inFire = false;
+    if (f.isAI && f.state === 'idle' && s && s.k !== 'cool') {   // AI：熱い板から外へ逃げる
+      const p = P[i], dx = f.x - (AR.x + p.x), dy = f.y - (AR.y + p.y), l = Math.hypot(dx, dy) || 1;
+      const ux = l > 1 ? dx/l : Math.cos(f.face + Math.PI), uy = l > 1 ? dy/l : Math.sin(f.face + Math.PI);
+      f.x += ux*130*dt; f.y += uy*130*dt; } }
+}
+
+// ---- 1本ごとの準備（newRound から）：第4章の地形、第5章の床、将軍の持ちかえ ----
+function stRoundInit(){
+  const gm = CHAPTERS[G.stage.ch].gim;
+  if (gm === 'steam') {   // 鉄柱3本（真ん中と、180度回して同じ形）。v0.48 雲はやめて、蒸気の噴き出し（G.jets）
+    G.terrain = { pits: [], pillars: [{ x: AR.x, y: AR.y, r: 16 }, { x: AR.x - 92, y: AR.y - 48, r: 13 }, { x: AR.x + 92, y: AR.y + 48, r: 13 }], bushes: [], steam: 1 };
+    if (!G.jets) G.jets = { st: [], next: 2 };
+  }
+  if (gm === 'edge') { AR.r = DUEL_R; G.edge = { t: 0, i: 0, warn: false, wt: 0, fallT: 0 }; }
+}
+// ---- 第4章：蒸気の噴き出し（v0.48） ----
+// 台を横切る4本の線（横2本・縦2本）。端の噴き出し口が光って線が点滅（予告 JET_WARN 秒）→ 蒸気が JET_ON 秒噴く
+// 噴いている間に線の上にいる者（宙・回避の無敵中は除く）は、流れの向きへ吹き飛ばされて少しよろめく（1回の噴き出しで1度だけ）
+// AIは立っているとき、予告・噴いている線から横へ逃げる。相手が当たるとお題の steamed を数える
+const JETS = [{ ax: 'h', o: -70, d: 1 }, { ax: 'h', o: 70, d: -1 }, { ax: 'v', o: -50, d: 1 }, { ax: 'v', o: 50, d: -1 }], JET_HW = 17, JET_WARN = 1.2, JET_ON = .6;
+const jetIn = (j, f) => j.ax === 'h' ? Math.abs(f.y - (AR.y + j.o)) < JET_HW : Math.abs(f.x - (AR.x + j.o)) < JET_HW;
+function stSteam(dt){
+  if (G.terrain && G.terrain.steam) for (const f of [G.p, G.e]) if (f) terrainStep(f);
+  const J = G.jets; if (!J) return; const boss = !!G.stage.boss;
+  J.next -= dt;
+  if (J.next <= 0) { J.next = boss ? 2.2 : 2.8; const free = JETS.map((_, i) => i).filter(i => !J.st[i]);
+    for (let k = 0; k < (boss && Math.random() < .5 ? 2 : 1) && free.length; k++) { const i = free.splice(Math.floor(Math.random()*free.length), 1)[0]; J.st[i] = { k: 'warn', t: 0, hit: [] }; } }
+  J.st.forEach((s, i) => { if (!s) return; s.t += dt; const j = JETS[i];
+    if (s.k === 'warn' && s.t >= JET_WARN) { s.k = 'on'; s.t = 0; SFX.dash(AR.x); }
+    else if (s.k === 'on' && s.t >= JET_ON) { J.st[i] = null; return; }
+    for (const f of [G.p, G.e]) { if (!f || f.dead) continue;
+      if (s.k === 'on' && jetIn(j, f) && !f.z && !(f.iframe > 0) && f.state !== 'held' && !s.hit.includes(f)) { s.hit.push(f);
+        const vx = j.ax === 'h' ? j.d : 0, vy = j.ax === 'v' ? j.d : 0; f.kx += vx*380; f.ky += vy*380;
+        if (f.state !== 'stun') { f.state = 'stun'; f.stunKind = 'hit'; f.stunT = .4; f.t = 0; f.guard = false; f.queued = false; }
+        say('蒸気！', f.x, f.y - 40, '#DCEBE6', 17, .8); spark(f.x, f.y, '#E8F4F0', 12, 220);
+        if (f === G.e) G.count.steamed = (G.count.steamed || 0) + 1; }
+      if (f.isAI && f.state === 'idle' && jetIn(j, f)) {   // AI：線から横へ逃げる。相手のいる側へ（歩きたい向きと逆らわないように）
+        const o = f === G.p ? G.e : G.p, ln = j.ax === 'h' ? AR.y + j.o : AR.x + j.o, me = j.ax === 'h' ? f.y : f.x, ot = j.ax === 'h' ? o.y : o.x;
+        const sg = Math.sign(Math.abs(ot - ln) > JET_HW ? ot - ln : me - ln) || 1;
+        if (j.ax === 'h') f.y += sg*170*dt; else f.x += sg*170*dt; } } });
+}
+// 噴き出し口と蒸気の絵（drawJokiArena の中、台の円で切り抜いた中から呼ぶ）
+function drawJets(cx, cy, r){
+  const J = G && G.jets, T = performance.now()/1000;
+  JETS.forEach((j, i) => { const s = J && J.st[i], h = j.ax === 'h', L = Math.sqrt(r*r - j.o*j.o);
+    const sx = h ? cx - j.d*L : cx + j.o, sy = h ? cy + j.o : cy - j.d*L;   // 噴き出し口（流れの元の端）
+    const rect = (a, b, c2, d2) => h ? ctx.fillRect(cx - L + a, cy + j.o - c2, L*2 - a - b, c2 + d2) : ctx.fillRect(cx + j.o - c2, cy - L + a, c2 + d2, L*2 - a - b);
+    ctx.fillStyle = 'rgba(10,16,14,.35)'; rect(0, 0, JET_HW, JET_HW);   // 線の通り道（うっすら暗い溝）
+    ctx.fillStyle = '#0A100E'; ctx.fillRect(sx - (h ? 6 : 14), sy - (h ? 14 : 6), h ? 12 : 28, h ? 28 : 12);   // 噴き出し口の格子
+    ctx.fillStyle = s ? (s.k === 'warn' ? `rgba(255,${Math.floor(s.t*10) % 2 ? 120 : 200},60,1)` : '#E8F4F0') : '#3A4C44';
+    for (let k = -2; k <= 2; k++) ctx.fillRect(sx + (h ? -4 : k*5 - 1), sy + (h ? k*5 - 1 : -4), h ? 8 : 2, h ? 2 : 8);
+    if (!s) return;
+    if (s.k === 'warn') { const q = s.t/JET_WARN;   // 予告：線が点滅し、口から小さな湯気
+      ctx.strokeStyle = `rgba(255,170,90,${(Math.floor(s.t*(5 + 8*q)) % 2 ? .25 : .7)})`; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -T*40*j.d;
+      ctx.beginPath(); if (h) { ctx.moveTo(cx - L, cy + j.o - JET_HW); ctx.lineTo(cx + L, cy + j.o - JET_HW); ctx.moveTo(cx - L, cy + j.o + JET_HW); ctx.lineTo(cx + L, cy + j.o + JET_HW); }
+      else { ctx.moveTo(cx + j.o - JET_HW, cy - L); ctx.lineTo(cx + j.o - JET_HW, cy + L); ctx.moveTo(cx + j.o + JET_HW, cy - L); ctx.lineTo(cx + j.o + JET_HW, cy + L); }
+      ctx.stroke(); ctx.setLineDash([]);
+      for (let k = 0; k < 4; k++) { const u = (s.t*2 + k*.25) % 1; ctx.fillStyle = `rgba(230,240,236,${(1 - u)*.5})`; ctx.beginPath();
+        ctx.arc(sx + (h ? j.d*u*24 : Math.sin(k*2)*5), sy + (h ? Math.sin(k*2)*5 : j.d*u*24), 4 + u*6, 0, Math.PI*2); ctx.fill(); } }
+    else { const a = 1 - s.t/JET_ON*.6;   // 噴いている：白い蒸気の帯と、流れていくかたまり
+      ctx.fillStyle = `rgba(225,238,234,${.55*a})`; rect(0, 0, JET_HW, JET_HW);
+      for (let k = 0; k < 12; k++) { const u = ((s.t*3 + k/12) % 1), along = -L + u*L*2, wob = Math.sin(k*1.7 + T*9)*JET_HW*.5, rr = 9 + 8*Math.sin(k + T*6);
+        const px = h ? cx + j.d*along : cx + j.o + wob, py = h ? cy + j.o + wob : cy + j.d*along;
+        ctx.fillStyle = `rgba(245,252,250,${.6*a})`; ctx.beginPath(); ctx.arc(px, py, Math.max(4, rr), 0, Math.PI*2); ctx.fill(); } } });
+}
+// ---- 第5章：端から床が抜ける ----
+// 抜ける時刻 EDGE_AT（強敵は早い）の EDGE_WARN 秒前から、次の輪 EDGE_R の外が赤く点滅。抜けた瞬間にそこに立っていた者（宙にいない）は落ちる
+// 端（縁から2以内）で強く吹き飛ばされた者（速さ220以上）も落ちる。落ちたら1本取られる。AIは立っているとき、抜ける所から内側へ逃げる
+const EDGE_R = [150, 126, 104, 86], EDGE_AT = [14, 26, 38], EDGE_AT_BOSS = [11, 21, 31], EDGE_WARN = 2.5;
+function stFall(f, why){
+  if (G.phase !== 'fight' || f.hp <= 0) return;
+  f.hp = 0; say(why || '落下！', f.x, f.y - 30, '#FF9F43', 24, 1.2); spark(f.x, f.y, '#C8982E', 16, 220); SFX.guardBreak(f.x);
+  if (f === G.e) G.count.ringout = (G.count.ringout || 0) + 1;
+  ko(f);
+}
+function stEdge(dt){
+  const E = G.edge; if (!E) return;
+  const at = G.stage.boss ? EDGE_AT_BOSS : EDGE_AT, nx = at[E.i];
+  E.t += dt; if (E.fallT > 0) E.fallT -= dt;
+  if (nx != null) {
+    E.warn = E.t >= nx - EDGE_WARN; E.wr = EDGE_R[E.i + 1]; E.wt = E.warn ? E.t - (nx - EDGE_WARN) : 0;
+    if (E.t >= nx) {   // 床が抜ける
+      E.pr = AR.r; AR.r = E.wr; E.i++; E.warn = false; E.fallT = 1.2; G.shake = .3; say('床が抜けた！', AR.x, AR.y - 20, '#FF6A3A', 20, 1.1);
+      for (const f of [G.p, G.e]) if (f && !f.z && Math.hypot(f.x - AR.x, f.y - AR.y) > AR.r - f.r*.3) stFall(f);
+    }
+  }
+  for (const f of [G.p, G.e]) { if (!f || f.z || f.state === 'held') continue;
+    const d = Math.hypot(f.x - AR.x, f.y - AR.y);
+    if (d > AR.r - f.r - 2 && Math.hypot(f.kx, f.ky) > 220) { stFall(f, '場外！'); continue; }
+    if (f.isAI && f.state === 'idle' && E.warn && d > E.wr - f.r - 8) { const k = 130*dt/(d || 1); f.x -= (f.x - AR.x)*k; f.y -= (f.y - AR.y)*k; } }
+}
+// 将軍の持ちかえ：1本目以外の始まりに知らせる（newRound の後なので G.texts が消されない）
+function stRoundSay(){ if (G.stage && G.stage.wkSeq && G.round > 1) say(`${WEAPONS[G.eW].name}に持ちかえた！`, AR.x, AR.y - 112, G.boss ? G.boss.c : '#FFD040', 18, 2.2); }
+
+// ================= 第2章の闘技場「からくり工房」（v0.44、見た目だけ） =================
+// 床＝木の板（小さな絵を敷き詰める）、闘技場＝木の円い台に真鍮の縁と歯車の象嵌
+// まわり＝闘技場を囲むベルトコンベア（木箱が流れる）・四隅で回る大きな真鍮の歯車・吊りランプの暖かい光・舞うおが屑
+// 地下闘技場（arena_lab.js）と同じく draw() の中、カメラでずらした後に描く。時計は performance.now()
+let KOBO_TILE = null;
+function koboTile(){
+  if (KOBO_TILE) return KOBO_TILE;
+  const c = document.createElement('canvas'); c.width = c.height = 48; const x = c.getContext('2d');
+  const planks = ['#4A3020', '#523624', '#46301E', '#4E3422'];
+  for (let i = 0; i < 4; i++) { x.fillStyle = planks[i]; x.fillRect(0, i*12, 48, 12);   // 横の板4枚
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(0, i*12 + 11, 48, 1); x.fillStyle = 'rgba(255,220,170,.06)'; x.fillRect(0, i*12, 48, 1);
+    const j = (i*19) % 48; x.fillStyle = 'rgba(0,0,0,.4)'; x.fillRect(j, i*12, 1, 11);   // 板の継ぎ目（段ごとにずらす）
+    x.fillStyle = 'rgba(0,0,0,.12)'; x.fillRect((j + 9) % 48, i*12 + 4, 7, 1); x.fillRect((j + 27) % 48, i*12 + 7, 9, 1);   // 木目
+    x.fillStyle = '#8A7A5A'; x.fillRect((j + 2) % 48, i*12 + 5, 1, 1); x.fillRect((j + 46) % 48, i*12 + 5, 1, 1); }   // 釘
+  KOBO_TILE = ctx.createPattern(c, 'repeat'); return KOBO_TILE;
+}
+// 歯車：歯の数 n、外の半径 R、角度 a
+function koboGear(x, y, R, n, a, col, dark){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = dark; ctx.beginPath();
+  for (let i = 0; i <= n*4; i++) { const q = i/(n*4)*Math.PI*2, rr = (i % 4 < 2) ? R : R - 7; ctx.lineTo(Math.cos(q)*rr, Math.sin(q)*rr); }
+  ctx.fill();
+  ctx.fillStyle = col; ctx.beginPath();
+  for (let i = 0; i <= n*4; i++) { const q = i/(n*4)*Math.PI*2, rr = (i % 4 < 2) ? R - 2 : R - 9; ctx.lineTo(Math.cos(q)*rr, Math.sin(q)*rr); }
+  ctx.fill();
+  ctx.fillStyle = dark; for (let i = 0; i < 5; i++) { const q = i/5*Math.PI*2; ctx.beginPath(); ctx.arc(Math.cos(q)*R*.5, Math.sin(q)*R*.5, R*.17, 0, Math.PI*2); ctx.fill(); }   // 肉抜きの穴
+  ctx.beginPath(); ctx.arc(0, 0, R*.22, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#E8C878'; ctx.beginPath(); ctx.arc(0, 0, R*.1, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,240,200,.18)'; ctx.beginPath(); ctx.arc(-R*.2, -R*.25, R*.45, 0, Math.PI*2); ctx.fill();   // 照り
+  ctx.restore();
+}
+function drawKoboArena(){
+  const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
+  const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
+  ctx.fillStyle = koboTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  // 四隅の大きな歯車（となり同士は逆に回る）
+  for (let i = 0; i < 4; i++) { const a = (i + .5)/4*Math.PI*2, R = 46, d = r + 62;
+    koboGear(cx + Math.cos(a)*d, cy + Math.sin(a)*d, R, 14, (i % 2 ? -1 : 1)*T*.5 + i, '#B8862E', '#4A3010'); }
+  // 闘技場のまわりの暗がり
+  const sh = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 60); sh.addColorStop(0, 'rgba(20,8,0,.5)'); sh.addColorStop(1, 'rgba(20,8,0,0)');
+  ctx.fillStyle = sh; ctx.beginPath(); ctx.arc(cx, cy, r + 60, 0, Math.PI*2); ctx.fill();
+  // ベルトコンベアの輪：黒い帯の上を桟が流れ、木箱が乗って回る
+  const br = r + 24;
+  ctx.lineWidth = 18; ctx.strokeStyle = '#141010'; ctx.beginPath(); ctx.arc(cx, cy, br, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 14; ctx.strokeStyle = '#2A2420'; ctx.stroke();
+  ctx.lineWidth = 14; ctx.strokeStyle = '#3A322A'; ctx.setLineDash([3, 9]); ctx.lineDashOffset = -T*30; ctx.stroke(); ctx.setLineDash([]);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#8A6A3A'; ctx.beginPath(); ctx.arc(cx, cy, br - 9, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy, br + 9, 0, Math.PI*2); ctx.stroke();
+  for (let i = 0; i < 6; i++) { const a = i/6*Math.PI*2 + T*30/br, bx = cx + Math.cos(a)*br, by = cy + Math.sin(a)*br;
+    ctx.save(); ctx.translate(bx, by); ctx.rotate(a);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(-6, -5, 14, 12);
+    ctx.fillStyle = '#3A2410'; ctx.fillRect(-7, -7, 14, 14); ctx.fillStyle = i % 3 ? '#B07840' : '#9A6A38'; ctx.fillRect(-6, -6, 12, 12);
+    ctx.fillStyle = '#7A4E24'; ctx.fillRect(-6, -1, 12, 2); ctx.fillRect(-1, -6, 2, 12); ctx.restore(); }
+  // 台の側面
+  ctx.fillStyle = '#2A1A0E'; ctx.beginPath(); ctx.arc(cx, cy + 9, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#4A2E18'; ctx.beginPath(); ctx.arc(cx, cy + 5, r, 0, Math.PI*2); ctx.fill();
+  // 台の上：明るい木の板（縦の板目）
+  const g = ctx.createRadialGradient(cx, cy - r*.3, 20, cx, cy, r);
+  g.addColorStop(0, '#C89A62'); g.addColorStop(.7, '#A87A48'); g.addColorStop(1, '#8A6036');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+  for (let x = cx - r; x < cx + r; x += 22) { ctx.fillStyle = 'rgba(60,30,10,.35)'; ctx.fillRect(Math.round(x), cy - r, 2, r*2); ctx.fillStyle = 'rgba(255,230,190,.08)'; ctx.fillRect(Math.round(x) + 2, cy - r, 1, r*2);
+    const k = Math.round((x - cx)/22); ctx.fillStyle = 'rgba(60,30,10,.18)';   // 木目と板の継ぎ目（板ごとにずらす）
+    for (let y = cy - r + ((k*53) % 70 + 70) % 70; y < cy + r; y += 90) { ctx.fillRect(Math.round(x) + 2, Math.round(y), 20, 2); }
+    ctx.fillRect(Math.round(x) + 8, cy - r + ((k*31) % 40 + 40) % 40, 1, 30); }
+  // 真ん中の真鍮の歯車の象嵌（ゆっくり回る）と、まわりの輪
+  ctx.globalAlpha = .9; koboGear(cx, cy, 40, 12, T*.15, '#C89838', '#5A3A12'); ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(90,50,16,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, 70, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = 'rgba(200,152,56,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 73, 0, Math.PI*2); ctx.stroke();
+  if (G && G.stage && CHAPTERS[G.stage.ch].gim === 'belt') drawBelts(cx, cy, r);   // v0.45 ギミック：ベルトコンベア
+  ctx.fillStyle = 'rgba(255,240,210,.06)'; ctx.beginPath(); ctx.ellipse(cx - r*.3, cy - r*.45, r*.55, r*.25, -.4, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+  // 縁：真鍮の太い枠・鋲・回る暖かい光
+  ctx.lineWidth = 8; ctx.strokeStyle = '#3A2410'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 4; ctx.strokeStyle = '#B8862E'; ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 1; ctx.strokeStyle = '#F0D088'; ctx.beginPath(); ctx.arc(cx, cy, r - 2.5, 0, Math.PI*2); ctx.stroke();
+  const nb = Math.round(r/6); ctx.fillStyle = '#5A3A12';
+  for (let i = 0; i < nb; i++) { const a = i/nb*Math.PI*2; ctx.fillRect(cx + Math.cos(a)*(r - 1) - 1.5, cy + Math.sin(a)*(r - 1) - 1.5, 3, 3); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 3;
+  ctx.strokeStyle = `rgba(255,170,60,${.4 + .2*Math.sin(T*2.5)})`; ctx.setLineDash([10, 26]); ctx.lineDashOffset = T*40;
+  ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  // 吊りランプの光：2つの暖かい光がゆれる（ときどきちらつく）
+  for (let i = 0; i < 2; i++) { const lx = cx + (i ? 1 : -1)*r*.42 + Math.sin(T*.7 + i*2)*10, ly = cy - r*.25 + Math.cos(T*.6 + i)*6;
+    const fl = Math.sin(T*17 + i*5) > .96 ? .5 : 1, gg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 110);
+    gg.addColorStop(0, `rgba(255,190,110,${.13*fl})`); gg.addColorStop(1, 'rgba(255,190,110,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(lx, ly, 110, 0, Math.PI*2); ctx.fill(); }
+  // 舞うおが屑（光の中で小さく光る）
+  ctx.fillStyle = 'rgba(255,220,150,.5)';
+  for (let i = 0; i < 18; i++) { const px = cx + ((i*97) % (r*2 + 120)) - r - 60 + Math.sin(T*.8 + i)*12, py = cy - r - 40 + ((T*(6 + i % 5) + i*41) % (r*2 + 80));
+    ctx.fillRect(Math.round(px), Math.round(py), i % 3 ? 1 : 2, i % 3 ? 1 : 2); }
+  ctx.restore();
+}
+
+// ================= 第3章の闘技場「炉の間」（v0.46） =================
+// 床＝黒い耐火れんが（すき間が赤く光る）、闘技場＝鉄板を並べた円い台（板1枚ずつが火を噴くギミックの単位）
+// まわり＝溶けた鉄の堀（流れる）・四隅の炉（口が脈打ち火の粉）・立ちのぼる火の粉。ギミックの状態は G.fire（stage.js）
+let RO_TILE = null;
+function roTile(){
+  if (RO_TILE) return RO_TILE;
+  const c = document.createElement('canvas'); c.width = c.height = 48; const x = c.getContext('2d');
+  x.fillStyle = '#2A0E08'; x.fillRect(0, 0, 48, 48);   // 目地（赤黒）
+  const br = ['#2E2624', '#362C28', '#2A2220', '#322826'];
+  for (let j = 0; j < 4; j++) for (let i = -1; i < 3; i++) { const bx = i*24 + (j % 2 ? 12 : 0), by = j*12;
+    x.fillStyle = br[(i + j*3 + 8) % 4]; x.fillRect(bx + 1, by + 1, 22, 10);
+    x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(bx + 1, by + 1, 22, 1); x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(bx + 1, by + 10, 22, 1); }
+  x.fillStyle = 'rgba(255,90,30,.35)'; x.fillRect(11, 23, 2, 2); x.fillRect(35, 47, 2, 1); x.fillRect(0, 11, 1, 1);   // 目地の熾火
+  RO_TILE = ctx.createPattern(c, 'repeat'); return RO_TILE;
+}
+// 火を噴く板（台の上の正方形）。闘技場の中心からの位置。大きさ FIRE_S
+const FIRE_S = 46;
+function firePlates(){
+  const r = AR.r, out = [];
+  for (let i = -4; i < 4; i++) for (let j = -4; j < 4; j++) { const x = (i + .5)*FIRE_S, y = (j + .5)*FIRE_S;
+    if (Math.hypot(Math.abs(x) + FIRE_S/2, Math.abs(y) + FIRE_S/2) <= r - 4) out.push({ x, y }); }
+  return out;
+}
+function drawRoArena(){
+  const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
+  const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
+  ctx.fillStyle = roTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  // 四隅の炉：れんがの箱、口の中が脈打つ
+  for (let i = 0; i < 4; i++) { const a = (i + .5)/4*Math.PI*2, d = r + 66, fx = cx + Math.cos(a)*d, fy = cy + Math.sin(a)*d, p = .6 + .4*Math.sin(T*2.2 + i*1.7);
+    ctx.fillStyle = '#120806'; ctx.fillRect(fx - 34, fy - 30, 68, 58); ctx.fillStyle = '#4A3A34'; ctx.fillRect(fx - 32, fy - 28, 64, 54);
+    ctx.fillStyle = '#3A2C28'; for (let k = 0; k < 4; k++) ctx.fillRect(fx - 32, fy - 28 + k*14, 64, 1);
+    const g = ctx.createRadialGradient(fx, fy + 6, 2, fx, fy + 6, 22); g.addColorStop(0, `rgba(255,240,160,${p})`); g.addColorStop(.5, `rgba(255,120,30,${p})`); g.addColorStop(1, 'rgba(120,20,0,.9)');
+    ctx.fillStyle = '#120806'; ctx.beginPath(); ctx.arc(fx, fy + 6, 20, Math.PI, 0); ctx.lineTo(fx + 20, fy + 20); ctx.lineTo(fx - 20, fy + 20); ctx.fill();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(fx, fy + 6, 17, Math.PI, 0); ctx.lineTo(fx + 17, fy + 18); ctx.lineTo(fx - 17, fy + 18); ctx.fill(); }
+  // 溶けた鉄の堀（台のまわりを流れる）
+  ctx.lineWidth = 26; ctx.strokeStyle = '#1A0804'; ctx.beginPath(); ctx.arc(cx, cy, r + 24, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 20; ctx.strokeStyle = '#C8380C'; ctx.stroke();
+  ctx.lineWidth = 20; ctx.strokeStyle = '#FF8A1E'; ctx.setLineDash([22, 30]); ctx.lineDashOffset = -T*18; ctx.stroke();
+  ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255,230,120,.7)'; ctx.setLineDash([6, 46]); ctx.lineDashOffset = -T*26; ctx.stroke(); ctx.setLineDash([]);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const hg = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 60); hg.addColorStop(0, 'rgba(255,90,20,.18)'); hg.addColorStop(1, 'rgba(255,90,20,0)');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, r + 60, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  // 台の側面と上（鉄板）
+  ctx.fillStyle = '#140A08'; ctx.beginPath(); ctx.arc(cx, cy + 9, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#2C2220'; ctx.beginPath(); ctx.arc(cx, cy + 5, r, 0, Math.PI*2); ctx.fill();
+  const g = ctx.createRadialGradient(cx, cy - r*.3, 20, cx, cy, r); g.addColorStop(0, '#6A605C'); g.addColorStop(.7, '#4E4644'); g.addColorStop(1, '#3E3634');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+  const F = G && G.fire, st = F ? F.st : [];
+  firePlates().forEach((p, i) => { const x0 = cx + p.x - FIRE_S/2, y0 = cy + p.y - FIRE_S/2, s = st[i];
+    ctx.fillStyle = '#1C1614'; ctx.fillRect(x0, y0, FIRE_S, FIRE_S);   // すき間
+    ctx.fillStyle = (i*7) % 3 ? '#57504C' : '#5E5652'; ctx.fillRect(x0 + 2, y0 + 2, FIRE_S - 4, FIRE_S - 4);
+    ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fillRect(x0 + 2, y0 + 2, FIRE_S - 4, 1);
+    ctx.fillStyle = '#2E2826'; [[5, 5], [FIRE_S - 7, 5], [5, FIRE_S - 7], [FIRE_S - 7, FIRE_S - 7]].forEach(([a, b]) => ctx.fillRect(x0 + a, y0 + b, 2, 2));   // 鋲
+    ctx.fillStyle = 'rgba(30,20,18,.5)'; for (let k = 10; k < FIRE_S - 6; k += 8) ctx.fillRect(x0 + 8, y0 + k, FIRE_S - 16, 2);   // 通気の溝
+    if (!s) return;
+    if (s.k === 'warn') { const q = s.t/FIRE_WARN, bl = .35 + .45*q + (Math.floor(s.t*(6 + 10*q)) % 2 ? .2 : 0);   // 予告：赤く光り、だんだん速く点滅
+      ctx.fillStyle = `rgba(255,60,20,${bl*.6})`; ctx.fillRect(x0 + 2, y0 + 2, FIRE_S - 4, FIRE_S - 4);
+      ctx.strokeStyle = `rgba(255,140,60,${bl})`; ctx.lineWidth = 2; ctx.strokeRect(x0 + 3, y0 + 3, FIRE_S - 6, FIRE_S - 6); }
+    else if (s.k === 'fire') {   // 火柱：板いっぱいの炎がゆらぐ
+      const gl = ctx.createLinearGradient(0, y0, 0, y0 + FIRE_S); gl.addColorStop(0, '#C8300A'); gl.addColorStop(1, '#FF8A1E');
+      ctx.fillStyle = gl; ctx.fillRect(x0 + 2, y0 + 2, FIRE_S - 4, FIRE_S - 4);
+      // 炎の舌：根元が広く先がとがった形が、ゆらぎながら上へ（外は橙、内は黄）
+      const tongue = (fx, base, w, h, sw, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(fx - w/2, base);
+        ctx.quadraticCurveTo(fx - w/2 - 1 + sw*.3, base - h*.55, fx + sw, base - h); ctx.quadraticCurveTo(fx + w/2 + 1 + sw*.3, base - h*.55, fx + w/2, base); ctx.fill(); };
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 5; k++) { const fx = x0 + 7 + k*8 + (k % 2 ? 2 : 0), base = y0 + FIRE_S - 3 - (k % 2)*10, ph = T*8 + k*1.7 + i;
+        const h = 22 + 12*Math.abs(Math.sin(ph)), sw = Math.sin(ph*1.3)*4;
+        tongue(fx, base, 13, h, sw, 'rgba(255,110,20,.6)'); tongue(fx, base, 7, h*.6, sw*.6, 'rgba(255,220,100,.65)'); }
+      ctx.restore(); }
+    else { const q = 1 - s.t/FIRE_COOL; ctx.fillStyle = `rgba(200,50,10,${.45*q})`; ctx.fillRect(x0 + 2, y0 + 2, FIRE_S - 4, FIRE_S - 4); } });
+  ctx.restore();
+  // 縁：黒鉄の枠と、赤く脈打つ光
+  ctx.lineWidth = 7; ctx.strokeStyle = '#0E0806'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = `rgba(255,110,40,${.55 + .25*Math.sin(T*2)})`; ctx.beginPath(); ctx.arc(cx, cy, r - 4, 0, Math.PI*2); ctx.stroke();
+  // 立ちのぼる火の粉
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 26; i++) { const ang = i*2.39, rr = r + 10 + (i*13) % 60, life = (T*.45 + i*.137) % 1;
+    const px = cx + Math.cos(ang)*rr + Math.sin(T*2 + i)*6, py = cy + Math.sin(ang)*rr*.9 - life*90;
+    ctx.fillStyle = `rgba(255,${150 + (i % 3)*40},60,${(1 - life)*.8})`; ctx.fillRect(Math.round(px), Math.round(py), i % 4 ? 2 : 3, i % 4 ? 2 : 3); }
+  ctx.restore();
+}
+
+// ================= 第4章の闘技場「蒸気の迷路」（v0.47） =================
+// 床＝緑がかった鉄の網、まわり＝太い配管（弁・圧力計の針がふれる・継ぎ目から蒸気が噴く）・緑の計器の光
+// 台＝鋲打ちの鋼板。鉄柱と蒸気の雲（ギミック）は乱戦の地形（G.terrain の pillars・bushes）として描かれる
+let JOKI_TILE = null;
+function jokiTile(){
+  if (JOKI_TILE) return JOKI_TILE;
+  const c = document.createElement('canvas'); c.width = c.height = 24; const x = c.getContext('2d');
+  x.fillStyle = '#0C1412'; x.fillRect(0, 0, 24, 24);
+  x.fillStyle = '#26342F'; for (let i = 0; i < 24; i += 6) { x.fillRect(i, 0, 2, 24); x.fillRect(0, i, 24, 2); }   // 網
+  x.fillStyle = '#3A4C44'; for (let i = 0; i < 24; i += 6) { x.fillRect(i, 0, 1, 24); x.fillRect(0, i, 24, 1); }
+  JOKI_TILE = ctx.createPattern(c, 'repeat'); return JOKI_TILE;
+}
+function drawJokiArena(){
+  const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
+  const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
+  ctx.fillStyle = jokiTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  // 台を囲む太い配管の輪（継ぎ手つき）
+  ctx.lineWidth = 22; ctx.strokeStyle = '#0A100E'; ctx.beginPath(); ctx.arc(cx, cy, r + 26, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 18; ctx.strokeStyle = '#3E5A50'; ctx.stroke();
+  ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(160,210,190,.35)'; ctx.beginPath(); ctx.arc(cx, cy, r + 22, Math.PI*1.05, Math.PI*1.75); ctx.stroke();
+  for (let i = 0; i < 12; i++) { const a = i/12*Math.PI*2, x = cx + Math.cos(a)*(r + 26), y = cy + Math.sin(a)*(r + 26);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = '#0A100E'; ctx.fillRect(-4, -13, 8, 26); ctx.fillStyle = '#7A8A60'; ctx.fillRect(-3, -12, 6, 24);
+    ctx.fillStyle = '#A8B884'; ctx.fillRect(-3, -12, 2, 24); ctx.restore(); }
+  // 四隅：圧力計（針がふれる）と、ときどき蒸気を噴く弁
+  for (let i = 0; i < 4; i++) { const a = (i + .5)/4*Math.PI*2, d = r + 66, gx = cx + Math.cos(a)*d, gy = cy + Math.sin(a)*d;
+    ctx.fillStyle = '#0A100E'; ctx.beginPath(); ctx.arc(gx, gy, 27, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#8A7A40'; ctx.beginPath(); ctx.arc(gx, gy, 25, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#E8E4D0'; ctx.beginPath(); ctx.arc(gx, gy, 20, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#2A2A20'; ctx.lineWidth = 2; for (let k = 0; k < 9; k++) { const q = Math.PI*.75 + k/8*Math.PI*1.5; ctx.beginPath(); ctx.moveTo(gx + Math.cos(q)*15, gy + Math.sin(q)*15); ctx.lineTo(gx + Math.cos(q)*19, gy + Math.sin(q)*19); ctx.stroke(); }
+    ctx.strokeStyle = '#C8301C'; ctx.beginPath(); ctx.arc(gx, gy, 17, Math.PI*2.05, Math.PI*2.25); ctx.stroke();
+    const nd = Math.PI*.75 + (.55 + .35*Math.sin(T*1.7 + i*2) + .05*Math.sin(T*23 + i))*Math.PI*1.5;   // 針
+    ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.cos(nd)*16, gy + Math.sin(nd)*16); ctx.stroke();
+    ctx.fillStyle = '#1A1A1A'; ctx.beginPath(); ctx.arc(gx, gy, 3, 0, Math.PI*2); ctx.fill();
+    const q = ((T + i*1.9) % 4.3)/4.3;   // 蒸気
+    if (q < .45) for (let j = 0; j < 5; j++) { const u = q/.45 + j*.1; if (u > 1) continue; const va = a + Math.PI + (j - 2)*.15;
+      ctx.fillStyle = `rgba(220,235,230,${(1 - u)*.4})`; ctx.beginPath(); ctx.arc(gx + Math.cos(va)*(28 + u*40), gy + Math.sin(va)*(28 + u*40) - u*10, 6 + u*14, 0, Math.PI*2); ctx.fill(); } }
+  // 台：側面と鋼板
+  ctx.fillStyle = '#0E1614'; ctx.beginPath(); ctx.arc(cx, cy + 9, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#22302C'; ctx.beginPath(); ctx.arc(cx, cy + 5, r, 0, Math.PI*2); ctx.fill();
+  const g = ctx.createRadialGradient(cx, cy - r*.3, 20, cx, cy, r); g.addColorStop(0, '#6E8078'); g.addColorStop(.7, '#55665F'); g.addColorStop(1, '#43524C');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+  ctx.strokeStyle = 'rgba(12,20,18,.5)'; ctx.lineWidth = 2;   // 鋼板の継ぎ目（斜めの格子）
+  for (let k = -6; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(cx + k*50 - r, cy - r); ctx.lineTo(cx + k*50 + r, cy + r); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + k*50 + r, cy - r); ctx.lineTo(cx + k*50 - r, cy + r); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(190,220,200,.35)'; for (let k = -6; k <= 6; k++) for (let j = -6; j <= 6; j++) ctx.fillRect(cx + k*25 + (j % 2 ? 12 : 0) - 1, cy + j*25 - 1, 2, 2);   // 鋲
+  ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.beginPath(); ctx.ellipse(cx - r*.3, cy - r*.45, r*.55, r*.25, -.4, 0, Math.PI*2); ctx.fill();
+  if (G && G.stage && CHAPTERS[G.stage.ch].gim === 'steam') drawJets(cx, cy, r);   // v0.48 蒸気の噴き出し
+  ctx.restore();
+  ctx.lineWidth = 7; ctx.strokeStyle = '#0A100E'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 3;   // 縁を流れる緑の光
+  ctx.strokeStyle = `rgba(80,255,150,${.4 + .2*Math.sin(T*3)})`; ctx.setLineDash([6, 18]); ctx.lineDashOffset = -T*50;
+  ctx.beginPath(); ctx.arc(cx, cy, r - 3, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+}
+// ================= 第5章の闘技場「からくり天守」（v0.47） =================
+// 夜の天守のてっぺん。まわり＝瓦屋根（金の棟）・四隅で揺れる提灯・舞う桜の花びら
+// 台＝黒漆の板に金の縁と家紋。床が抜けたあと（AR.r が DUEL_R より小さい）は、外側が奈落になる。抜ける予告は赤く点滅（G.edge）
+let TEN_TILE = null;
+function tenTile(){
+  if (TEN_TILE) return TEN_TILE;
+  const c = document.createElement('canvas'); c.width = 32; c.height = 16; const x = c.getContext('2d');
+  x.fillStyle = '#10141E'; x.fillRect(0, 0, 32, 16);
+  for (let i = 0; i < 2; i++) { const o = i*16;   // 瓦：丸い山が並ぶ
+    x.fillStyle = '#2A3242'; x.fillRect(o + 1, 2, 14, 12); x.fillStyle = '#3A4458'; x.fillRect(o + 3, 2, 10, 10); x.fillStyle = '#4C5872'; x.fillRect(o + 5, 3, 4, 8);
+    x.fillStyle = '#0A0C12'; x.fillRect(o, 14, 16, 2); }
+  TEN_TILE = ctx.createPattern(c, 'repeat'); return TEN_TILE;
+}
+function drawTenshuArena(){
+  const T = performance.now()/1000, r = AR.r, R0 = DUEL_R, cx = AR.x, cy = AR.y;
+  const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
+  ctx.fillStyle = tenTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  // 金の棟（十字）
+  ctx.fillStyle = '#0A0C12'; ctx.fillRect(cx - 8, oy - 30, 16, H + 60); ctx.fillRect(ox - 30, cy - 8, W + 60, 16);
+  ctx.fillStyle = '#B88A2E'; ctx.fillRect(cx - 5, oy - 30, 10, H + 60); ctx.fillRect(ox - 30, cy - 5, W + 60, 10);
+  ctx.fillStyle = '#F0D088'; ctx.fillRect(cx - 5, oy - 30, 2, H + 60); ctx.fillRect(ox - 30, cy - 5, W + 60, 2);
+  // 奈落（抜けた床の跡も含めて、元の台の大きさの穴）
+  const vg = ctx.createRadialGradient(cx, cy, R0*.6, cx, cy, R0 + 22); vg.addColorStop(0, '#000'); vg.addColorStop(.85, '#06040A'); vg.addColorStop(1, 'rgba(6,4,10,0)');
+  ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(cx, cy, R0 + 22, 0, Math.PI*2); ctx.fill();
+  ctx.lineWidth = 6; ctx.strokeStyle = '#B88A2E'; ctx.beginPath(); ctx.arc(cx, cy, R0 + 14, 0, Math.PI*2); ctx.stroke();   // 外の金の手すり
+  ctx.lineWidth = 2; ctx.strokeStyle = '#5A3A10'; ctx.beginPath(); ctx.arc(cx, cy, R0 + 17, 0, Math.PI*2); ctx.stroke();
+  // 四隅の提灯（ゆれる・暖かい光）
+  for (let i = 0; i < 4; i++) { const a = (i + .5)/4*Math.PI*2, d = R0 + 64, lx = cx + Math.cos(a)*d + Math.sin(T*1.3 + i)*4, ly = cy + Math.sin(a)*d;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const lg = ctx.createRadialGradient(lx, ly, 2, lx, ly, 60);
+    lg.addColorStop(0, `rgba(255,170,80,${.32 + .06*Math.sin(T*5 + i)})`); lg.addColorStop(1, 'rgba(255,170,80,0)'); ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, ly, 60, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#1A0E08'; ctx.fillRect(lx - 9, ly - 17, 18, 4); ctx.fillRect(lx - 9, ly + 13, 18, 4);
+    ctx.fillStyle = '#D8301C'; ctx.beginPath(); ctx.ellipse(lx, ly, 13, 15, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#FF7A3A'; ctx.beginPath(); ctx.ellipse(lx - 3, ly - 2, 6, 10, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(80,10,0,.6)'; ctx.lineWidth = 1; for (let k = -10; k <= 10; k += 5) { ctx.beginPath(); ctx.moveTo(lx - 12, ly + k); ctx.lineTo(lx + 12, ly + k); ctx.stroke(); } }
+  // 台：黒漆の板と金の縁（今の大きさ r）
+  ctx.fillStyle = '#05060A'; ctx.beginPath(); ctx.arc(cx, cy + 10, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1A1210'; ctx.beginPath(); ctx.arc(cx, cy + 5, r, 0, Math.PI*2); ctx.fill();
+  const g = ctx.createRadialGradient(cx, cy - r*.3, 20, cx, cy, r); g.addColorStop(0, '#3A2A26'); g.addColorStop(.7, '#24181A'); g.addColorStop(1, '#180F10');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; for (let x = cx - R0; x < cx + R0; x += 26) ctx.fillRect(Math.round(x), cy - R0, 2, R0*2);   // 板の目
+  ctx.fillStyle = 'rgba(255,220,180,.05)'; for (let x = cx - R0; x < cx + R0; x += 26) ctx.fillRect(Math.round(x) + 2, cy - R0, 1, R0*2);
+  // 家紋：金の輪と、八つの花びら
+  ctx.strokeStyle = 'rgba(216,170,70,.75)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, 44, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = 'rgba(216,170,70,.55)'; for (let k = 0; k < 8; k++) { const q = k/8*Math.PI*2 + T*.05; ctx.beginPath(); ctx.ellipse(cx + Math.cos(q)*24, cy + Math.sin(q)*24, 12, 5, q, 0, Math.PI*2); ctx.fill(); }
+  ctx.fillStyle = 'rgba(240,208,136,.8)'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI*2); ctx.fill();
+  // 床が抜ける予告：次に抜ける輪が赤く点滅し、ひびが入る
+  const E = G && G.edge;
+  if (E && E.warn) { const q = E.wt/EDGE_WARN, on = Math.floor(E.wt*(5 + 10*q)) % 2 === 0;
+    ctx.fillStyle = `rgba(255,40,20,${on ? .25 + .3*q : .1})`; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.arc(cx, cy, E.wr, 0, Math.PI*2, true); ctx.fill();
+    ctx.strokeStyle = `rgba(255,120,80,${.5 + .4*q})`; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.arc(cx, cy, E.wr, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(10,0,0,.7)'; ctx.lineWidth = 1.5; for (let k = 0; k < 14; k++) { const q2 = k/14*Math.PI*2 + .2; ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(q2)*E.wr, cy + Math.sin(q2)*E.wr); ctx.lineTo(cx + Math.cos(q2 + .05)*(E.wr + (r - E.wr)*.5), cy + Math.sin(q2 + .05)*(E.wr + (r - E.wr)*.5)); ctx.lineTo(cx + Math.cos(q2 - .03)*r, cy + Math.sin(q2 - .03)*r); ctx.stroke(); } }
+  ctx.restore();
+  ctx.lineWidth = 6; ctx.strokeStyle = '#0A0608'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#C8982E'; ctx.beginPath(); ctx.arc(cx, cy, r - 2, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 1; ctx.strokeStyle = '#F8E0A0'; ctx.beginPath(); ctx.arc(cx, cy, r - 3.5, 0, Math.PI*2); ctx.stroke();
+  // 抜けた破片が奈落へ落ちていく
+  if (E && E.fallT > 0) { ctx.fillStyle = '#24181A'; for (let k = 0; k < 18; k++) { const q2 = k/18*Math.PI*2, u = 1 - E.fallT/1.2, rr = r + (E.pr - r)*.5;
+    const s = 10*(1 - u*.8); ctx.globalAlpha = 1 - u; ctx.fillRect(cx + Math.cos(q2)*rr - s/2, cy + Math.sin(q2)*rr - s/2 + u*20, s, s); } ctx.globalAlpha = 1; }
+  // 舞う桜の花びら
+  ctx.fillStyle = 'rgba(255,190,210,.8)';
+  for (let i = 0; i < 16; i++) { const px = ox + ((i*83 + T*(14 + i % 4*5)) % (W + 40)) - 20, py = oy + ((i*61 + T*(22 + i % 3*6)) % (H + 40)) - 20 + Math.sin(T*2 + i)*6;
+    ctx.save(); ctx.translate(Math.round(px), Math.round(py)); ctx.rotate(T*2 + i); ctx.fillRect(-2, -1, 4, 2); ctx.restore(); }
 }
 
 // ================= ホーム画面（v0.39、ブロスタ風） =================
@@ -4683,7 +5181,7 @@ function title(){
       <div class="hmSide"><button id="hS"><i>🏮</i>店</button><button id="hG" class="gc${bag.koban >= 100 ? ' hot' : ''}"><i>🎁</i>ガチャ</button><button id="hK"><i>📦</i>蔵</button></div>
       <div class="hmStage" id="hStage">
         <div class="hmLogo">${GAME_NAME}</div>
-        <canvas id="hmCv" width="340" height="340"></canvas>
+        <canvas id="hmCv" width="680" height="680"></canvas>
         <div class="hmPlate"><b>${WEAPONS[myW].name}</b><small>タップで装備</small></div>
       </div>
       <div class="hmSide"><button id="hH"><i>📜</i>遊び方</button><button id="hU" class="${ranPref ? '' : 'off'}"><i>🛡️</i>乱入受付<br>${ranPref ? 'オン' : 'オフ'}</button><button id="hM" class="${SFX.muted ? 'off' : ''}"><i>${SFX.muted ? '🔇' : '🔊'}</i>音</button></div>
@@ -4712,18 +5210,27 @@ function title(){
   // 顔（左上の札）
   const fc = $('hmFace'), fx = fc.getContext('2d'); fx.imageSmoothingEnabled = false;
   drawMech(fx, 28, 92, Math.PI/2 - .3, mySkin, 'blue', MECH_BASE(), { px: 3.2, noSword: true, wk: myW });
-  // 真ん中の武者：ふわふわ浮いて、ときどき向きを変える
+  // 真ん中の武者：ふわふわ浮いて、ぐるっと回る（v0.44：装備画面と同じ大きさ＝canvas を2倍にして半分の大きさで見せる。研究所のカプセルの中）
   const cvs = $('hmCv'), x = cvs.getContext('2d'), sw = WEAPONS[myW].len/34, t0 = performance.now()/1000;
   let lab = null;
   const tick = () => {
     if (!cvs.isConnected) return;
     const t = performance.now()/1000 - t0, b = Math.sin(t*2.4)*.8;
     if (!lab || lab.stale()) lab = hmLab($('hmBg'), cvs); lab.draw(t);
-    const F = Math.PI/2 - .45 + Math.sin(t*.45)*.55;
+    const F = Math.PI/2 - .45 + t*.75;   // 約8.4秒で1回転
     x.clearRect(0, 0, cvs.width, cvs.height); x.imageSmoothingEnabled = false;
     const P = MECH_BASE(); P.body[2] += b*.6; P.head[2] += b; P.handL[2] += Math.sin(t*2.4 + 1)*.7; P.handR[2] += b*.6;   // 武器を持つ右手は胴と一緒に上下
-    x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(170, 306, 88 - b*3, 20, 0, 0, Math.PI*2); x.fill();
-    drawMech(x, 170, 300, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW });   // 装備画面と同じ構え（体の横で上へ立てる）
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(340, 612, 88 - b*3, 20, 0, 0, Math.PI*2); x.fill();
+    drawMech(x, 340, 600, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW });   // 装備画面と同じ構え（体の横で上へ立てる）
+    // カプセルの前のガラス：うっすら水色・映り込みの筋・上下する読み取りの光（武者にもかかる）
+    { const g = lab.glass, H = $('hmBg').parentElement.getBoundingClientRect(), C = cvs.getBoundingClientRect(), f = cvs.width/C.width;
+      const X = v => (H.left + v - C.left)*f, Y = v => (H.top + v - C.top)*f, l = X(g.l), r = X(g.r), tp = Y(g.t), bt = Y(g.b), u = 3*f;
+      x.fillStyle = 'rgba(120,220,255,.07)'; x.fillRect(l, tp, r - l, bt - tp);
+      x.fillStyle = 'rgba(210,250,255,.16)'; x.fillRect(r - 7*u, tp + 4*u, u, bt - tp - 16*u); x.fillRect(r - 5*u, tp + 10*u, u, bt - tp - 30*u);
+      const sy = Math.round(Y(g.scan(t))/u)*u;
+      x.save(); x.globalCompositeOperation = 'lighter';
+      x.fillStyle = 'rgba(80,230,255,.14)'; x.fillRect(l, sy, r - l, 4*u); x.fillStyle = 'rgba(150,245,255,.55)'; x.fillRect(l, sy, r - l, u);
+      x.restore(); }
     requestAnimationFrame(tick); };
   tick();
 }
@@ -4761,7 +5268,7 @@ function hmLab(bg, chCv){
   bg.width = W; bg.height = H;
   const c = bg.getContext('2d'), k = C.height/340;
   const cx = Math.round((C.left + C.width/2 - R.left)/S), fy = Math.round((C.top + 300*k - R.top)/S);   // 足元
-  const top = Math.round((C.top + 40*k - R.top)/S), fl = fy - 12;   // カプセルの上・壁と床の境
+  const top = Math.round((C.top + 105*k - R.top)/S), fl = fy - 12;   // カプセルの上・壁と床の境（v0.44 武者が装備画面と同じ大きさになったので低く）
   const st = document.createElement('canvas'); st.width = W; st.height = H; const s = st.getContext('2d');
   const F = (cc, x, y, w, h, col) => { cc.fillStyle = col; cc.fillRect(x, y, w, h); };
   labBase(s, W, H, cx, fl);
@@ -4795,6 +5302,8 @@ function hmLab(bg, chCv){
   cons.forEach(([x, y]) => { for (let i = 0; i < 4; i++) leds.push([x + 4 + i*4, y + 16]); });
   const LC = ['#FF4A3A', '#3CFF8A', '#FFD23A', '#4AC8FF'];
   return {
+    // v0.44 ガラスの範囲（ホームの枠の左上からの画面の単位）。武者の canvas の上に前のガラスを重ねるのに使う
+    glass: { l: (pl + 3)*S, r: pr*S, t: (pt + 8)*S, b: fy*S, scan: t => (pt + 10 + (Math.sin(t*1.1)*.5 + .5)*(fy - pt - 14))*S },
     stale(){ const r = hm.getBoundingClientRect(); return Math.abs(r.width - R.width) > 1 || Math.abs(r.height - R.height) > 1; },
     draw(t){
       c.drawImage(st, 0, 0);
