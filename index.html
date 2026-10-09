@@ -684,6 +684,7 @@ function calcMods(gear){
   return m;
 }
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), ov = document.getElementById('overlay');
+const MAIN_CTX = ctx;   // v0.52 演出をほかの canvas にも描けるように
 const quitBtn = document.getElementById('quit'), sndBtn = document.getElementById('snd');
 const sndLabel = () => SFX.muted ? '🔇' : '🔊';
 sndBtn.onclick = () => { SFX.toggle(); BGM.sync(); sndBtn.textContent = sndLabel(); };
@@ -1638,7 +1639,7 @@ const ICE_CS = ['#FFFFFF', '#E4F6FF', '#A4E4FC', '#6FB8E0'];
 function ofx(q){ (G.ofx = G.ofx || []).push({ max: q.life, ...q }); }
 // 実時間の経過（描画の間に粒をどれだけ出すか）
 const fxDt = f => { const now = performance.now()/1000, d = Math.min(.05, now - (f.fxT || now)); f.fxT = now; return d; };
-function orbBlade(f, hx, hy, ba, L){
+function orbBlade(f, hx, hy, ba, L, ctx = MAIN_CTX){
   const k = f.orb.k, t = performance.now()/1000, cx = Math.cos(ba), cy = Math.sin(ba), nx = -cy, ny = cx, dt = fxDt(f);
   const act = f.state === 'active' || f.state === 'rush', rate = act ? 3 : 1, at = u => [hx + cx*L*u, hy + cy*L*u];
   const n = q => { let m = q*dt*rate; let c = Math.floor(m); if (Math.random() < m - c) c++; return c; };   // 1秒に q 個（攻撃中は多め）
@@ -1708,7 +1709,18 @@ function orbBurst(def, k){
     for (let i = 0; i < 16; i++) { const a = rnd(0, Math.PI*2), v = rnd(120, 240); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v*.6, drag: .9, life: rnd(.2, .35), c: '#DFFFF4', sz: rnd(1.5, 3) }); } }
   else if (k === 'kori') { for (let i = 0; i < 18; i++) { const a = rnd(0, Math.PI*2), v = rnd(80, 200); ofx({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v, g: 200, drag: .95, life: rnd(.4, .7), cs: ICE_CS, sz: rnd(3, 5.5) }); } }
 }
-function drawOfx(){
+// 装備画面の鍔玉の演出（v0.52）。so＝drawMech が返した武器の握り（gx, gy）・向き（ang）・長さ（L）、px＝1ドットの大きさ
+const EQFX = { f: { state: 'idle' }, G: { ofx: [] }, t: 0 };
+function eqOrbFx(c, so, px){
+  const now = performance.now()/1000, dt = Math.min(.05, now - (EQFX.t || now)); EQFX.t = now;
+  for (const q of EQFX.G.ofx) { q.life -= dt; q.x += q.vx*dt; q.y += q.vy*dt; q.vy += (q.g || 0)*dt; q.vx *= q.drag || 1; }
+  EQFX.G.ofx = EQFX.G.ofx.filter(q => q.life > 0).slice(-300);
+  const k = bag.orbEq; if (so.gx == null) return;
+  const s = px/MECH_PX*.55, g0 = G; G = EQFX.G; EQFX.f.orb = k && ORBS[k] ? { k, lv: bag.orbs[k] || 0 } : null;   // 試合と同じ割合だと武者が隠れるので、少し小さく
+  c.save(); c.translate(so.gx, so.gy); c.scale(s, s);
+  try { if (EQFX.f.orb) orbBlade(EQFX.f, 0, 0, so.ang, so.L/s, c); drawOfx(c); } finally { G = g0; c.restore(); }
+}
+function drawOfx(ctx = MAIN_CTX){
   if (!G.ofx) return;
   for (const q of G.ofx) { const k = q.life/q.max, s2 = q.sz*(q.shrink ? .35 + .65*k : 1);
     ctx.globalAlpha = Math.min(1, k*1.6)*(q.a || 1); ctx.fillStyle = q.cs ? q.cs[Math.min(q.cs.length - 1, Math.floor((1 - k)*q.cs.length))] : q.c;
@@ -2012,7 +2024,7 @@ function loadout(level, eW, eGear, practice){
       cx.strokeStyle = 'rgba(62,142,222,.8)'; cx.lineWidth = 4; cx.beginPath(); cx.ellipse(200, 416, 92, 27, 0, 0, Math.PI*2); cx.stroke();
       const xr = armorKind(sheet) ? sheet : null;   // 透視：仕掛けの一覧を開いている間
       if (xr) { cx.save(); cx.globalAlpha = .26; }
-      drawMech(cx, 200, 410, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW });   // 武器は体の外側で上へ立てて、形が体に重ならないように（長い武器ほど高く）
+      drawMech(cx, 200, 410, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW, out: {}, fx: xr ? null : (c2, so) => eqOrbFx(c2, so, 9) });   // v0.52 鍔玉の演出（武器と同じ奥行き）   // 武器は体の外側で上へ立てて、形が体に重ならないように（長い武器ほど高く）
       if (xr) { cx.restore(); drawXray(cx, xr, (gearById(sel) || myGear[xr]).k, P, t); }
       requestAnimationFrame(tick); };
     tick();
@@ -2921,14 +2933,14 @@ const TEAM = { blue: '#3E8EDE', red: '#E0493E', green: '#4FC872', yellow: '#E8C5
 const SKINS = {
   head:   { name: '頭',     list: { none: ['鍬形', -1], hachi: ['鉢巻', 0], hachi_aka: ['赤い鉢巻', 0], kasa: ['陣笠', 0], kabuto: ['大鍬形', 1], menpo: ['面頬', 1], kitsune: ['狐面', 2], kabuto_kin: ['金の兜', 2],
                                     oni: ['鬼の角', 0], dokuro: ['どくろ', 1], tengu: ['天狗', 1], shishi: ['獅子頭', 2], chochin: ['提灯お化け', 2], kid: ['花ハート', -1] } },
-  bodyP:  { name: '胴',     list: { std: ['いつもの胴', -1], hosomi: ['細身', 0], taru: ['樽', 0], hoe: ['法衣', 1], juso: ['重装甲', 1], tokei: ['からくり時計', 2] } },
+  bodyP:  { name: '胴',     list: { std: ['いつもの胴', -1], hosomi: ['細身', 0], taru: ['樽', 0], hoe: ['法衣', 1], juso: ['重装甲', 1], tokei: ['からくり時計', 2], kid: ['おえかき胴', -1] } },
   armP:   { name: '腕',     list: { std: ['いつもの手', -1], kobushi: ['大拳', 0], tsume: ['かぎ爪', 1], ogi: ['扇', 1], kusari: ['鎖分銅', 2] } },
   legP:   { name: '脚',     list: { std: ['いつもの足', -1], geta: ['一本下駄', 0], sharin: ['車輪', 1], tako: ['たこ足', 1], jet: ['ジェット', 2] } },
   hair:   { name: '飾り',   list: { mage: ['なし', -1], pony: ['房飾り', 0], short: ['一本角', 0], long: ['長い房', 1] } },
   hairC:  { name: '金属',   list: { '#2A2522': ['鋼', -1], '#6B4428': ['銅', 0], '#3B5BA5': ['藍鉄', 0], '#B8322C': ['朱', 1], '#C9CED6': ['銀', 1], '#F2F2EE': ['白磁', 1], '#E8C25A': ['金', 2] } },
   outfit: { name: '胴の色', list: { kimono: ['生成り', -1], kon: ['紺', 0], beni: ['紅', 0], kuro: ['墨', 0], shinobi: ['忍び', 1], kariginu: ['白', 1],
                                     yoroi: ['鉄', 1], yoroi_kuro: ['黒漆', 2], yoroi_kin: ['金', 2] } },
-  back:   { name: '背中',   list: { none: ['なし', -1], flag: ['旗指物', 0], cape: ['陣羽織', 1], flag_kin: ['金の旗', 1], horo: ['母衣', 2] } },
+  back:   { name: '背中',   list: { none: ['なし', -1], flag: ['旗指物', 0], cape: ['陣羽織', 1], flag_kin: ['金の旗', 1], horo: ['母衣', 2], heart: ['ハート', -1] } },
   blade:  { name: '刃',     list: { plain: ['いつもの刃', -1], shu: ['朱の柄', 0], ao: ['青い刃', 1], sakura: ['桜の刃', 1], yoto: ['妖刀', 2], kin: ['金の刃', 2] } },
 };
 const BLADE = { plain: { edge: '#DDE3EA', grip: '#2A2D34', guard: GOLD }, shu: { edge: '#DDE3EA', grip: '#B8322C', guard: '#2A2D34' },
@@ -3028,6 +3040,7 @@ const BODYP = {
     side:  ['..KKKK..', '.KYYYYK.', 'KYBBBBYK', 'KYBBBBYK', 'KYBBBBYK', 'KYBBBBYK', '.KYYYYK.', '.KTTBbK.', '.KbBBbK.', '..KKKK..'],
     bdiag: ['..KKKKKK..', '.KYYYYYYK.', 'KYBYBBBBYK', 'KYBYBmmBYK', 'KYBYBmmBYK', 'KYBYBBBBYK', '.KYYYYYYK.', '.KBBBTTbK.', '.KbBBBBbK.', '..KKKKKK..'],
     back:  ['..KKKKKK..', '.KYYYYYYK.', 'KYBBBBBBYK', 'KYBmmBBBYK', 'KYBmmBmBYK', 'KYBBBBBBYK', '.KYYYYYYK.', '.KBBTTBbK.', '.KbBBBBbK.', '..KKKKKK..'] },
+  kid: {"front": ["..KKKKKKKK..", "..KNNNNNNK..", ".KNNNNNNNNK.", ".KOOOOOOOOK.", ".KOOOOOOOOK.", ".KOOOOOOOOK.", "KONNNNNONNNK", "KNNNNNNNNNNK", "KKKKKKKKKKKK"], "fdiag": ["..KKKKKKK..", "..KNNNNNK..", ".KNNNNNNNK.", ".KOOOOOOOK.", ".KOOOOOOOK.", ".KOOOOOOOK.", "KONNNNOONNK", "KNNNNNNNNNK", "KKKKKKKKKKK"], "side": [".KKKKKK.", ".KNNNNK.", ".KNNNNK.", ".KOOOOK.", ".KOOOOK.", "KOOOOOOK", "KONNNNOK", "KNNNNNNK", "KKKKKKKK"], "bdiag": ["..KKKKKKK..", "..KNNNNNK..", ".KNNNNNNNK.", ".KOOOOOOOK.", ".KOOOOOOOK.", ".KOOOOOOOK.", "KNNNNNONNNK", "KNNNNNNNNNK", "KKKKKKKKKKK"], "back": ["..KKKKKKKK..", "..KNNNNNNK..", ".KNNNNNNNNK.", ".KOOOOOOOOK.", ".KOOOOOOOOK.", ".KOOOOOOOOK.", "KNNNNOONNNNK", "KNNNNNNNNNNK", "KKKKKKKKKKKK"]},   // 子供が描いた胴（v0.50）
 };
 // 腕：L＝左手（R がなければ刀を持つ手も同じ絵）。cx・cy＝握りの位置
 const ARMP = {
@@ -3533,6 +3546,7 @@ const BACK2 = {
   cape: { front: CAPE_FRONT, fdiag: CAPE_FDIAG, side: CAPE_SIDE, bdiag: CAPE_BDIAG, back: CAPE_BACK },
   horo: { front: horoView(24, 0, false), fdiag: horoView(20, 1, true), side: horoView(14, 3, true), bdiag: horoView(20, 1, true), back: horoView(24, 0, true) },
 };
+BACK2.heart = {"back": ["....KKKK......KKKK....", "..KKNNWNK....KNNNNKK..", ".KNHNNNNNK..KNNNHNNNK.", ".KNNNNNNNNKKNNNNNNWNK.", "KNNNNNHNNNNNNNNNNNNHNK", "KHNNNNNNNNNNNNHNNNNNNK", "KNNNNNNNNHNNNNNNNNNNNK", ".KNNHWNNNNNNNNNNNHNNK.", ".KNNNNNNNNNWHNNNNNNNK.", "..KKNNNHNNNNNNNNNWKK..", "....KNNNNNNNNNNHNK....", ".....KNNNNHNNNNNK.....", "......KNNNNNNNNK......", "......KNNNNNNHNK......", ".......KHNNNNNK.......", "........KNNNNK........", ".........KNHK.........", ".........KNNK.........", "..........KK..........", "......................"], "front": ["....KKKK......KKKK....", "..KKNNWNK....KNNNNKK..", ".KNHNNNNNK..KNNNHNNNK.", ".KNNNNNNNNKKNNNNNNWNK.", "KNNNNNHNNNNNNNNNNNNHNK", "KHNNNNNNNNNNNNHNNNNNNK", "KNNNNNNNNHNNNNNNNNNNNK", ".KNNHWNNNNNNNNNNNHNNK.", ".KNNNNNNNNNWHNNNNNNNK.", "..KKNNNHNNNNNNNNNWKK..", "....KNNNNNNNNNNHNK....", ".....KNNNNHNNNNNK.....", "......KNNNNNNNNK......", "......KNNNNNNHNK......", ".......KHNNNNNK.......", "........KNNNNK........", ".........KNHK.........", ".........KNNK.........", "..........KK..........", "......................"], "bdiag": ["....KK..KK....", "...KNK..KNK...", "...KNNKKNNK...", "...KNNNNNNK...", "...KNNHNNNK...", "...KNNNNNNK...", "...KNNNNNHK...", "...KHWNNNNK...", "...KNNNNNNK...", "....KNNHNK....", "....KNNNNK....", ".....KNNK.....", ".....KNNK.....", ".....KNNK.....", ".....KNNK.....", "......KK......", "......KK......", "......KK......", "..............", ".............."], "fdiag": ["....KK..KK....", "...KNK..KNK...", "...KNNKKNNK...", "...KNNNNNNK...", "...KNNHNNNK...", "...KNNNNNNK...", "...KNNNNNHK...", "...KHWNNNNK...", "...KNNNNNNK...", "....KNNHNK....", "....KNNNNK....", ".....KNNK.....", ".....KNNK.....", ".....KNNK.....", ".....KNNK.....", "......KK......", "......KK......", "......KK......", "..............", ".............."], "side": ["KKKKKK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", "KHNNHK", ".KHHK.", "..KK..", "..KK.."]};   // 子供が描いた背中のハート（v0.51）
 for (const k in BACK2) for (const v in BACK2[k]) { const r = BACK2[k][v]; r.big = true;
   if (r.length % 2 || r.some(x => x.length !== r[0].length) || r[0].length % 2) console.warn('背中の絵の大きさ', k, v); }
 
@@ -3797,6 +3811,7 @@ B2BODY.tokei.fdiag = B2BODY.tokei.front.map((r, i) => ({ 3: 'KYyWWWWKWWWyYBBBByY
   6: 'KYyWWWWKWWWWyYBBByYK', 7: 'KYyKWWWKKKKWyYBBByYK', 8: 'KYyWWWWWWWWWyYBBByYK', 9: 'KYyWWWWWWWWWyYBBByYK',
   10: 'KYyyWWWKWWWyyYBBByYK', 11: 'KYYyyyyyyyyyYYBBByYK' })[i] || r);
 B2BODY.tokei.bdiag = B2BODY.tokei.back;
+B2BODY.kid = {"front": ["....KKKKKKKKKKKKKKKK....", "....KNNNNNNNNNNHNNNK....", "....KNNNHNNNNNNNNNNK....", "....KNNNNNNNHNNNNNNK....", "...KNHNNNNNNNNNNHNNNK...", "...KNNONNHONNNONNNONK...", "...KNOOONOOONOOONOOOK...", "...KOOOOOOOOOOOOOOOOK...", "..KOOOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOOOK..", "..KOOOONNNNOOOOOOOONNK..", ".KOOONNNNNNNNOOOONNNNNK.", ".KNNNNNNHNNNNNNNNNNHNNK.", ".KNNNNNNNNNNHNNNNNNNNNK.", ".KNNNHNNNNNNNNNNHNNNNNK.", "KNNNNNNNNHNNNNNNNNNNHNNK", "KKKKKKKKKKKKKKKKKKKKKKKK"], "fdiag": ["....KKKKKKKKKKKKKK....", "....KNNNNHNNNNNNNK....", "....KNNNNNNNNHNNNK....", "....KNHNNNNNNNNNNK....", "...KNNNNNNHNNNNNNNK...", "...KNONNNONNNOHNNOK...", "...KOOOHOOONOOONOOK...", "...KOOOOOOOOOOOOOOK...", "..KOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOK..", "..KOOONNNNOOOOOOOONK..", ".KOOONNNNHNNOOOONNNNK.", ".KHNNNNNNNNNNHNNNNNNK.", ".KNNNNHNNNNNNNNNNHNNK.", ".KNNNNNNNNHNNNNNNNNNK.", "KNNHNNNNNNNNNNHNNNNNNK", "KKKKKKKKKKKKKKKKKKKKKK"], "side": ["...KKKKKKKKKK...", "...KNNNNNNNNK...", "...KNNNHNNNNK...", "...KNNNNNNNHK...", "...KHNNNNNNNK...", "..KNONNNONNNOK..", "..KOOONOOONOOK..", "..KOOOOOOOOOOK..", "..KOOOOOOOOOOK..", "..KOOOOOOOOOOK..", ".KOOOOOOOOOOOOK.", ".KOOOONNNNOOOOK.", ".KOONNNNNNNOOOK.", ".KNNNNNHNNNNNNK.", ".KNNNNNNNNNHNNK.", ".KNNHNNNNNNNNNK.", "KNNNNNNNHNNNNNNK", "KKKKKKKKKKKKKKKK"], "bdiag": ["....KKKKKKKKKKKKKK....", "....KNNNNNNNNHNNNK....", "....KNHNNNNNNNNNNK....", "....KNNNNNHNNNNNNK....", "...KNNNNNNNNNNHNNNK...", "...KNNOHNNONNNONNNK...", "...KNOOONOOONOOONOK...", "...KOOOOOOOOOOOOOOK...", "..KOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOK..", "..KOONNNNOOOOOOONNNK..", ".KONNNNNNNNOOOONNNNNK.", ".KNNNNHNNNNNNNNNNHNNK.", ".KNNNNNNNNHNNNNNNNNNK.", ".KNHNNNNNNNNNNHNNNNNK.", "KNNNNNNHNNNNNNNNNNHNNK", "KKKKKKKKKKKKKKKKKKKKKK"], "back": ["....KKKKKKKKKKKKKKKK....", "....KNNNHNNNNNNNNNNK....", "....KNNNNNNNHNNNNNNK....", "....KHNNNNNNNNNNHNNK....", "...KNNNNNHNNNNNNNNNNK...", "...KNNNONNNONHNONNNOK...", "...KONOOONOOONOOOHOOK...", "...KOOOOOOOOOOOOOOOOK...", "..KOOOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOOOK..", "..KOOOOOOOOOOOOOOOOOOK..", "..KOHNNNOOOOOOOONNNNOK..", ".KNNNNNNHNOOOONNNNNHNOK.", ".KNNNNNNNNNNHNNNNNNNNNK.", ".KNNNHNNNNNNNNNNHNNNNNK.", ".KNNNNNNNHNNNNNNNNNNHNK.", "KNHNNNNNNNNNNHNNNNNNNNNK", "KKKKKKKKKKKKKKKKKKKKKKKK"]};
 for (const k in B2BODY) for (const v in B2BODY[k]) { const o = BODYP[k][v]; if (o) reg(Array.isArray(o) ? o : o.rows, B2BODY[k][v]); else console.warn('胴の向きがない', k, v); }
 
 // ---------- 着せ替えの腕（ARMP）・脚（LEGP）：2倍 ----------
@@ -4021,7 +4036,7 @@ function drawMech(c, x, y, F, skin, team, P, o = {}){
   const BP = BODYP[skin.bodyP];
   part(BP ? pickView(BP, view) : MSPR['body_' + view], P.body);
   if (skin.back && skin.back !== 'none' && P.body) {   // 背負い物は胴の後ろ
-    const off = { flag: [-3, 0, 14], flag_kin: [-3, 0, 14], cape: [-2.5, 0, -.5], horo: [-5, 0, 5] }[skin.back];
+    const off = { flag: [-3, 0, 14], flag_kin: [-3, 0, 14], cape: [-2.5, 0, -.5], horo: [-5, 0, 5], heart: [-4.5, 0, 3.5] }[skin.back];
     part(BACK2[skin.back] ? { rows: BACK2[skin.back][view] } : MSPR[skin.back], [P.body[0] + off[0], P.body[1] + off[1], P.body[2] + off[2]], -.2);
   }
   const HP = HEADP[skin.head];
@@ -4045,7 +4060,8 @@ function drawMech(c, x, y, F, skin, team, P, o = {}){
       // v0.41.2 握る位置：手の絵は place で 1ドットのマス目にそろえて置かれるので、武器も同じ所から描く（ずれると上下のたびに手と武器が別々に動く）
       const hs = spr(armSpr(skin, 'R')), hImg = im(hs.rows), hax = (flip ? hImg.width - (hs.cx ?? hImg.width/2) : (hs.cx ?? hImg.width/2))*px, hay = (hs.cy ?? hImg.height/2)*px;
       const gx = Rd(h.x - hax) + hax, gy = Rd(h.y - hay) + hay;
-      list.push([h.d + .05, () => drawWeaponPix(c, gx, gy, Math.atan2(t.y - h.y, t.x - h.x), o.wk || 'katana', px, Math.hypot(t.x - h.x, t.y - h.y), skin.blade, !!o.white, kq)]); }
+      if (o.out) Object.assign(o.out, { gx, gy, ang: Math.atan2(t.y - h.y, t.x - h.x), L: Math.hypot(t.x - h.x, t.y - h.y) });   // v0.52 装備画面の鍔玉の演出用
+      list.push([h.d + .05, () => { drawWeaponPix(c, gx, gy, Math.atan2(t.y - h.y, t.x - h.x), o.wk || 'katana', px, Math.hypot(t.x - h.x, t.y - h.y), skin.blade, !!o.white, kq); if (o.fx) o.fx(c, o.out); }]); }
   }
   list.sort((a, b) => a[0] - b[0]).forEach(([, fn]) => fn());
 }
@@ -5227,7 +5243,8 @@ function title(){
     x.clearRect(0, 0, cvs.width, cvs.height); x.imageSmoothingEnabled = false;
     const P = MECH_BASE(); P.body[2] += b*.6; P.head[2] += b; P.handL[2] += Math.sin(t*2.4 + 1)*.7; P.handR[2] += b*.6;   // 武器を持つ右手は胴と一緒に上下
     x.fillStyle = 'rgba(0,0,0,.35)'; x.beginPath(); x.ellipse(340, 612, 88 - b*3, 20, 0, 0, Math.PI*2); x.fill();
-    drawMech(x, 340, 600, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW });   // 装備画面と同じ構え（体の横で上へ立てる）
+    drawMech(x, 340, 600, F, mySkin, 'blue', P, { px: 9, sword: [1, 7, 5 + 7*sw], wk: myW, out: {},   // 装備画面と同じ構え（体の横で上へ立てる）
+      fx: typeof eqOrbFx === 'function' ? (c2, so) => eqOrbFx(c2, so, 9) : null });   // v0.52 鍔玉の演出（武器と同じ奥行き）
     // カプセルの前のガラス：うっすら水色・映り込みの筋・上下する読み取りの光（武者にもかかる）
     { const g = lab.glass, H = $('hmBg').parentElement.getBoundingClientRect(), C = cvs.getBoundingClientRect(), f = cvs.width/C.width;
       const X = v => (H.left + v - C.left)*f, Y = v => (H.top + v - C.top)*f, l = X(g.l), r = X(g.r), tp = Y(g.t), bt = Y(g.b), u = 3*f;
