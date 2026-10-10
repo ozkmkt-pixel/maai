@@ -583,7 +583,8 @@
 
 <script>
 // ================= 基本設定 =================
-const W = 360, H = 640, AR = {x:180, y:262, r:150};
+let W = 360, H = 640; const AR = {x:180, y:262, r:150};   // v0.54 W・H は横画面の試合で 740×360 に入れ替える
+let YOKO = false; const YK = { W: 740, H: 360, cx: 370, cy: 186 };   // v0.54 横画面の試合（yoko.js）
 // 武器。最後の段は重く、ためが長く、怯まない（heavy）
 //   parry：ガードを押してからこの秒数以内に攻撃を受けると「はじき」
 //   guardMul：ガードで受けたときのスタミナの減り方　near：AIがこれより近いと下がる距離
@@ -668,16 +669,31 @@ const ARMOR = {
   }},
 };
 const SLOTS = Object.keys(ARMOR), ADDITIVE = ['hp', 'stMax', 'parry', 'dashIf', 'dashSt'];
+// v0.53 型ごとの長所（[0]）と短所（[1]）。等級と強化で長所だけを gearPow 倍にする（掛け算の値は 1 からの差を倍に、0.2 より小さくしない）
+const GEAR_PC = {
+  a1: [{ dmgTaken: .88 }, { speed: .95 }], a2: [{ parry: .05 }, { hp: -10 }], a3: [{ dashIf: .05 }, { dmgTaken: 1.08 }],
+  b1: [{ hp: 30 }, { speed: .88, stRegen: .9 }], b2: [{ guardMul: .75, hp: 10 }, { dashSt: 4 }], b3: [{ stMax: 25, stRegen: 1.15 }, { hp: -10 }],
+  c1: [{ knock: .5, stunMul: .75 }, { speed: .93 }], c2: [{ speed: 1.12 }, { dmgTaken: 1.05 }], c3: [{ dashSt: -6, dashDist: 1.25 }, { guardMul: 1.15 }],
+};
+const RARE_POW = [1, 1.2, 1.4, 1.6], LV_POW = .08;
+const gearPow = g => g && g.r != null ? RARE_POW[g.r] + LV_POW*(g.lv || 0) : 1;   // 型だけ（練習の相手など）は 1
+const scaleMod = (k, v, p) => ADDITIVE.includes(k) ? v*p : Math.max(.2, 1 + (v - 1)*p);
+const gearPro = (k, p) => Object.fromEntries(Object.entries(GEAR_PC[k][0]).map(([kk, v]) => [kk, scaleMod(kk, v, p)]));
+const pctTxt = v => `${v < 1 ? '-' : '+'}${Math.round(Math.abs(v - 1)*100)}%`;
+const secTxt = v => (Math.round(v*1000)/1000).toString();   // 秒は小数3けたまで（強化1段の差が見えるように）
+const MOD_TXT = { dmgTaken: v => '受けるダメ' + pctTxt(v), speed: v => '移動' + pctTxt(v), stRegen: v => 'スタミナ回復' + pctTxt(v), guardMul: v => 'ガード時のスタミナ減' + pctTxt(v),
+  knock: v => '吹き飛び' + pctTxt(v), stunMul: v => '怯み' + pctTxt(v), dashDist: v => '回避距離' + pctTxt(v), hp: v => '体力+' + Math.round(v), stMax: v => 'スタミナ上限+' + Math.round(v),
+  parry: v => `はじき受付+${secTxt(v)}秒`, dashIf: v => `回避の無敵+${secTxt(v)}秒`, dashSt: v => '回避スタミナ' + (v < 0 ? '' : '+') + Math.round(v) };
+const prosTxt = g => Object.entries(gearPro(g.k, gearPow(g))).map(([k, v]) => MOD_TXT[k](v));
 const randomGear = () => Object.fromEntries(SLOTS.map(s => { const ks = Object.keys(ARMOR[s].items); return [s, ks[Math.floor(Math.random()*ks.length)]]; }));
 // v0.27：gear の各部位は、型のキー（'a1' など。練習相手）か、仕掛けの品（{k, r, lv, subs, sp, set}）
-// 型の主効果に、品の副効果・特殊能力（m.sp）・銘を3つそろえた効果（m.set）を重ねる
+// 型の長所（等級・強化で大きくなる）と短所に、特殊能力（m.sp）・銘を3つそろえた効果（m.set）を重ねる（v0.53 副効果はなくした）
 const asItem = g => typeof g === 'string' ? { k: g } : g;
 const addMods = (m, mods) => { for (const k in mods) { if (ADDITIVE.includes(k)) m[k] += mods[k]; else m[k] *= mods[k]; } };
 function calcMods(gear){
   const m = {hp:0, stMax:0, parry:0, dashIf:0, dashSt:0, dmgTaken:1, speed:1, stRegen:1, guardMul:1, dashDist:1, knock:1, stunMul:1, atk:1, chip:1, sp:{}, set:null}, sets = {};
   for (const s of SLOTS) { const g = asItem(gear[s]), it = g && ARMOR[s].items[g.k]; if (!it) continue;
-    addMods(m, it.mods);
-    for (const [k, v] of g.subs || []) { const S = SUBS[k]; if (S.u === '%') m[k] *= S.neg ? 1 - v/100 : 1 + v/100; else m[k] += v; }
+    addMods(m, gearPro(g.k, gearPow(g))); addMods(m, GEAR_PC[g.k][1]);   // v0.53 長所（等級と強化で大きくなる）＋短所
     if (g.sp) m.sp[g.sp] = 1;
     if (g.set) sets[g.set] = (sets[g.set] || 0) + 1; }
   for (const k in sets) if (sets[k] >= 3 && SETS[k]) { m.set = k; addMods(m, SETS[k].mods); }
@@ -711,8 +727,8 @@ function resize(){
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
   // 「練習をやめる」「やめる」は操作パネルの左上（空いている場所）に置く
   const c = cv.getBoundingClientRect();
-  sndBtn.style.left = (c.left - a.left + (W - 42)*scale) + 'px'; sndBtn.style.top = (c.top - a.top + 82*scale) + 'px'; sndBtn.style.transform = `scale(${scale})`; sndBtn.style.transformOrigin = '0 0';
-  quitBtn.style.left = (c.left - a.left + 10*scale) + "px"; quitBtn.style.top = (c.top - a.top + 440*scale) + "px"; quitBtn.style.fontSize = 11*scale + "px"; quitBtn.style.padding = `${5*scale}px ${11*scale}px`;
+  sndBtn.style.left = (c.left - a.left + (W - 42)*scale) + 'px'; sndBtn.style.top = (c.top - a.top + (YOKO ? 88 : 82)*scale) + 'px'; sndBtn.style.transform = `scale(${scale})`; sndBtn.style.transformOrigin = '0 0';
+  quitBtn.style.left = (c.left - a.left + 10*scale) + "px"; quitBtn.style.top = (c.top - a.top + (YOKO ? 90 : 440)*scale) + "px"; quitBtn.style.fontSize = 11*scale + "px"; quitBtn.style.padding = `${5*scale}px ${11*scale}px`;
 }
 addEventListener('resize', resize);
 const rnd = (a,b) => a + Math.random()*(b-a);
@@ -1478,7 +1494,7 @@ appEl.addEventListener('pointerdown', e => {
   e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(err) {}
   const q = toLogical(e), b = btnAt(q.x, q.y);
   if (b) { touches.set(e.pointerId, {role:b}); if (b === 'atk') P.attack = true; if (b === 'dash') P.dash = true; if (b === 'thr') P.throw = true; if (b === 'ougi') P.ougi = true; }
-  else if (q.x < W*0.6 && q.y > 300) { stick = {id:e.pointerId, ox:q.x, oy:q.y, x:q.x, y:q.y}; touches.set(e.pointerId, {role:'stick'}); }
+  else if (YOKO ? q.x < W*.45 && q.y > 90 : (q.x < W*0.6 && q.y > 300)) { stick = {id:e.pointerId, ox:q.x, oy:q.y, x:q.x, y:q.y}; touches.set(e.pointerId, {role:'stick'}); }
   syncGuard();
 });
 // iOS Safari：ページの引っぱり・スクロールを止める（装備画面のスクロールだけは許す）
@@ -1568,7 +1584,7 @@ const gearCard = (it, i = 0) => shCard(it.s, it.k, gearName(it), it.r, { i, sub:
 // v0.27.1：手に入れたその場で、品位・副効果・特殊能力・銘が分かるように1つ1行で
 const dropRow = (it, i) => `<div class="dRow" style="--rc:${RARE[it.r].c};animation-delay:${i*120}ms"><canvas data-th="${it.s}|${it.k}" width="108" height="108"></canvas>
   <div class="dInfo"><div class="dHd">${rareTag(it.r)}<b>${gearName(it)}</b>${SETS[it.set] ? `<span class="tag set" style="--sc:${SETS[it.set].c}">銘 ${SETS[it.set].n}</span>` : ''}${it.full ? '<span class="tag n">いっぱい→小判</span>' : ''}</div>
-  <div class="dSubs">${it.subs.map(([k, v]) => `<span class="tag s">${subTxt(k, v)}</span>`).join('')}</div>
+  <div class="dSubs">${prosTxt(it).map(t => `<span class="tag p">＋${t}</span>`).join('')}</div>
   ${it.sp ? `<div class="gSp"><b>${SPECIALS[it.sp].n}</b>${SPECIALS[it.sp].d}</div>` : ''}</div></div>`;
 const dropHtml = (list, boss) => list.length ? `<div class="dropT">${boss ? `強敵「${boss.n}」の銘を手に入れた！` : '仕掛けを手に入れた'}</div><div class="dList">${list.map(dropRow).join('')}</div>` : '';
 
@@ -1923,8 +1939,8 @@ function loadout(level, eW, eGear, practice){
     const cnt = setCount({...myGear, [sheet]: it}), cost = enhCost(it), maxed = it.lv >= MAX_LV[it.r];
     const now = statsOf(myW, {...myGear, [sheet]: it}, PARRY_BONUS), was = statsOf(myW, myGear, PARRY_BONUS);   // 比べる相手は今装備している品
     const det = `<div class="gDet"><div class="gHd"><span class="nm">${rareTag(it.r)}${gearName(it)}</span>${S ? `<span class="tag set" style="--sc:${S.c}">銘 ${S.n}</span>` : ''}</div>
-      <div>${tagChips(A.pros, A.cons)}</div>
-      <div class="gSubs">${it.subs.length ? it.subs.map(([k, v]) => `<span class="tag s${k === lastUp ? ' up' : ''}">${subTxt(k, v)}</span>`).join('') : '<span class="gNone">副効果なし</span>'}</div>
+      <div>${tagChips(prosTxt(it), A.cons)}</div>
+      ${maxed ? '' : `<div class="gSet">強化すると：${(nx => prosTxt(it).map((t, i) => `${t} → ${nx[i].replace(/^[^+-]+/, '')}`))(prosTxt({ ...it, lv: (it.lv || 0) + 1 })).join('・')}</div>`}
       ${it.sp ? `<div class="gSp"><b>${SPECIALS[it.sp].n}</b>${SPECIALS[it.sp].d}</div>` : ''}
       ${S ? `<div class="gSet${cnt[it.set] >= 3 ? ' on' : ''}" style="--sc:${S.c}"><b>銘「${S.n}」${Math.min(3, cnt[it.set] || 0)}/3</b>3つそろえると：${S.d}</div>` : ''}${diffChips(now, was)}</div>`;
     const acts = !own ? '' : `<div class="gActs">${it.id === eq ? '<button disabled>装備中</button>' : '<button id="gEq" class="go">装備する</button>'}
@@ -2102,7 +2118,7 @@ function dailyItems(){
 function shopScreen(tab = 'armor'){
   const tabs = [['armor', '仕掛け'], ['frag', '欠片交換'], ['daily', '日替わり']];
   let body = '', list = [];
-  if (tab === 'armor') body = `<p class="shNote top">仕掛けの箱：上以上が1つ出る。型・副効果・銘はランダム。試合に勝っても手に入る</p>` + SLOTS.map(s => `
+  if (tab === 'armor') body = `<p class="shNote top">仕掛けの箱：上以上が1つ出る。型と銘はランダム。試合に勝っても手に入る</p>` + SLOTS.map(s => `
     <div class="shRow"><div class="shIcon"><canvas data-th="${s}|${Object.keys(ARMOR[s].items)[(Date.now()/1000|0) % 3]}" width="96" height="96"></canvas></div>
       <div class="shInfo"><b>${ARMOR[s].label}の箱</b><div>${[3, 2, 1].map(r => `<span class="tag" style="background:${RARE[r].c}33;color:${RARE[r].c}">${RARE[r].n} ${BOX.w[r]}%</span>`).join('')}</div></div>
       <button class="shBuy" data-box="${s}" ${bag.koban < BOX.price ? 'disabled' : ''}>${BOX.price}<small>枚</small></button></div>`).join('')
@@ -2155,7 +2171,7 @@ function openBox(s){
 // 品の中身（箱の結果など）：主効果・副効果・特殊能力・銘
 function gearInfo(it){
   const A = ARMOR[it.s].items[it.k], S = SETS[it.set];
-  return `<div class="gDet gBx"><div>${tagChips(A.pros, A.cons)}</div><div class="gSubs">${it.subs.map(([k, v]) => `<span class="tag s">${subTxt(k, v)}</span>`).join('')}</div>
+  return `<div class="gDet gBx"><div>${tagChips(prosTxt(it), A.cons)}</div>
     ${it.sp ? `<div class="gSp"><b>${SPECIALS[it.sp].n}</b>${SPECIALS[it.sp].d}</div>` : ''}${S ? `<div class="gSet" style="--sc:${S.c}"><b>銘「${S.n}」</b>3つそろえると：${S.d}</div>` : ''}</div>`;
 }
 // 蔵：集めた見た目と防具。持っていない物は黒い影と「？？？」（等級の色の枠だけ見える）
@@ -2751,6 +2767,7 @@ function draw(){
   ctx.fillStyle = '#15181D'; ctx.fillRect(0, 0, W, H);
   if (!G) return;
   ctx.save();
+  if (YOKO) ctx.translate(YK.cx - AR.x, YK.cy - AR.y);   // v0.54 横画面：闘技場を画面の真ん中へ
   if (G.shake > 0) ctx.translate(rnd(-4,4)*G.shake*5, rnd(-4,4)*G.shake*5);
   if (G.cam) ctx.translate(AR.x - G.cam.x, AR.y - G.cam.y);   // 乱戦：自分が画面の真ん中に来るようにずらす
   stArena();   // v0.40 地下闘技場（床・台・まわりの飾り）。v0.44 ステージは章ごとの闘技場
@@ -2779,15 +2796,16 @@ function draw(){
   ctx.globalAlpha = 1;
   ctx.restore();
   if (G.cam) drawOffscreen();
-  if (G.mikiriT > 0) { ctx.fillStyle = `rgba(150,130,255,${Math.min(.14, G.mikiriT*.2)})`; ctx.fillRect(0, 76, W, 354); }   // 奥義「見切り」の間は紫がかる
-  drawHUD(); drawControls();
+  if (G.mikiriT > 0) { ctx.fillStyle = `rgba(150,130,255,${Math.min(.14, G.mikiriT*.2)})`; ctx.fillRect(0, YOKO ? 0 : 76, W, YOKO ? H : 354); }   // 奥義「見切り」の間は紫がかる
+  if (YOKO) drawHUDYoko(); else drawHUD(); drawControls();
   if (G.phase === 'intro') banner(G.melee ? `乱戦 ${G.fs.length}人` : G.practice ? `練習：${G.e.name}` : G.round === 1 && G.pw + G.ew === 0 ? `${G.e.name}` : `ラウンド ${G.round}`, G.phaseT > .6 ? '始め！' : '');
   if (G.phase === 'ko') banner(G.melee ? (G.meleeRank === 1 ? '勝ち残り！' : '撃破された') : G.e.hp <= 0 ? '一本！' : '一本取られた', '');
 }
 function banner(a, b){
-  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(10,12,15,.55)'; ctx.fillRect(0, AR.y - 44, W, 88);
-  ctx.font = '30px "Dela Gothic One", sans-serif'; ctx.fillStyle = '#F4EEDF'; ctx.fillText(a, W/2, AR.y + (b ? -4 : 10));
-  if (b) { ctx.font = '22px "Dela Gothic One", sans-serif'; ctx.fillStyle = '#E8B23A'; ctx.fillText(b, W/2, AR.y + 30); }
+  const by = YOKO ? YK.cy : AR.y;   // v0.54
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(10,12,15,.55)'; ctx.fillRect(0, by - 44, W, 88);
+  ctx.font = '30px "Dela Gothic One", sans-serif'; ctx.fillStyle = '#F4EEDF'; ctx.fillText(a, W/2, by + (b ? -4 : 10));
+  if (b) { ctx.font = '22px "Dela Gothic One", sans-serif'; ctx.fillStyle = '#E8B23A'; ctx.fillText(b, W/2, by + 30); }
 }
 // 広い闘技場の地面：動いているのが分かるように、同心円と小石を散らす（小石の位置は毎回同じ）
 const PEBBLES = (() => { let sd = 7; const r1 = () => (sd = (sd*16807) % 2147483647)/2147483647;
@@ -4133,15 +4151,9 @@ const pickOne = a => a[Math.floor(Math.random()*a.length)];
 const rollSub = k => { const S = SUBS[k], v = S.lo + Math.random()*(S.hi - S.lo); return S.dec ? Math.round(v*100)/100 : Math.round(v); };
 const subTxt = (k, v) => { const S = SUBS[k]; return `${S.n}${S.neg ? '-' : '+'}${S.dec ? v.toFixed(2) : v}${S.u}`; };
 function addSub(it){ const k = pickOne(SUB_KEYS.filter(k => !it.subs.some(x => x[0] === k))); it.subs.push([k, rollSub(k)]); return k; }
-// 強化1回：副効果が4つ未満なら1つ増え、4つなら今ある1つが伸びる（どれが伸びるかは運）。伸びた副効果のキーを返す
-function enhance(it){
-  it.lv++;
-  if (it.subs.length < 4) return addSub(it);
-  const x = pickOne(it.subs), S = SUBS[x[0]]; x[1] = S.dec ? Math.round((x[1] + rollSub(x[0]))*100)/100 : x[1] + rollSub(x[0]); return x[0];
-}
+function enhance(it){ it.lv++; return null; }   // v0.53 強化は長所を大きくするだけ（gearPow）
 function makeGear(r, o = {}){   // o.s：部位、o.set：銘（指定がなければランダム）
   const s = o.s || pickOne(SLOTS), it = { s, k: pickOne(Object.keys(ARMOR[s].items)), r, lv: 0, subs: [], sp: null, set: o.set || pickOne(NORMAL_SETS), lock: false };
-  for (let i = 0; i < START_SUBS[r]; i++) addSub(it);
   if (r === 3 || (r === 2 && Math.random() < .3)) it.sp = pickOne(SP_KEYS);
   return it;
 }
@@ -4169,6 +4181,9 @@ function grantGear(list){
   saveBag(); return list;
 }
 const gearById = id => bag.gear.find(g => g.id === id);
+// v0.53 副効果をなくした：持っていた副効果は1つ15枚の小判にして返す（1回だけ）
+if (!bag.simpleGear) { let n = 0; for (const g of bag.gear || []) { n += (g.subs || []).length; g.subs = []; }
+  bag.simpleGear = 1; if (n) { bag.koban += n*15; setTimeout(() => { try { alertCard(`仕掛けの副効果をなくしました（小判 +${n*15}）`); } catch(e) {} }, 1200); } saveBag(); }
 function syncGear(){   // 装備している品（bag.eq の id）→ myGear。なくなっていたら、その部位のいちばん良い物
   for (const s of SLOTS) { let g = gearById(bag.eq[s]);
     if (!g || g.s !== s) { g = bag.gear.filter(x => x.s === s).sort((a, b) => b.r - a.r || b.lv - a.lv)[0]; bag.eq[s] = g ? g.id : null; }
@@ -4501,11 +4516,11 @@ function drawHUD(){
 }
 function drawControls(){
   const y0 = 430;
-  ctx.fillStyle = '#1B1F26'; ctx.fillRect(0, y0, W, H - y0);
-  ctx.fillStyle = '#0B0F18'; ctx.fillRect(0, y0, W, 6); for (let x = 0; x < W; x += 12) { ctx.fillStyle = '#E8B020'; ctx.fillRect(x, y0 + 1, 6, 4); }
+  if (!YOKO) { ctx.fillStyle = '#1B1F26'; ctx.fillRect(0, y0, W, H - y0);
+  ctx.fillStyle = '#0B0F18'; ctx.fillRect(0, y0, W, 6); for (let x = 0; x < W; x += 12) { ctx.fillStyle = '#E8B020'; ctx.fillRect(x, y0 + 1, 6, 4); } }
   ctx.textAlign = 'center';
   // 左：移動スティック（押した場所が中心になる）
-  const sx = stick ? stick.ox : 88, sy = stick ? stick.oy : 548;
+  const sx = stick ? stick.ox : (YOKO ? 108 : 88), sy = stick ? stick.oy : (YOKO ? 270 : 548);
   ctx.fillStyle = 'rgba(237,230,214,.08)'; ctx.beginPath(); ctx.arc(sx, sy, 44, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = 'rgba(237,230,214,.25)'; ctx.lineWidth = 2; ctx.stroke();
   let kx = sx, ky = sy; if (stick) { const dx = stick.x - sx, dy = stick.y - sy, l = Math.hypot(dx, dy), m = Math.min(l, 40); if (l > 0) { kx = sx + dx/l*m; ky = sy + dy/l*m; } }
@@ -4519,7 +4534,7 @@ function drawControls(){
     ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = '#F4EEDF'; ctx.font = `${k === 'atk' ? 17 : 13}px "Dela Gothic One", sans-serif`; ctx.fillText(b.label, b.x, b.y + (k === 'atk' ? 6 : 5) + (on ? 2 : 0)); }
   ctx.font = '800 10px "M PLUS Rounded 1c", sans-serif'; ctx.fillStyle = '#6E7785';
-  ctx.fillText('キーボード：WASD移動 / J攻撃 / Kガード / U投げ / I奥義 / Space回避', W/2, H - 10);
+  if (!YOKO) ctx.fillText('キーボード：WASD移動 / J攻撃 / Kガード / U投げ / I奥義 / Space回避', W/2, H - 10);
 }
 // 奥義ボタン：まわりの輪がゲージ。満タンで心臓の色に光る（心臓をつけていなければ出さない）
 function drawOugiBtn(){
@@ -4536,7 +4551,7 @@ function drawOugiBtn(){
 }
 
 let last = performance.now();
-function loop(now){ const dt = Math.min(.05, (now - last)/1000); last = now; update(dt); draw(); netTick(); ranTick(); warmStep(3);
+function loop(now){ const dt = Math.min(.05, (now - last)/1000); last = now; yokoCheck(); update(dt); draw(); netTick(); ranTick(); warmStep(3);
   const sh = !G || !ov.hidden; if (sndBtn.hidden !== sh) { sndBtn.hidden = sh; sndBtn.textContent = sndLabel(); }   // 音のボタンは試合中だけ
   requestAnimationFrame(loop); }
 
@@ -4914,7 +4929,7 @@ function koboGear(x, y, R, n, a, col, dark){
 function drawKoboArena(){
   const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
   const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
-  ctx.fillStyle = koboTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  ctx.fillStyle = koboTile(); ctx.fillRect(...floorRect());   // v0.54 画面全体（横画面でも）
   // 四隅の大きな歯車（となり同士は逆に回る）
   for (let i = 0; i < 4; i++) { const a = (i + .5)/4*Math.PI*2, R = 46, d = r + 62;
     koboGear(cx + Math.cos(a)*d, cy + Math.sin(a)*d, R, 14, (i % 2 ? -1 : 1)*T*.5 + i, '#B8862E', '#4A3010'); }
@@ -4998,7 +5013,7 @@ function firePlates(){
 function drawRoArena(){
   const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
   const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
-  ctx.fillStyle = roTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  ctx.fillStyle = roTile(); ctx.fillRect(...floorRect());   // v0.54 画面全体（横画面でも）
   // 四隅の炉：れんがの箱、口の中が脈打つ
   for (let i = 0; i < 4; i++) { const a = (i + .5)/4*Math.PI*2, d = r + 66, fx = cx + Math.cos(a)*d, fy = cy + Math.sin(a)*d, p = .6 + .4*Math.sin(T*2.2 + i*1.7);
     ctx.fillStyle = '#120806'; ctx.fillRect(fx - 34, fy - 30, 68, 58); ctx.fillStyle = '#4A3A34'; ctx.fillRect(fx - 32, fy - 28, 64, 54);
@@ -5070,7 +5085,7 @@ function jokiTile(){
 function drawJokiArena(){
   const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
   const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
-  ctx.fillStyle = jokiTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  ctx.fillStyle = jokiTile(); ctx.fillRect(...floorRect());   // v0.54 画面全体（横画面でも）
   // 台を囲む太い配管の輪（継ぎ手つき）
   ctx.lineWidth = 22; ctx.strokeStyle = '#0A100E'; ctx.beginPath(); ctx.arc(cx, cy, r + 26, 0, Math.PI*2); ctx.stroke();
   ctx.lineWidth = 18; ctx.strokeStyle = '#3E5A50'; ctx.stroke();
@@ -5124,11 +5139,12 @@ function tenTile(){
 function drawTenshuArena(){
   const T = performance.now()/1000, r = AR.r, R0 = DUEL_R, cx = AR.x, cy = AR.y;
   const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
-  ctx.fillStyle = tenTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  ctx.fillStyle = tenTile(); ctx.fillRect(...floorRect());   // v0.54 画面全体（横画面でも）
   // 金の棟（十字）
-  ctx.fillStyle = '#0A0C12'; ctx.fillRect(cx - 8, oy - 30, 16, H + 60); ctx.fillRect(ox - 30, cy - 8, W + 60, 16);
-  ctx.fillStyle = '#B88A2E'; ctx.fillRect(cx - 5, oy - 30, 10, H + 60); ctx.fillRect(ox - 30, cy - 5, W + 60, 10);
-  ctx.fillStyle = '#F0D088'; ctx.fillRect(cx - 5, oy - 30, 2, H + 60); ctx.fillRect(ox - 30, cy - 5, W + 60, 2);
+  const [fx0, fy0, fw, fh] = floorRect();
+  ctx.fillStyle = '#0A0C12'; ctx.fillRect(cx - 8, fy0, 16, fh); ctx.fillRect(fx0, cy - 8, fw, 16);
+  ctx.fillStyle = '#B88A2E'; ctx.fillRect(cx - 5, fy0, 10, fh); ctx.fillRect(fx0, cy - 5, fw, 10);
+  ctx.fillStyle = '#F0D088'; ctx.fillRect(cx - 5, fy0, 2, fh); ctx.fillRect(fx0, cy - 5, fw, 2);
   // 奈落（抜けた床の跡も含めて、元の台の大きさの穴）
   const vg = ctx.createRadialGradient(cx, cy, R0*.6, cx, cy, R0 + 22); vg.addColorStop(0, '#000'); vg.addColorStop(.85, '#06040A'); vg.addColorStop(1, 'rgba(6,4,10,0)');
   ctx.fillStyle = vg; ctx.beginPath(); ctx.arc(cx, cy, R0 + 22, 0, Math.PI*2); ctx.fill();
@@ -5172,6 +5188,40 @@ function drawTenshuArena(){
   ctx.fillStyle = 'rgba(255,190,210,.8)';
   for (let i = 0; i < 16; i++) { const px = ox + ((i*83 + T*(14 + i % 4*5)) % (W + 40)) - 20, py = oy + ((i*61 + T*(22 + i % 3*6)) % (H + 40)) - 20 + Math.sin(T*2 + i)*6;
     ctx.save(); ctx.translate(Math.round(px), Math.round(py)); ctx.rotate(T*2 + i); ctx.fillRect(-2, -1, 4, 2); ctx.restore(); }
+}
+
+// ================= 横画面の試合（v0.54、試作） =================
+// 画面が横長（innerWidth > innerHeight）で、1対1の試合中（乱戦・通信対戦は除く）だけ、試合画面を横の並びで描く
+//   画面の大きさ（論理）を 740×360 にし、闘技場の中心（AR）を画面の (370, 186) に置く。体力などは左上・右上の角の箱、
+//   移動スティックは左側（押した所が中心）、ボタンは右側に、闘技場の上へ重ねる。縦に戻すと今まで通り（360×640）
+// 毎フレーム yokoCheck() で向きを見て、変わったら W・H・ボタンの位置を入れ替えて resize() する
+const BTN_T = {};   // YOKO・YK は W・H の宣言のすぐ下（resize がこれより前に呼ばれるため）
+const yokoWant = () => !!(G && !G.melee && !G.net && innerWidth > innerHeight);
+function yokoApply(on){
+  YOKO = on; W = on ? YK.W : 360; H = on ? YK.H : 640;
+  for (const k in BTN) { if (!BTN_T[k]) BTN_T[k] = { x: BTN[k].x, y: BTN[k].y };   // 縦の位置を覚えておき、横では右下にそろえて動かす
+    BTN[k].x = BTN_T[k].x + (on ? YK.W - 360 : 0); BTN[k].y = BTN_T[k].y - (on ? 640 - YK.H + 8 : 0); }
+  stick = null; touches.clear(); syncGuard(); resize();
+}
+function yokoCheck(){ if (yokoWant() !== YOKO) yokoApply(!YOKO); }
+// 床の模様を敷く範囲：今の座標の変換（横画面のずらし・揺れ・乱戦のカメラ）を戻して、画面全体を覆う四角
+const floorRect = () => { const m = ctx.getTransform().inverse(), a = m.transformPoint(new DOMPoint(0, 0)), b = m.transformPoint(new DOMPoint(cv.width, cv.height));
+  return [Math.min(a.x, b.x) - 30, Math.min(a.y, b.y) - 30, Math.abs(b.x - a.x) + 60, Math.abs(b.y - a.y) + 60]; };
+// 横画面の上の表示：左上に自分、右上に相手（名前・体力・取った本数・強化）。その下に、お題などの文と相手の性格
+function drawHUDYoko(){
+  const box = x => { ctx.fillStyle = 'rgba(14,17,24,.78)'; ctx.fillRect(x, 6, 232, 58); ctx.strokeStyle = '#0B0F18'; ctx.lineWidth = 2; ctx.strokeRect(x, 6, 232, 58); };
+  box(6); box(W - 238);
+  ctx.font = '800 13px "M PLUS Rounded 1c", sans-serif'; ctx.fillStyle = '#EDE6D6';
+  ctx.textAlign = 'left'; ctx.fillText(G.p.name, 14, 24); ctx.textAlign = 'right'; ctx.fillText(G.e.name, W - 14, 24);
+  const bar = (x, w, v, c, right) => { ctx.fillStyle = '#0E1014'; ctx.fillRect(x, 31, w, 11); ctx.fillStyle = c; const vw = w*Math.max(0, v)/100; ctx.fillRect(right ? x + w - vw : x, 31, vw, 11); };
+  bar(14, 216, G.p.hp/G.p.maxHp*100, '#3E8EDE', false); bar(W - 230, 216, G.e.hp/G.e.maxHp*100, '#E0493E', true);
+  const pips = (x, n, dir) => { for (let i = 0; i < 2; i++) { ctx.fillStyle = i < n ? '#E8B23A' : '#3A3F49'; ctx.beginPath(); ctx.arc(x + dir*i*14, 53, 5, 0, Math.PI*2); ctx.fill(); } };
+  pips(20, G.pw, 1); pips(W - 20, G.ew, -1);
+  ctx.save(); ctx.translate(0, -9); buffIcons0(G.p, 66, 1); buffIcons0(G.e, W - 66, -1); ctx.restore();
+  ctx.font = '800 11px "M PLUS Rounded 1c", sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,12,15,.85)';
+  const info = G.practice ? `練習　はじき${G.count.parry}　被弾${G.count.taken}　命中${G.count.given}` : (G.stage ? stHud() : '先に2本取った方が勝ち');
+  ctx.textAlign = 'left'; ctx.strokeText(info, 10, 80); ctx.fillStyle = '#C8D0DC'; ctx.fillText(info, 10, 80);
+  const Pe = PERSONA[G.e.per]; if (Pe && !G.practice) { ctx.textAlign = 'right'; ctx.strokeText(Pe.n, W - 10, 80); ctx.fillStyle = Pe.c; ctx.fillText(Pe.n, W - 10, 80); }
 }
 
 // ================= ホーム画面（v0.39、ブロスタ風） =================
@@ -5578,7 +5628,7 @@ function drawLabArena(){
   const T = performance.now()/1000, r = AR.r, cx = AR.x, cy = AR.y;
   // 床：見えている範囲を敷き詰め（乱戦はカメラでずれる、揺れの分も少し広く）
   const ox = G.cam ? G.cam.x - AR.x : 0, oy = G.cam ? G.cam.y - AR.y : 0;
-  ctx.fillStyle = labTile(); ctx.fillRect(ox - 30, oy - 30, W + 60, H + 60);
+  ctx.fillStyle = labTile(); ctx.fillRect(...floorRect());   // v0.54 画面全体（横画面でも）
   // 闘技場のまわりの暗がりと、黄色と黒の縞の輪
   const sh = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 70); sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = sh; ctx.beginPath(); ctx.arc(cx, cy, r + 70, 0, Math.PI*2); ctx.fill();
@@ -5690,7 +5740,7 @@ function helpScreen(){
     ['回避', '一瞬だけ無敵。スティックの方向へ跳ぶ'],
     ['スタミナ', '攻撃・ガード・回避で減る。足元の黄色いバー'],
     ['装備', '武器と仕掛け（眼・ゼンマイ・歯車＝からくりの中の部品）で能力が変わる。見た目の着せ替えは能力に関係しない'],
-    ['仕掛け', '1つずつ中身が違う。品位（並・上・極・<b>伝</b>）、ランダムな副効果、極・伝には<b>特殊能力</b>。小判で強化すると副効果が増えたり伸びたりする。いらない物は分解して小判に（鍵をかければ守れる）'],
+    ['仕掛け', '型ごとに長所と短所がある。品位（並・上・極・<b>伝</b>）が高いほど、小判で強化するほど長所が大きくなる（伝を最大まで強化すると並の2倍）。極・伝には<b>特殊能力</b>。いらない物は分解して小判に（鍵をかければ守れる）'],
     ['鍔玉（属性）', '武器の鍔に玉をはめると属性がつく（あなただけ）。🔥火＝燃やしてじわじわ／💧水＝濡らして遅くする／⚡雷＝重い一撃でしびれさせる／🌀風＝大きく吹き飛ばす／❄氷＝はじくと凍らせる。装備画面の「武器」→「鍔玉」で付け替え・強化。最初に火の鍔玉を1つ持っている'],
     ['心臓・奥義', 'からくり心臓は、あなただけの第四の部位。つけると<b>奥義</b>が使える。はじき・斬って当てる・投げる・斬られるで奥義ゲージがたまり、満タンで「奥義」ボタン。心臓は5種類（油差し・鉄壁・身代わり・迅雷・見切り）で、店で買えるほか、強敵を倒すとときどき手に入る。強化するとゲージが早くたまり、奥義も強くなる'],
     ['銘', '仕掛けには銘がある。同じ銘を眼・ゼンマイ・歯車の3つそろえると、銘の効果がつく'],
