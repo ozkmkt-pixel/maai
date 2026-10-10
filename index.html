@@ -36,7 +36,7 @@
   .lv{display:flex;align-items:center;justify-content:center;gap:14px;}
   .lv button{margin:0;padding:4px 16px;font-size:18px;}
   .lv b{font-size:18px;color:#23252B !important;min-width:52px;}
-  .card{background:var(--paper);color:#23252B;border-radius:16px;padding:22px 20px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.45);}
+  .card{background:var(--paper);color:#23252B;border-radius:16px;padding:22px 20px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.45);max-height:100%;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-sizing:border-box;}
   .card h1{font-family:"Dela Gothic One",sans-serif;font-size:40px;margin:0 0 4px;letter-spacing:.06em;}
   .card h2{font-family:"Dela Gothic One",sans-serif;font-size:26px;margin:0 0 6px;}
   .card p{margin:8px 0;line-height:1.6;font-size:14px;}
@@ -1486,7 +1486,7 @@ const BTN = { atk:{x:296, y:556, r:38, label:'攻撃'}, grd:{x:214, y:588, r:30,
 const P = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false, ougi:false};
 const touches = new Map(); let stick = null; const keys = {};
 function toLogical(e){ const r = cv.getBoundingClientRect(); return {x:(e.clientX - r.left)/scale, y:(e.clientY - r.top)/scale}; }
-function btnAt(x, y){ for (const k in BTN) { const b = BTN[k]; if (k === 'ougi' && !(G && G.p && G.p.heart)) continue; if (Math.hypot(x-b.x, y-b.y) < b.r + 10) return k; } return null; }
+function btnAt(x, y){ for (const k in BTN) { const b = BTN[k]; if (k === 'ougi' && !(G && G.p && G.p.heart)) continue; if (Math.hypot(x-b.x, y-b.y) < b.r + (YOKO ? 16 : 10)) return k; } return null; }
 // 画面の外側の余白（iPhoneで上下に残る帯）から触っても操作できるように、#app 全体で受ける
 const appEl = document.getElementById('app');
 appEl.addEventListener('pointerdown', e => {
@@ -1498,7 +1498,7 @@ appEl.addEventListener('pointerdown', e => {
   syncGuard();
 });
 // iOS Safari：ページの引っぱり・スクロールを止める（装備画面のスクロールだけは許す）
-document.addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('.card.load, .eqScroll')) e.preventDefault(); }, {passive:false});
+document.addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('.card, .eqScroll')) e.preventDefault(); }, {passive:false});
 cv.addEventListener('pointermove', e => { if (stick && e.pointerId === stick.id) { const q = toLogical(e); stick.x = q.x; stick.y = q.y; } });
 const up = e => { touches.delete(e.pointerId); if (stick && e.pointerId === stick.id) stick = null; syncGuard(); };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -5195,12 +5195,14 @@ function drawTenshuArena(){
 //   画面の大きさ（論理）を 740×360 にする。カメラは自分と相手の真ん中を追い、最大1.6倍まで寄る（離れたら二人とも入るように引く。闘技場の端は画面の外に出てよい）。体力などは左上・右上の角の箱、
 //   移動スティックは左側（押した所が中心）、ボタンは右側に、闘技場の上へ重ねる。縦に戻すと今まで通り（360×640）
 // 毎フレーム yokoCheck() で向きを見て、変わったら W・H・ボタンの位置を入れ替えて resize() する
-const BTN_T = {};   // YOKO・YK は W・H の宣言のすぐ下（resize がこれより前に呼ばれるため）
+const BTN_T = {};
+// v0.54.1 横画面のボタン：縦の位置をずらすだけだと小さく端に寄って押しにくかった（iPhone で回避・奥義が反応しにくい）→ 横用に大きく、画面の端から離して並べる
+const BTN_Y = { atk: { x: 652, y: 270, r: 42 }, grd: { x: 560, y: 306, r: 33 }, thr: { x: 556, y: 224, r: 29 }, dash: { x: 648, y: 176, r: 33 }, ougi: { x: 572, y: 146, r: 26 } };   // YOKO・YK は W・H の宣言のすぐ下（resize がこれより前に呼ばれるため）
 const yokoWant = () => !!(G && !G.melee && !G.net && innerWidth > innerHeight);
 function yokoApply(on){
   YOKO = on; W = on ? YK.W : 360; H = on ? YK.H : 640;
-  for (const k in BTN) { if (!BTN_T[k]) BTN_T[k] = { x: BTN[k].x, y: BTN[k].y };   // 縦の位置を覚えておき、横では右下にそろえて動かす
-    BTN[k].x = BTN_T[k].x + (on ? YK.W - 360 : 0); BTN[k].y = BTN_T[k].y - (on ? 640 - YK.H + 8 : 0); }
+  for (const k in BTN) { if (!BTN_T[k]) BTN_T[k] = { x: BTN[k].x, y: BTN[k].y, r: BTN[k].r };   // 縦の位置・大きさを覚えておき、横では横用の並び（BTN_Y）に
+    Object.assign(BTN[k], on ? BTN_Y[k] : BTN_T[k]); }
   stick = null; touches.clear(); syncGuard(); resize();
 }
 function yokoCheck(){ if (yokoWant() !== YOKO) yokoApply(!YOKO); }
