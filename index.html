@@ -666,6 +666,28 @@
     .card.cols .cR .dropT{margin:6px 0 4px;}
     .card.cols .cR .stHint{margin:0 0 6px;}
   }
+  /* ===== v0.57 ===== */
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}   /* iPhone の横向きで、長い文だけ勝手に大きくなる（遊び方の文字がばらばらだった） */
+  .eqScroll canvas:not(#eqChar){touch-action:pan-y;}   /* 一覧のアイコンの上からでもスクロールできる（canvas は全部 touch-action:none だった） */
+  @media (orientation: landscape) and (max-height: 600px) {
+    .eqBody{overflow-x:hidden;}   /* 店・蔵が左右に少し動いていた（中身が24〜30px はみ出していた） */
+    /* 装備の一覧（仕掛け・武器・心臓）：左に一覧、右に説明と操作。右の列の高さは決まっているので、選ぶ物で枠が伸び縮みしない */
+    .eqSheet,.eqSheet.gs{width:60%;}
+    .eqSheet.gs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;}
+    .eq.open>.eqBody,.eq.open.tall>.eqBody{width:40%;}
+    .eqSheet.gs>.eqSheetHd{grid-column:1 / -1;}
+    .eqSheet.gs>.eqSheetBody{grid-column:1;grid-row:2 / span 2;padding:2px 6px 10px 12px;}
+    .eqSheet.gs>.gTop{grid-column:2;grid-row:2;max-height:none;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 12px 6px 6px;}
+    .eqSheet.gs>.eqDetail{grid-column:2;grid-row:3;padding:6px 12px 10px 6px;border-top:0;}
+    .eqSheet.gs .eqGrid{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .eqSheet.gs .gDet{line-height:1.5;padding:6px 8px;} .eqSheet.gs .gDet>div{margin-top:3px;}
+    .eqSheet.gs{grid-template-rows:auto minmax(0,1fr) 62px;}   /* 操作の段はいつも同じ高さ（ボタンがない物でも） */
+    .eqSheet.gs .gActs{gap:5px;} .eqSheet.gs .gActs button{flex:1 1 0;min-width:0;padding:7px 2px;font-size:12px;white-space:nowrap;}
+    .eqSheet.gs .gActs button small{font-size:9px;} .eqSheet.gs .gActs button.lk{flex:0 0 36px;}
+    /* 遊び方：2列 */
+    .hpList{display:grid;grid-template-columns:1fr 1fr;align-items:start;}
+    .hpList>.hpKeys{grid-column:1 / -1;}
+  }
 
 </style>
 
@@ -1928,7 +1950,9 @@ function drawXray(cx, slot, key, P, t){
   cx.font = '900 18px "M PLUS Rounded 1c", sans-serif'; cx.textAlign = 'left'; cx.fillStyle = 'rgba(164,228,252,.85)'; cx.fillText('透視', 44, 140);
 }
 // practice が true なら練習の準備：練習相手の強さ・武器・防具もここで決める（「練習相手」の枠から）
+let EQ_HOME = false;   // v0.57 ホームの武者をタップして開いた装備画面（勝負はホームの「勝負！」で始めるので、勝負ボタンを出さない）
 function loadout(level, eW, eGear, practice){
+  const fromHome = EQ_HOME; EQ_HOME = false;
   weaponPrewarm(myW, mySkin.blade);   // これから使う武器の絵を先に作り始める
   BGM.play('loadout');
   { const t0 = performance.now()/1000; let room = null, cvEl = null;   // v0.39.3 研究所の背景
@@ -2057,7 +2081,7 @@ function loadout(level, eW, eGear, practice){
       <div class="bkBtns"><button id="bkNo">やめる</button><button id="bkGo" class="${bulkArm ? 'arm' : 'go'}" ${L.length ? '' : 'disabled'}>${bulkArm ? '本当に？' : '分解する'}</button></div></div></div>`;
   }
   function render(){
-    const oldBody = ov.querySelector('.eqSheetBody'), keep = oldBody ? oldBody.scrollTop : 0;
+    const oldBody = ov.querySelector('.eqSheetBody'), keep = oldBody ? oldBody.scrollTop : 0, wasSheet = !!ov.querySelector('.eqSheet');
     const st = statsOf(myW, myGear, PARRY_BONUS);
     const bars = [['体力', st.hp, 140], ['スタミナ', st.st, 130], ['速さ', st.speed, 170], ['はじき', st.parry, .7]];
     const det = [['攻撃力', st.atk + '%'], ['スタミナ回復', st.stRegen + '%'], ['受けるダメージ', st.taken + '%'], ['回避の無敵', st.dodge + '秒'], ['回避のスタミナ', st.dashSt], ['回避の距離', st.dashDist + '%'],
@@ -2073,7 +2097,7 @@ function loadout(level, eW, eGear, practice){
       <div class="eqStats">${bars.map(([n, v, m]) => `<div class="eqBar"><span>${n}</span><em><i style="width:${Math.min(100, v/m*100)}%"></i></em><b>${v}</b></div>`).join('')}
         ${showDet ? `<div class="eqDet">${det.map(([n, v]) => `<span>${n}</span><b>${v}</b>`).join('')}</div>` : ''}
         <button id="stDet" class="eqLink">${showDet ? '閉じる' : '詳細 ▾'}</button></div>
-      <div class="eqFoot">${practice
+      <div class="eqFoot"${fromHome ? ' style="display:none"' : ''}>${practice
         ? `<button id="foeBtn" class="eqVs btn">練習相手<b>${WEAPONS[eW].title} Lv${level} ›</b></button>`
         : boss ? `<div class="eqVs boss" style="--bc:${boss.c}">${stHead('強敵')}<b>${boss.n}（${WEAPONS[eW].name}） Lv${level}</b><small>倒すと銘「${SETS[boss.set].n}」の仕掛け・性格「${PERSONA[BOSS_PER[boss.set]].n}」</small>${stGoalLine()}</div>`
         : `<div class="eqVs">${stHead('次の相手')}<b>${WEAPONS[eW].title} Lv${level}</b><small class="per" style="--pc:${PERSONA[foePer].c}">性格「${PERSONA[foePer].n}」${PERSONA[foePer].d}</small>${stGoalLine()}</div>`}
@@ -2081,6 +2105,7 @@ function loadout(level, eW, eGear, practice){
       </div>${sheet ? sheetHtml() : ''}${bulk ? bulkHtml() : ''}</div>`;
     ov.hidden = false;
     const nb = ov.querySelector('.eqSheetBody'); if (nb) nb.scrollTop = keep;
+    if (wasSheet) { const sh = ov.querySelector('.eqSheet'); if (sh) sh.style.animation = 'none'; }   // v0.57 開いたままの一覧は、選び直しても出てくる動きをしない（右半分がぶれていた）
     ov.querySelectorAll('canvas[data-th]').forEach(c => { const [k, key] = c.dataset.th.split('|'); eqThumb(c, k, key); });
     ov.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { sheet = sheet === b.dataset.slot ? null : b.dataset.slot; sel = null; scrapArm = false; lastUp = null; base = { w: myW, gear: {...myGear} }; render(); });
     // 仕掛けの一覧の操作
@@ -5438,7 +5463,7 @@ function title(){
   ov.hidden = false;
   const $ = id => document.getElementById(id);
   $('hS').onclick = () => shopScreen(); $('hG').onclick = gachaScreen; $('hK').onclick = kuraScreen; $('hH').onclick = helpScreen;
-  $('hStage').onclick = () => stGo(stNext());   // 装備画面（次の面の相手）
+  $('hStage').onclick = () => { EQ_HOME = true; stGo(stNext()); };   // 装備画面（次の面の相手）
   $('hRoad').onclick = () => { SFX.coin(); stageScreen(); };
   $('hPlay').onclick = () => { SFX.coin(); HM_MODES[hmMode].go(); };
   $('hU').onclick = () => { ranPref = !ranPref; try { localStorage.setItem('maai_ran', ranPref ? '1' : '0'); } catch(x) {} SFX.coin(); title(); };
