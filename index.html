@@ -622,6 +622,50 @@
     /* 結果などの札：横に少し広く */
     .card{max-width:440px;}
   }
+  /* ===== v0.56 横画面だけ ===== */
+  html{touch-action:manipulation;}   /* 2回タップで拡大しない（拡大するとタッチの位置がずれる） */
+  #rotMsg{display:none;position:fixed;inset:0;z-index:50;background:#141D30;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:"M PLUS Rounded 1c",sans-serif;font-weight:800;}
+  body.rot #rotMsg{display:flex;}
+  #rotMsg i{display:block;font-style:normal;font-size:64px;animation:rotTurn 1.6s ease-in-out infinite;}
+  @keyframes rotTurn{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+  #rotMsg b{display:block;font-size:20px;margin-top:18px;} #rotMsg small{display:block;font-size:13px;margin-top:6px;color:#C8D4E8;}
+  .hmModes,.hmPlay small,.hmMdD{display:none;}
+  @media (orientation: landscape) and (max-height: 600px) {
+    #overlay:has(>.eq){padding:0;}   /* メニューは画面いっぱい */
+    .eq .eqBody{box-sizing:border-box;}   /* 下の余白の分だけはみ出して、少し動いていた */
+    /* ホーム：右の列に モードを5つ並べて直接選ぶ → 下の「勝負！」で始める（モードの札は使わない） */
+    .hm{grid-template-rows:auto auto 1fr auto auto;}
+    .hm>.hmMid{grid-row:1 / span 5;}
+    .hm>.hmRoad{grid-row:2;margin:4px 12px 0;}
+    .hm>.hmModes{grid-column:2;grid-row:3;align-self:center;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0 12px;}
+    .hm>.hmMdD{grid-column:2;grid-row:4;display:block;margin:0 12px;font-size:11.5px;text-align:center;color:#fff;text-shadow:0 1px 0 #000,0 0 3px #000;}
+    .hm>.hmBot{grid-row:5;grid-template-columns:1fr;padding:6px 12px 12px;}
+    .hmMode{display:none !important;}
+    .hm .hmStage{padding-top:12px;}
+    .hmMd{position:relative;margin:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 6px;border:3px solid #000;border-radius:14px;background:var(--mc);box-shadow:0 4px 0 #000 !important;color:#fff;font-family:inherit;font-weight:800;filter:saturate(.5) brightness(.72);}
+    .hmMd i{font-style:normal;font-size:24px;line-height:1.1;}
+    .hmMd b{font-size:12.5px;white-space:nowrap;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;}
+    .hmMd.on{filter:none;outline:3px solid #FFE45C;outline-offset:1px;}
+    .hmMd:active{transform:translateY(3px);box-shadow:0 1px 0 #000 !important;}
+    .hmPlay{padding:8px 0 6px;font-size:26px;line-height:1.1;}
+    .hmPlay small{display:block;font-size:12px;letter-spacing:.06em;}
+    /* ガチャ：1画面に収まるので、指でなぞっても動かない */
+    .sh>.eqBody:has(>.gcStage){overflow:hidden;}
+    /* 結果などの札：左右2列（cardCols）で、スクロールしなくても全部見える */
+    .card.cols{max-width:760px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);column-gap:16px;align-items:center;padding:14px 18px;}
+    .card.cols>*:not(.cL):not(.cR){grid-column:1 / -1;}
+    .card.cols h2{font-size:24px;margin:0 0 2px;}
+    .card.cols .cL p{margin:4px 0;font-size:13px;line-height:1.45;}
+    .card.cols .stRes{margin:6px 0;gap:3px;} .card.cols .stRes div{padding:3px 8px;}
+    .card.cols .cL button{display:block;width:100%;margin:8px 0 0;padding:9px 0;}
+    .card.cols .cL button.sub{display:inline-block;width:calc(50% - 4px);margin:6px 0 0;padding:7px 0;font-size:14px;}
+    .card.cols .cL button.sub~button.sub{margin-left:8px;}
+    .card.cols .cL br{display:none;}
+    .card.cols .cL:not(:has(.sub~.sub)) .sub{width:100%;}
+    .card.cols .cR .earn{margin:0 0 4px;padding:6px 8px;}
+    .card.cols .cR .dropT{margin:6px 0 4px;}
+    .card.cols .cR .stHint{margin:0 0 6px;}
+  }
 
 </style>
 
@@ -1549,7 +1593,7 @@ appEl.addEventListener('pointerdown', e => {
   syncGuard();
 });
 // iOS Safari：ページの引っぱり・スクロールを止める（装備画面のスクロールだけは許す）
-document.addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('.card, .eqScroll')) e.preventDefault(); }, {passive:false});
+// v0.56 指でなぞったときの止め方は yoko.js（本当にスクロールできる所だけ通す）
 cv.addEventListener('pointermove', e => { if (stick && e.pointerId === stick.id) { const q = toLogical(e); stick.x = q.x; stick.y = q.y; } });
 const up = e => { touches.delete(e.pointerId); if (stick && e.pointerId === stick.id) stick = null; syncGuard(); };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -1568,7 +1612,7 @@ function readPlayer(){
 
 // ================= ループ =================
 function update(rdt){
-  if (!G || G.paused) return;
+  if (!G || G.paused || (ROT_ON && !G.net)) return;   // v0.56 縦に持っている間は止める（通信対戦は止めない）
   if (G.net && G.net.role === 'guest') return netGuestUpdate(rdt);   // 通信対戦の参加側は試合を進めない（ホストから届く）
   G.shake = Math.max(0, G.shake - rdt);
   for (const t of G.texts) { t.y -= 30*rdt; t.life -= rdt; } G.texts = G.texts.filter(t => t.life > 0);
@@ -1627,7 +1671,7 @@ function endRound(){
   }
   G.round++; newRound();
 }
-function card(html, fn){ ov.innerHTML = `<div class="card">${html}</div>`; ov.hidden = false; document.getElementById('b1').onclick = fn; }
+function card(html, fn){ ov.innerHTML = `<div class="card">${html}</div>`; ov.hidden = false; document.getElementById('b1').onclick = fn; setTimeout(cardCols, 0); }   // v0.56 横画面は2列に
 const paintThumbs = () => ov.querySelectorAll('canvas[data-th]').forEach(c => { const [k, key] = c.dataset.th.split('|'); eqThumb(c, k, key); });
 // 手に入れた仕掛けの札（結果画面・箱）。品位の色の枠、下に銘と特殊能力
 const gearCard = (it, i = 0) => shCard(it.s, it.k, gearName(it), it.r, { i, sub: (SETS[it.set] ? SETS[it.set].n : '') + (it.sp ? '・' + SPECIALS[it.sp].n : ''),
@@ -5257,7 +5301,7 @@ function yokoApply(on){
     Object.assign(BTN[k], on ? BTN_Y[k] : BTN_T[k]); }
   stick = null; touches.clear(); syncGuard(); resize();
 }
-function yokoCheck(){ if (yokoWant() !== YOKO) yokoApply(!YOKO); }
+function yokoCheck(){ rotCheck(); if (yokoWant() !== YOKO) yokoApply(!YOKO); }
 // 床の模様を敷く範囲：今の座標の変換（横画面のずらし・揺れ・乱戦のカメラ）を戻して、画面全体を覆う四角
 const floorRect = () => { const m = ctx.getTransform().inverse(), a = m.transformPoint(new DOMPoint(0, 0)), b = m.transformPoint(new DOMPoint(cv.width, cv.height));
   return [Math.min(a.x, b.x) - 30, Math.min(a.y, b.y) - 30, Math.abs(b.x - a.x) + 60, Math.abs(b.y - a.y) + 60]; };
@@ -5304,6 +5348,49 @@ function drawHUDYokoMelee(){
   ctx.save(); ctx.translate(0, 8); buffIcons0(G.p, 160, 1); ctx.restore();
 }
 
+// ================= v0.56 横画面だけにする・iPhone のタッチのずれ・札の2列 =================
+// iPhone：スクロールできない所（中身が収まっている・端まで来た）を指でなぞると、ページごと少しずれて、
+//   その後タッチした位置と画面の反応がずれていた（店・ガチャが「動く」のも同じ）→ 本当にスクロールできる所だけ指の動きを通す
+let tmX = 0, tmY = 0;
+document.addEventListener('touchstart', e => { const t = e.touches[0]; if (t) { tmX = t.clientX; tmY = t.clientY; } }, {passive:true});
+document.addEventListener('touchmove', e => {
+  const t = e.touches[0]; if (!t || e.touches.length > 1) return e.preventDefault();
+  const dx = t.clientX - tmX, dy = t.clientY - tmY; if (!dx && !dy) return;
+  tmX = t.clientX; tmY = t.clientY; const vert = Math.abs(dy) >= Math.abs(dx);
+  for (let el = e.target; el && el.nodeType === 1 && el !== document.body; el = el.parentElement) {
+    const cs = getComputedStyle(el);
+    if (vert && /auto|scroll/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1
+      && ((dy > 0 && el.scrollTop > 0) || (dy < 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 1))) return;
+    if (!vert && /auto|scroll/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1
+      && ((dx > 0 && el.scrollLeft > 0) || (dx < 0 && el.scrollLeft + el.clientWidth < el.scrollWidth - 1))) return;
+  }
+  e.preventDefault();
+}, {passive:false});
+// ずれてしまったときも元に戻す（ページの位置・ツールバーの出し入れ・向きを変えたとき）。2本指の拡大（iPhone は user-scalable=no を無視する）も止める
+const unScroll = () => { if (scrollX || scrollY) scrollTo(0, 0); };
+addEventListener('scroll', unScroll);
+if (window.visualViewport) { visualViewport.addEventListener('resize', () => { unScroll(); resize(); }); visualViewport.addEventListener('scroll', unScroll); }
+addEventListener('orientationchange', () => setTimeout(() => { unScroll(); resize(); }, 300));
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// スマホを縦に持ったら「横にしてください」（1人用の試合は止める。通信対戦は止めない）
+let ROT_ON = false;
+const rotEl = document.createElement('div'); rotEl.id = 'rotMsg';
+rotEl.innerHTML = '<div><i>📱</i><b>スマホを横にしてください</b><small>このゲームは横画面で遊びます</small></div>';
+document.body.appendChild(rotEl);
+function rotCheck(){ const on = innerHeight > innerWidth && innerWidth < 600; if (on !== ROT_ON) { ROT_ON = on; document.body.classList.toggle('rot', on); } }
+
+// 横画面の札（勝ち・負けの結果など）：中身を左右2列に分けて、スクロールしなくても全部見えるように
+//   左＝見出し・文・星・ボタン、右＝小判・ヒント・手に入れた物。card() のすぐ後（後から足すボタンも入るように少し待って）並べ直す
+function cardCols(){
+  const c = ov.querySelector(':scope>.card'); if (!c || !yokoWant() || c.classList.contains('cols')) return;
+  const kids = [...c.children], isR = e => e.matches('.earn, .dropT, .dList, .shGrid, .stHint');
+  if (!kids.some(isR)) return;
+  const L = document.createElement('div'), R = document.createElement('div'); L.className = 'cL'; R.className = 'cR';
+  kids.forEach(e => (isR(e) ? R : L).appendChild(e));
+  c.append(L, R); c.classList.add('cols');
+}
+
 // ================= ホーム画面（v0.39、ブロスタ風） =================
 // 真ん中に自分のからくり武者、上に持ち物と到達Lv、左右に店・ガチャなどの丸いボタン、下に「モード」と大きな「勝負」。
 // 前の title() はそのまま残してあり、この title() が後ろにあるので上書きになる
@@ -5339,9 +5426,10 @@ function title(){
       <div class="hmSide"><button id="hH"><i>📜</i>遊び方</button><button id="hU" class="${ranPref ? '' : 'off'}"><i>🛡️</i>乱入受付<br>${ranPref ? 'オン' : 'オフ'}</button><button id="hM" class="${SFX.muted ? 'off' : ''}"><i>${SFX.muted ? '🔇' : '🔊'}</i>音</button></div>
     </div>
     <div class="hmRoad" id="hRoad"><span>${stAll ? `${CHAPTERS[sn.ch].n} <b>クリア</b>` : toBoss > 0 ? `強敵まで あと<b>${toBoss}</b>面` : '次は<b>強敵</b>！'}</span><div class="hmNodes">${road}</div></div>
+    <div class="hmModes">${Object.entries(HM_MODES).map(([k, m]) => `<button class="hmMd${k === hmMode ? ' on' : ''}" data-k="${k}" style="--mc:${m.c}"><i>${m.ic}</i><b>${m.n}</b></button>`).join('')}</div><div class="hmMdD" id="hMdD">${md.d}</div>
     <div class="hmBot">
       <button id="hMode" class="hmMode" style="--mc:${md.c}"><i>${md.ic}</i><span><small>モード</small>${md.n}</span></button>
-      <button id="hPlay" class="hmPlay">勝負！</button>
+      <button id="hPlay" class="hmPlay">勝負！<small id="hPlayM">${md.n}</small></button>
     </div>
     <div class="hmSheet" id="hSheet" hidden><div class="hmSheetIn"><h3>モードを選ぶ</h3>
       ${Object.entries(HM_MODES).map(([k, m]) => `<button class="hmCard${k === hmMode ? ' on' : ''}" data-k="${k}" style="--mc:${m.c}"><i>${m.ic}</i><b>${m.n}</b><small>${m.d}</small></button>`).join('')}
@@ -5357,6 +5445,9 @@ function title(){
   $('hM').onclick = () => { SFX.toggle(); BGM.sync(); SFX.coin(); title(); };
   $('hMode').onclick = () => { $('hSheet').hidden = false; SFX.coin(); };
   $('hClose').onclick = () => { $('hSheet').hidden = true; };
+  ov.querySelectorAll('.hmMd').forEach(b => b.onclick = () => {   // v0.56 横画面：モードをホームで直接選ぶ
+    hmMode = b.dataset.k; try { localStorage.setItem('maai_mode', hmMode); } catch(x) {} SFX.coin();
+    ov.querySelectorAll('.hmMd').forEach(x => x.classList.toggle('on', x === b)); $('hPlayM').textContent = HM_MODES[hmMode].n; $('hMdD').textContent = HM_MODES[hmMode].d; });
   ov.querySelectorAll('.hmCard').forEach(b => b.onclick = () => {
     hmMode = b.dataset.k; try { localStorage.setItem('maai_mode', hmMode); } catch(x) {} SFX.coin(); title(); });
   // 顔（左上の札）
