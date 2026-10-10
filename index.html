@@ -2767,7 +2767,7 @@ function draw(){
   ctx.fillStyle = '#15181D'; ctx.fillRect(0, 0, W, H);
   if (!G) return;
   ctx.save();
-  if (YOKO) ctx.translate(YK.cx - AR.x, YK.cy - AR.y);   // v0.54 横画面：闘技場を画面の真ん中へ
+  if (YOKO) yokoCam();   // v0.54 横画面：自分と相手を追うカメラ（寄る・離れたら引く）
   if (G.shake > 0) ctx.translate(rnd(-4,4)*G.shake*5, rnd(-4,4)*G.shake*5);
   if (G.cam) ctx.translate(AR.x - G.cam.x, AR.y - G.cam.y);   // 乱戦：自分が画面の真ん中に来るようにずらす
   stArena();   // v0.40 地下闘技場（床・台・まわりの飾り）。v0.44 ステージは章ごとの闘技場
@@ -5192,7 +5192,7 @@ function drawTenshuArena(){
 
 // ================= 横画面の試合（v0.54、試作） =================
 // 画面が横長（innerWidth > innerHeight）で、1対1の試合中（乱戦・通信対戦は除く）だけ、試合画面を横の並びで描く
-//   画面の大きさ（論理）を 740×360 にし、闘技場の中心（AR）を画面の (370, 186) に置く。体力などは左上・右上の角の箱、
+//   画面の大きさ（論理）を 740×360 にする。カメラは自分と相手の真ん中を追い、最大1.6倍まで寄る（離れたら二人とも入るように引く。闘技場の端は画面の外に出てよい）。体力などは左上・右上の角の箱、
 //   移動スティックは左側（押した所が中心）、ボタンは右側に、闘技場の上へ重ねる。縦に戻すと今まで通り（360×640）
 // 毎フレーム yokoCheck() で向きを見て、変わったら W・H・ボタンの位置を入れ替えて resize() する
 const BTN_T = {};   // YOKO・YK は W・H の宣言のすぐ下（resize がこれより前に呼ばれるため）
@@ -5222,6 +5222,15 @@ function drawHUDYoko(){
   const info = G.practice ? `練習　はじき${G.count.parry}　被弾${G.count.taken}　命中${G.count.given}` : (G.stage ? stHud() : '先に2本取った方が勝ち');
   ctx.textAlign = 'left'; ctx.strokeText(info, 10, 80); ctx.fillStyle = '#C8D0DC'; ctx.fillText(info, 10, 80);
   const Pe = PERSONA[G.e.per]; if (Pe && !G.practice) { ctx.textAlign = 'right'; ctx.strokeText(Pe.n, W - 10, 80); ctx.fillStyle = Pe.c; ctx.fillText(Pe.n, W - 10, 80); }
+}
+// 横画面のカメラ：二人の真ん中へ、なめらかに。寄り具合 z は二人の距離から（横は 560、縦は 250 に収まるように、0.9〜1.6）
+function yokoCam(){
+  const a = G.p, b = G.e, now = performance.now()/1000, k = G.yk ? Math.min(1, (now - G.yk.t)*6) : 1;
+  const tx = (a.x + b.x)/2, ty = (a.y + b.y)/2 - 14, dx = Math.abs(a.x - b.x) + 70, dy = Math.abs(a.y - b.y) + 90;
+  const tz = Math.max(.9, Math.min(1.6, 560/dx, 250/dy));
+  const c = G.yk || (G.yk = { x: tx, y: ty, z: tz, t: now });
+  c.x += (tx - c.x)*k; c.y += (ty - c.y)*k; c.z += (tz - c.z)*k*.6; c.t = now;
+  ctx.translate(YK.cx, YK.cy + 6); ctx.scale(c.z, c.z); ctx.translate(-c.x, -c.y);
 }
 
 // ================= ホーム画面（v0.39、ブロスタ風） =================
