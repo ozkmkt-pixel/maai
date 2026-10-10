@@ -689,6 +689,112 @@
     .hpList>.hpKeys{grid-column:1 / -1;}
   }
 
+  /* v0.58 PC でも横画面（yoko.css の横画面の分を写したもの） */
+  :where(html.pcy) .eq{max-width:none;max-height:none;border-radius:0;border:0;}
+  :where(html.pcy) .hm{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-rows:auto 1fr auto auto;}
+  :where(html.pcy) .hm>.hmMid{grid-column:1;grid-row:1 / span 4;min-height:0;}
+  :where(html.pcy) .hm>.hmTop{grid-column:2;grid-row:1;padding-top:12px;}
+  :where(html.pcy) .hm>.hmRoad{grid-column:2;grid-row:3;margin:0 12px 4px;}
+  :where(html.pcy) .hm>.hmBot{grid-column:2;grid-row:4;padding:8px 12px 12px;}
+  :where(html.pcy) .hmStage{min-height:0;}
+  :where(html.pcy) .hmLogo{font-size:26px;}
+  :where(html.pcy) #hmCv{width:min(100%,300px);}
+  :where(html.pcy) .hmSide{gap:8px;}
+  :where(html.pcy) .hmSide button{width:54px;padding:4px 0;}
+  :where(html.pcy) .hmSide button i{font-size:20px;}
+  :where(html.pcy) .hmSheetIn{grid-template-columns:1fr 1fr 1fr;max-width:680px;margin:0 auto;}
+  :where(html.pcy) .eqLab>.eqBody{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-rows:auto auto auto 1fr;align-content:start;}
+  :where(html.pcy) .eqLab>.eqBody>.eqTop{grid-column:1 / -1;}
+  :where(html.pcy) .eqLab>.eqBody>.eqStage{grid-column:1;grid-row:2 / span 3;min-height:0;padding-top:4px;grid-template-columns:50px 1fr 50px;}
+  :where(html.pcy) .eqLab>.eqBody>.eqChips{grid-column:2;grid-row:2;flex-wrap:wrap;padding-top:8px;}
+  :where(html.pcy) .eqLab>.eqBody>.eqStats{grid-column:2;grid-row:3;}
+  :where(html.pcy) .eqLab>.eqBody>.eqFoot{grid-column:2;grid-row:4;align-self:start;}
+  :where(html.pcy) .eqLab .eqSlot,:where(html.pcy) .eqLab .eqCol.five .eqSlot{width:46px;height:46px;}
+  :where(html.pcy) .eqLab .eqSlot.sm{width:44px;height:44px;}
+  :where(html.pcy) .eqLab .eqCol,:where(html.pcy) .eqLab .eqCol.five{gap:4px;}
+  :where(html.pcy) .eqLab #eqChar{height:min(260px, calc(100vh - 70px));}
+  :where(html.pcy) .eq.open>.eqBody,:where(html.pcy) .eq.open.tall>.eqBody{height:100%;width:44%;grid-template-columns:1fr;}
+  :where(html.pcy) .eq.open>.eqBody>.eqStage{grid-column:1;grid-row:2;}
+  :where(html.pcy) .eqSheet,:where(html.pcy) .eqSheet.gs{left:auto;top:0;width:56%;height:100%;border-top:0;border-left:2px solid #E8B23A;border-radius:18px 0 0 18px;animation:eqSide .18s ease-out;}
+  @keyframes eqSide{from{transform:translateX(30px);opacity:0}}
+  :where(html.pcy) .stWrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:8px;}
+  :where(html.pcy) .stWrap>.stCh{grid-column:1;grid-row:1;}
+  :where(html.pcy) .stWrap>.stMap{grid-column:1;grid-row:2;height:auto;min-height:210px;}
+  :where(html.pcy) .stWrap>.stInfo{grid-column:2;grid-row:1 / span 2;align-self:start;padding:8px 12px;}
+  :where(html.pcy) .stWrap{padding:6px 10px 8px;}
+  :where(html.pcy) .stInfo p{margin:3px 0;font-size:11.5px;line-height:1.38;}
+  :where(html.pcy) .stTip,:where(html.pcy) .stGim{padding:4px 8px !important;}
+  :where(html.pcy) .stGoals{margin:4px 0 !important;font-size:12px;}
+  :where(html.pcy) .stGoals li i{font-size:15px;}
+  :where(html.pcy) .stGo{margin-top:4px;padding:7px 0;font-size:17px;}
+  :where(html.pcy) .stCh{padding:6px 12px;}
+  :where(html.pcy) .stCh b{font-size:16px;}
+  :where(html.pcy) .stCh span{font-size:12px;}
+  :where(html.pcy) .stCh small{display:none;}
+  :where(html.pcy) .sh>.eqBody:has(>.gcStage){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr auto auto auto 1fr;}
+  :where(html.pcy) .sh>.eqBody:has(>.gcStage)>.eqTop{grid-column:1 / -1;}
+  :where(html.pcy) .sh>.eqBody>.gcStage{grid-column:1;grid-row:2 / span 5;min-height:0;}
+  :where(html.pcy) .sh>.eqBody>.gcRates{grid-column:2;grid-row:3;}
+  :where(html.pcy) .sh>.eqBody>.gcPity{grid-column:2;grid-row:4;}
+  :where(html.pcy) .sh>.eqBody>.gcBtns{grid-column:2;grid-row:5;}
+  :where(html.pcy) .shGrid{grid-template-columns:repeat(8,1fr);}
+  :where(html.pcy) .shGrid.big{grid-template-columns:repeat(5,1fr);}
+  :where(html.pcy) .shGrid.k5{grid-template-columns:repeat(10,1fr);}
+  :where(html.pcy) .shGrid.drops{grid-template-columns:repeat(6,1fr);}
+  :where(html.pcy) .sh>.eqBody{flex-direction:row;flex-wrap:wrap;align-content:flex-start;}
+  :where(html.pcy) .sh>.eqBody>*{flex:0 0 100%;max-width:100%;box-sizing:border-box;}
+  :where(html.pcy) .sh>.eqBody>.shRow{flex:0 0 calc(50% - 18px);margin:0 6px 8px 12px;}
+  :where(html.pcy) .card{max-width:440px;}
+  :where(html.pcy) #overlay:has(>.eq){padding:0;}
+  :where(html.pcy) .eq .eqBody{box-sizing:border-box;}
+  :where(html.pcy) .hm{grid-template-rows:auto auto 1fr auto auto;}
+  :where(html.pcy) .hm>.hmMid{grid-row:1 / span 5;}
+  :where(html.pcy) .hm>.hmRoad{grid-row:2;margin:4px 12px 0;}
+  :where(html.pcy) .hm>.hmModes{grid-column:2;grid-row:3;align-self:center;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:0 12px;}
+  :where(html.pcy) .hm>.hmMdD{grid-column:2;grid-row:4;display:block;margin:0 12px;font-size:11.5px;text-align:center;color:#fff;text-shadow:0 1px 0 #000,0 0 3px #000;}
+  :where(html.pcy) .hm>.hmBot{grid-row:5;grid-template-columns:1fr;padding:6px 12px 12px;}
+  :where(html.pcy) .hmMode{display:none !important;}
+  :where(html.pcy) .hm .hmStage{padding-top:12px;}
+  :where(html.pcy) .hmMd{position:relative;margin:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0 6px;border:3px solid #000;border-radius:14px;background:var(--mc);box-shadow:0 4px 0 #000 !important;color:#fff;font-family:inherit;font-weight:800;filter:saturate(.5) brightness(.72);}
+  :where(html.pcy) .hmMd i{font-style:normal;font-size:24px;line-height:1.1;}
+  :where(html.pcy) .hmMd b{font-size:12.5px;white-space:nowrap;color:#fff;text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;}
+  :where(html.pcy) .hmMd.on{filter:none;outline:3px solid #FFE45C;outline-offset:1px;}
+  :where(html.pcy) .hmMd:active{transform:translateY(3px);box-shadow:0 1px 0 #000 !important;}
+  :where(html.pcy) .hmPlay{padding:8px 0 6px;font-size:26px;line-height:1.1;}
+  :where(html.pcy) .hmPlay small{display:block;font-size:12px;letter-spacing:.06em;}
+  :where(html.pcy) .sh>.eqBody:has(>.gcStage){overflow:hidden;}
+  :where(html.pcy) .card.cols{max-width:760px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);column-gap:16px;align-items:center;padding:14px 18px;}
+  :where(html.pcy) .card.cols>*:not(.cL):not(.cR){grid-column:1 / -1;}
+  :where(html.pcy) .card.cols h2{font-size:24px;margin:0 0 2px;}
+  :where(html.pcy) .card.cols .cL p{margin:4px 0;font-size:13px;line-height:1.45;}
+  :where(html.pcy) .card.cols .stRes{margin:6px 0;gap:3px;}
+  :where(html.pcy) .card.cols .stRes div{padding:3px 8px;}
+  :where(html.pcy) .card.cols .cL button{display:block;width:100%;margin:8px 0 0;padding:9px 0;}
+  :where(html.pcy) .card.cols .cL button.sub{display:inline-block;width:calc(50% - 4px);margin:6px 0 0;padding:7px 0;font-size:14px;}
+  :where(html.pcy) .card.cols .cL button.sub~button.sub{margin-left:8px;}
+  :where(html.pcy) .card.cols .cL br{display:none;}
+  :where(html.pcy) .card.cols .cL:not(:has(.sub~.sub)) .sub{width:100%;}
+  :where(html.pcy) .card.cols .cR .earn{margin:0 0 4px;padding:6px 8px;}
+  :where(html.pcy) .card.cols .cR .dropT{margin:6px 0 4px;}
+  :where(html.pcy) .card.cols .cR .stHint{margin:0 0 6px;}
+  :where(html.pcy) .eqBody{overflow-x:hidden;}
+  :where(html.pcy) .eqSheet,:where(html.pcy) .eqSheet.gs{width:60%;}
+  :where(html.pcy) .eqSheet.gs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;}
+  :where(html.pcy) .eq.open>.eqBody,:where(html.pcy) .eq.open.tall>.eqBody{width:40%;}
+  :where(html.pcy) .eqSheet.gs>.eqSheetHd{grid-column:1 / -1;}
+  :where(html.pcy) .eqSheet.gs>.eqSheetBody{grid-column:1;grid-row:2 / span 2;padding:2px 6px 10px 12px;}
+  :where(html.pcy) .eqSheet.gs>.gTop{grid-column:2;grid-row:2;max-height:none;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 12px 6px 6px;}
+  :where(html.pcy) .eqSheet.gs>.eqDetail{grid-column:2;grid-row:3;padding:6px 12px 10px 6px;border-top:0;}
+  :where(html.pcy) .eqSheet.gs .eqGrid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  :where(html.pcy) .eqSheet.gs .gDet{line-height:1.5;padding:6px 8px;}
+  :where(html.pcy) .eqSheet.gs .gDet>div{margin-top:3px;}
+  :where(html.pcy) .eqSheet.gs{grid-template-rows:auto minmax(0,1fr) 62px;}
+  :where(html.pcy) .eqSheet.gs .gActs{gap:5px;}
+  :where(html.pcy) .eqSheet.gs .gActs button{flex:1 1 0;min-width:0;padding:7px 2px;font-size:12px;white-space:nowrap;}
+  :where(html.pcy) .eqSheet.gs .gActs button small{font-size:9px;}
+  :where(html.pcy) .eqSheet.gs .gActs button.lk{flex:0 0 36px;}
+  :where(html.pcy) .hpList{display:grid;grid-template-columns:1fr 1fr;align-items:start;}
+  :where(html.pcy) .hpList>.hpKeys{grid-column:1 / -1;}
 </style>
 
 <div id="app">
@@ -701,7 +807,7 @@
 <script>
 // ================= 基本設定 =================
 let W = 360, H = 640; const AR = {x:180, y:262, r:150};   // v0.54 W・H は横画面の試合で 740×360 に入れ替える
-let YOKO = false; const YK = { W: 740, H: 360, cx: 370, cy: 186 };   // v0.54 横画面の試合（yoko.js）
+let YOKO = false, PCK = 1; const PC_MODE = !matchMedia('(pointer: coarse)').matches; const YK = { W: 740, H: 360, cx: 370, cy: 186 };   // v0.54 横画面の試合（yoko.js）
 // 武器。最後の段は重く、ためが長く、怯まない（heavy）
 //   parry：ガードを押してからこの秒数以内に攻撃を受けると「はじき」
 //   guardMul：ガードで受けたときのスタミナの減り方　near：AIがこれより近いと下がる距離
@@ -837,13 +943,14 @@ try { bestLv = +localStorage.getItem('maai_best') || 1; myW = WEAPONS[localStora
   const g = JSON.parse(localStorage.getItem('maai_gear') || 'null'); if (g && SLOTS.every(s => ARMOR[s].items[g[s]])) myGear = g; } catch(e) {}
 
 function resize(){
-  const a = document.getElementById('app').getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  pcFit();   // v0.58 PC：箱をウィンドウに合わせて拡大。画面上の大きさ（getBoundingClientRect）は PCK 倍なので割り戻す
+  const ar = document.getElementById('app').getBoundingClientRect(), dpr = (devicePixelRatio || 1)*PCK, a = { width: ar.width/PCK, height: ar.height/PCK, left: ar.left/PCK, top: ar.top/PCK };
   scale = Math.min(a.width/W, a.height/H);
   cv.style.width = W*scale + 'px'; cv.style.height = H*scale + 'px';
   cv.width = W*scale*dpr; cv.height = H*scale*dpr;
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
   // 「練習をやめる」「やめる」は操作パネルの左上（空いている場所）に置く
-  const c = cv.getBoundingClientRect();
+  const cr = cv.getBoundingClientRect(), c = { left: cr.left/PCK, top: cr.top/PCK };
   sndBtn.style.left = (c.left - a.left + (W - 42)*scale) + 'px'; sndBtn.style.top = (c.top - a.top + (YOKO ? 88 : 82)*scale) + 'px'; sndBtn.style.transform = `scale(${scale})`; sndBtn.style.transformOrigin = '0 0';
   quitBtn.style.left = (c.left - a.left + 10*scale) + "px"; quitBtn.style.top = (c.top - a.top + (YOKO ? 90 : 440)*scale) + "px"; quitBtn.style.fontSize = 11*scale + "px"; quitBtn.style.padding = `${5*scale}px ${11*scale}px`;
 }
@@ -1197,7 +1304,10 @@ function updateMelee(dt){
   for (const f of alive) f.tgt = pickTarget(f, alive);
   control(G.p, G.p.tgt || G.p, readPlayer(), dt);
   // 画面の外の者の動きでは、ヒットストップ・揺れ・スロー・音を出さない（遠くの斬り合いで自分の手が止まらないように）
-  const offscreen = (f, fn) => { const v = seen(f), s = [G.hitstop, G.shake, G.slowT]; sfxMute = !v; fn(); sfxMute = false; if (!v) [G.hitstop, G.shake, G.slowT] = s; };
+  // v0.59 画面の中でも、自分が関わらない斬り合いではヒットストップ・スローをかけない
+  const offscreen = (f, fn) => { const v = seen(f), s = [G.hitstop, G.shake, G.slowT], hp0 = G.p.hp, st0 = G.p.state; sfxMute = !v; fn(); sfxMute = false;
+    if (!v) [G.hitstop, G.shake, G.slowT] = s;
+    else if (f !== G.p && f.tgt !== G.p && G.p.hp === hp0 && G.p.state === st0 && G.phase !== 'ko') { G.hitstop = s[0]; G.slowT = s[2]; } };
   const dk = G.mikiriT > 0 ? .4 : 1; if (G.mikiriT > 0) G.mikiriT -= dt;   // 奥義「見切り」：自分以外が遅くなる
   for (const f of alive) if (f.isAI && f.tgt) offscreen(f, () => control(f, f.tgt, aiThink(dt*dk, f, f.tgt, f.ai), dt*dk));
     else if (f.isAI) { const z = G.zone, dz = Math.hypot(z.x - f.x, z.y - f.y) || 1; control(f, f, {mx: dz > 30 ? (z.x - f.x)/dz*.6 : 0, my: dz > 30 ? (z.y - f.y)/dz*.6 : 0}, dt*dk); }
@@ -1602,7 +1712,7 @@ function aiThink(dt, e = G.e, p = G.p, ai = G.ai){   // e：考えるAI、p：�
 const BTN = { atk:{x:296, y:556, r:38, label:'攻撃'}, grd:{x:214, y:588, r:30, label:'ガード'}, dash:{x:300, y:470, r:28, label:'回避'}, thr:{x:220, y:508, r:25, label:'投げ'}, ougi:{x:238, y:452, r:21, label:'奥義'} };
 const P = {mx:0, my:0, guard:false, attack:false, dash:false, throw:false, ougi:false};
 const touches = new Map(); let stick = null; const keys = {};
-function toLogical(e){ const r = cv.getBoundingClientRect(); return {x:(e.clientX - r.left)/scale, y:(e.clientY - r.top)/scale}; }
+function toLogical(e){ const r = cv.getBoundingClientRect(), k = scale*PCK; return {x:(e.clientX - r.left)/k, y:(e.clientY - r.top)/k}; }
 function btnAt(x, y){ for (const k in BTN) { const b = BTN[k]; if (k === 'ougi' && !(G && G.p && G.p.heart)) continue; if (Math.hypot(x-b.x, y-b.y) < b.r + (YOKO ? 16 : 10)) return k; } return null; }
 // 画面の外側の余白（iPhoneで上下に残る帯）から触っても操作できるように、#app 全体で受ける
 const appEl = document.getElementById('app');
@@ -5319,7 +5429,7 @@ function drawTenshuArena(){
 const BTN_T = {};
 // v0.54.1 横画面のボタン：縦の位置をずらすだけだと小さく端に寄って押しにくかった（iPhone で回避・奥義が反応しにくい）→ 横用に大きく、画面の端から離して並べる
 const BTN_Y = { atk: { x: 652, y: 270, r: 42 }, grd: { x: 560, y: 306, r: 33 }, thr: { x: 556, y: 224, r: 29 }, dash: { x: 648, y: 176, r: 33 }, ougi: { x: 572, y: 146, r: 26 } };   // YOKO・YK は W・H の宣言のすぐ下（resize がこれより前に呼ばれるため）
-const yokoWant = () => innerWidth > innerHeight && innerHeight < 600;   // v0.55 横画面のスマホ：試合（乱戦・通信対戦も）もメニューも横の並び
+const yokoWant = () => PC_MODE || (innerWidth > innerHeight && innerHeight < 600);   // v0.58 PC はいつも横   // v0.55 横画面のスマホ：試合（乱戦・通信対戦も）もメニューも横の並び
 function yokoApply(on){
   YOKO = on; W = on ? YK.W : 360; H = on ? YK.H : 640;
   for (const k in BTN) { if (!BTN_T[k]) BTN_T[k] = { x: BTN[k].x, y: BTN[k].y, r: BTN[k].r };   // 縦の位置・大きさを覚えておき、横では横用の並び（BTN_Y）に
@@ -5403,7 +5513,7 @@ let ROT_ON = false;
 const rotEl = document.createElement('div'); rotEl.id = 'rotMsg';
 rotEl.innerHTML = '<div><i>📱</i><b>スマホを横にしてください</b><small>このゲームは横画面で遊びます</small></div>';
 document.body.appendChild(rotEl);
-function rotCheck(){ const on = innerHeight > innerWidth && innerWidth < 600; if (on !== ROT_ON) { ROT_ON = on; document.body.classList.toggle('rot', on); } }
+function rotCheck(){ const on = !PC_MODE && innerHeight > innerWidth && innerWidth < 600; if (on !== ROT_ON) { ROT_ON = on; document.body.classList.toggle('rot', on); } }
 
 // 横画面の札（勝ち・負けの結果など）：中身を左右2列に分けて、スクロールしなくても全部見えるように
 //   左＝見出し・文・星・ボタン、右＝小判・ヒント・手に入れた物。card() のすぐ後（後から足すボタンも入るように少し待って）並べ直す
@@ -5414,6 +5524,19 @@ function cardCols(){
   const L = document.createElement('div'), R = document.createElement('div'); L.className = 'cL'; R.className = 'cR';
   kids.forEach(e => (isR(e) ? R : L).appendChild(e));
   c.append(L, R); c.classList.add('cols');
+}
+
+// ================= v0.58 PC でも横画面 =================
+// マウスの PC（指で触る画面でない）では、スマホの横画面と同じ並び（高さ390の横長の箱）を作り、ウィンドウに収まるよう拡大して真ん中に置く。
+//   箱の幅は844、高さはウィンドウの形から390〜600。ウィンドウが縦長でも横の並び（上下に余白）。CSS は yoko.css の横画面の分を html.pcy でも効かせる（integrate_v058.py）
+//   拡大の倍率 PCK は resize（キャンバスの大きさ・ボタンの位置）と toLogical（押した位置）で割り戻す
+function pcFit(){
+  const app = document.getElementById('app');
+  document.documentElement.classList.toggle('pcy', PC_MODE);
+  if (!PC_MODE) { PCK = 1; return; }
+  const Lw = 844, Lh = Math.max(390, Math.min(600, Math.round(Lw*innerHeight/innerWidth)));   // 幅はスマホの横画面と同じ844、高さはウィンドウの形に合わせて390〜600
+  PCK = Math.min(innerWidth/Lw, innerHeight/Lh);
+  app.style.cssText = `position:absolute;left:${(innerWidth - Lw*PCK)/2}px;top:${(innerHeight - Lh*PCK)/2}px;width:${Lw}px;height:${Lh}px;transform:scale(${PCK});transform-origin:0 0;`;
 }
 
 // ================= ホーム画面（v0.39、ブロスタ風） =================
@@ -5493,7 +5616,7 @@ function title(){
       fx: typeof eqOrbFx === 'function' ? (c2, so) => eqOrbFx(c2, so, 9) : null });   // v0.52 鍔玉の演出（武器と同じ奥行き）
     // カプセルの前のガラス：うっすら水色・映り込みの筋・上下する読み取りの光（武者にもかかる）
     { const g = lab.glass, H = $('hmBg').parentElement.getBoundingClientRect(), C = cvs.getBoundingClientRect(), f = cvs.width/C.width;
-      const X = v => (H.left + v - C.left)*f, Y = v => (H.top + v - C.top)*f, l = X(g.l), r = X(g.r), tp = Y(g.t), bt = Y(g.b), u = 3*f;
+      const X = v => (H.left + v - C.left)*f, Y = v => (H.top + v - C.top)*f, l = X(g.l), r = X(g.r), tp = Y(g.t), bt = Y(g.b), u = 3*PCK*f;
       x.fillStyle = 'rgba(120,220,255,.07)'; x.fillRect(l, tp, r - l, bt - tp);
       x.fillStyle = 'rgba(210,250,255,.16)'; x.fillRect(r - 7*u, tp + 4*u, u, bt - tp - 16*u); x.fillRect(r - 5*u, tp + 10*u, u, bt - tp - 30*u);
       const sy = Math.round(Y(g.scan(t))/u)*u;
@@ -5532,7 +5655,7 @@ function labBase(s, W, H, cx, fl){
 // ホームの背景：からくり研究所（v0.39.1）。1ドット＝3px のドット絵。動かない所は1回だけ別の canvas に描き、毎フレームは光・画面・泡・火花だけ
 // 武者の後ろに調整用のカプセル、足元に丸い台。位置は武者の canvas の場所から決める（画面の大きさが変わったら作り直す）
 function hmLab(bg, chCv){
-  const hm = bg.parentElement, R = hm.getBoundingClientRect(), C = chCv.getBoundingClientRect(), S = 3;
+  const hm = bg.parentElement, R = hm.getBoundingClientRect(), C = chCv.getBoundingClientRect(), S = 3*PCK;   // v0.58 PC で拡大しているときはドットも同じ倍率に
   const W = Math.max(40, Math.ceil(R.width/S)), H = Math.max(60, Math.ceil(R.height/S));
   bg.width = W; bg.height = H;
   const c = bg.getContext('2d'), k = C.height/340;
@@ -5613,7 +5736,7 @@ function hmLab(bg, chCv){
 // 店・ガチャ・蔵の背景（v0.39.2）：ホームと同じ研究所の部屋。店＝部品の棚と値札の画面、ガチャ＝製造機に管がつながり電球の輪、蔵＝木箱の積まれた倉庫
 // anchor：飾りの真ん中を合わせる相手の位置を返す関数（画面上の座標 {x, y}）。ガチャ＝製造機、装備＝武者の体の真ん中
 function hmRoom(bg, kind, anchor){
-  const hm = bg.parentElement, R = hm.getBoundingClientRect(), S = 3;
+  const hm = bg.parentElement, R = hm.getBoundingClientRect(), S = 3*PCK;   // v0.58 PC で拡大しているときはドットも同じ倍率に
   const W = Math.max(40, Math.ceil(R.width/S)), H = Math.max(60, Math.ceil(R.height/S));
   bg.width = W; bg.height = H;
   const c = bg.getContext('2d'), cx = Math.round(W/2), fl = Math.round(H*.8);
