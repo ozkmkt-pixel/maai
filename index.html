@@ -1147,7 +1147,7 @@ function newRound(){
   if (G.stage && G.stage.wkSeq) G.eW = G.stage.wkSeq[(G.round - 1) % G.stage.wkSeq.length];   // v0.47 将軍：1本ごとに持ちかえ
   G.e = mkF(AR.x, AR.y - 80, true, '#E0493E', `${WEAPONS[G.eW].title} Lv${G.level}`, G.eW, G.eGear);
   G.e.per = G.boss ? BOSS_PER[G.boss.set] : foePer;
-  if (G.boss) { makeBoss(G.e, G.boss, 0, 1.15); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
+  if (G.boss) { G.e.skin = bossSkin(G.boss) || G.e.skin; makeBoss(G.e, G.boss, 0, 1.15); G.e.name = `強敵 ${G.boss.n} Lv${G.level}`; }
   G.ai = {heat:0, seenWind:-1, guardAt:0, releaseAt:0, dashAt:0, attackAt:0, comboLeft:0, strafe:1, strafeT:0, backoff:0};
   if (G.stage && G.stage.ai) G.ai.prof = G.stage.ai;   // v0.65 最初の3面：敵の反応・守り・攻めを控えめに
   if (G.stage && G.stage.hand) { G.e.m.atk *= G.stage.hand.atk; G.e.maxHp = G.e.hp = Math.round(G.e.maxHp*G.stage.hand.hp); }   // 敵の攻撃力・体力を下げる
@@ -1207,7 +1207,7 @@ function newMelee(){
     // 4割の試合で、1体が強敵（名前つきのボス武者）
     const b = i === 0 && Math.random() < .4 ? pickOne(BOSSES) : null, wk = b ? b.wk : WKEYS[Math.floor(Math.random()*WKEYS.length)];
     const f = mkF(...at(Math.PI/2 + (i + 1)*Math.PI*2/(MELEE_N + 1)), true, '', WEAPONS[wk].title, wk, aiGear(level, b ? { boss: 1, set: b.set } : {}));
-    f.skin = randSkin(); f.team = MELEE_TEAMS[i]; f.ai = newAiMemo(); f.per = b ? BOSS_PER[b.set] : pickOne(PER_KEYS); G.fs.push(f);
+    f.skin = bossSkin(b) || randSkin(); f.team = MELEE_TEAMS[i]; f.ai = newAiMemo(); f.per = b ? BOSS_PER[b.set] : pickOne(PER_KEYS); G.fs.push(f);
     if (b) { makeBoss(f, b, 1, 1.35); f.wlv = 1; say(`強敵「${b.n}」がいる！`, G.p.x, G.p.y - 70, b.c, 18, 2.6); }
   }
   G.e = G.fs[1];   // 1対1用の処理が参照しても困らないように
@@ -2087,6 +2087,7 @@ function loadout(level, eW, eGear, practice){
   if (practice) CUR_STAGE = null; else if (CUR_STAGE) foePer = CUR_STAGE.per;   // v0.43 面の性格
   const boss = practice ? null : CUR_STAGE ? stBoss(CUR_STAGE) : bossForLevel(level);   // Lv3の倍数は強敵（武器は決まっている）
   eW = boss ? boss.wk : eW || WKEYS[Math.floor(Math.random()*WKEYS.length)];
+  if (bossSkin(boss)) foeSkin = bossSkin(boss);   // v0.67 強敵はいつも同じ見た目
   eGear = eGear || (practice ? randomGear() : aiGear(level, boss ? { boss: 1, set: boss.set } : {}));
   let bulk = null, bulkArm = false;   // 一括分解：選んだ等級（Set）、確かめ中
   let scrapArm = false, lastUp = null, wTab = 'w';   // wTab：武器の一覧の中の「武器」「鍔玉」のどちらを見ているか   // 仕掛け：分解の確かめ中、直前の強化で伸びた副効果
@@ -4719,6 +4720,15 @@ const BOSSES = [
   { n: '影法師', wk: 'katana', set: 'kagebo', c: '#9A9AC8' },
   { n: 'からくり将軍', wk: 'great', set: 'shogun', c: '#FFD040' },
 ];
+// 強敵の見た目（形の違う頭 head をつけると飾り hair は出ない）
+const BOSS_SKIN = {
+  onimaru:   { head: 'oni',  hair: 'mage',     hairC: '#1A1A1A', outfit: 'beni',      bodyP: 'domaru',   armP: 'kote', legP: 'tetsu', back: 'b_ootachi', blade: 'shu' },
+  tsukikage: { head: 'none', hair: 'mikazuki', hairC: '#7A3FB0', outfit: 'fuji',      bodyP: 'hosomi',   armP: 'std',  legP: 'tabi',  back: 'b_tsubasa', blade: 'shiro' },
+  raiden:    { head: 'none', hair: 'antena',   hairC: '#D4A373', outfit: 'kon',       bodyP: 'taiko',    armP: 'std',  legP: 'std',   back: 'b_raijin',  blade: 'shiden' },
+  kagebo:    { head: 'none', hair: 'onibi',    hairC: '#1A1A1A', outfit: 'shinobi',   bodyP: 'hosomi',   armP: 'std',  legP: 'tabi',  back: 'cape',      blade: 'yami' },
+  shogun:    { head: 'none', hair: 'kanmuri',  hairC: '#E8C25A', outfit: 'yoroi_kin', bodyP: 'haguruma', armP: 'kin',  legP: 'kin',   back: 'b_zenmai',  blade: 'honoo' },
+};
+const bossSkin = b => b && BOSS_SKIN[b.set] ? { ...DEFAULT_SKIN, ...BOSS_SKIN[b.set] } : null;
 const bossForLevel = lv => lv % 3 === 0 ? BOSSES[(lv/3 - 1) % BOSSES.length] : null;
 function makeBoss(f, b, lvUp, hpMul){   // AIの武者を強敵にする
   f.boss = b; f.lv = Math.min(9, G.level + lvUp); f.maxHp = f.hp = Math.round(f.maxHp*hpMul); f.name = b.n;
@@ -5030,7 +5040,7 @@ const CHAPTERS = [
     { id: '1-1', wk: 'katana', per: 'tosshin', lv: 1, coach: 1, ai: { react: .6, parryRate: 0, blockRate: .12, aggression: .35 }, hand: { atk: .6, hp: .75 }, goal: { k: 'heavy', h: '重い一撃', n: 1, t: '最後の段（重い一撃）を当てる', s: '最後の段を当てて勝つ' }, tip: '攻撃ボタンを続けて押すと3段目まで出る。3段目は重い一撃で、途中で斬られても止まらない' },
     { id: '1-2', wk: 'dagger', per: 'shincho', lv: 1, coach: 2, ai: { react: .55, parryRate: .01, blockRate: .2, aggression: .4 }, hand: { atk: .8, hp: .9 }, goal: { k: 'thr', h: '投げ', n: 1, t: '投げを1回決める', s: '投げを決めて勝つ' }, tip: '「投げ」はガードの上からでも決まる。相手の目の前で投げボタン' },
     { id: '1-3', wk: 'katana', per: 'kaeshi', lv: 1, coach: 3, ai: { react: .55, parryRate: .01, blockRate: .2, aggression: .4 }, hand: { atk: .8, hp: .9 }, goal: { k: 'parry', h: 'はじき', n: 1, t: 'はじきを1回決める', s: 'はじきを決めて勝つ' }, tip: '相手が構えると自分のまわりの輪が縮む。金色で「今」と出たらガードを押すと「はじき」。はじいた後は斬り放題' },
-    { id: '1-4', wk: 'great', per: 'tosshin', lv: 2, goal: { k: 'dodge', h: '回避', n: 3, t: '回避で3回かわす', s: '回避で3回かわして勝つ' }, tip: '大剣の重い一撃は、ガードより回避でかわす' },
+    { id: '1-4', wk: 'great', per: 'tosshin', lv: 2, coach: 4, goal: { k: 'dodge', h: '回避', n: 3, t: '回避で3回かわす', s: '回避で3回かわして勝つ' }, tip: '大剣の重い一撃は、ガードより回避でかわす' },
     { id: '1-5', wk: 'spear', per: 'nigeru', lv: 2, goal: { k: 'taken', h: '被弾', n: 5, max: 1, t: '被弾5回以下', s: '被弾5回以下で勝つ' }, tip: '槍は遠くから届く。懐に入れば柄しか当たらない' },
     { id: '1-6', boss: 'onimaru', per: 'tosshin', lv: 3, goal: { k: 'parry', h: 'はじき', n: 3, t: 'はじきを3回決める', s: 'はじきを3回決めて勝つ' }, tip: '体力の多い大剣の強敵。重い一撃は振り終わりに大きな隙がある。そこを斬る' },
   ] },
@@ -6267,7 +6277,7 @@ const LOGO_SRC = 'data:image/webp;base64,UklGRvxgAgBXRUJQVlA4WAoAAAAQAAAA9wIAlQE
 title();
 requestAnimationFrame(loop);
 // ===== v0.65 最初の3面（1-1〜1-3）の案内：試合中に「今やること」を1つだけ出し、押すボタンを光らせる =====
-// 面の coach：1＝近づく・連打・ガード／2＝投げ／3＝はじき。まだクリアしていない面だけ出す
+// 面の coach：1＝近づく・連打・ガード／2＝投げ／3＝はじき／4＝回避（v0.66）。まだクリアしていない面だけ出す
 const COACH_KEY = { atk: 'J', grd: 'K', thr: 'U', dash: 'Space' };
 const coachKey = k => PC_MODE ? `（${COACH_KEY[k]}）` : '';
 function coachNow(){
@@ -6275,9 +6285,11 @@ function coachNow(){
   if (stProg[st.id] && stProg[st.id][0]) return null;   // 一度クリアしたら出さない
   const p = G.p, e = G.e; if (!p || !e) return null;
   const n = st.coach, c = G.count, cs = G.coach || (G.coach = { warn: 0, wid: -1 }), d = Math.hypot(e.x - p.x, e.y - p.y);
-  const near = e.state === 'windup' && d < e.w.atk[e.atk].reach + 70;
+  const near = e.state === 'windup' && d < e.w.atk[e.atk].reach + 70, heavy = near && e.w.atk[e.atk].heavy;
   // 相手が構えたら、最初の数回はゆっくりにして見せる（はじきの面は多め）
-  if (near && e.windId !== cs.wid) { cs.wid = e.windId; if (cs.warn < (n === 3 ? 4 : 2) && !p.guard) { cs.warn++; G.slowT = Math.max(G.slowT, n === 3 ? .55 : .4); } }
+  if (near && e.windId !== cs.wid) { cs.wid = e.windId; if (n === 4 ? heavy && cs.warn < 3 : cs.warn < (n === 3 ? 4 : 2) && !p.guard) { cs.warn++; G.slowT = Math.max(G.slowT, n >= 3 ? .55 : .4); } }
+  if (heavy && n === 4) return { m: '重い一撃！ 回避' + coachKey('dash') + 'でかわす', b: 'dash' };
+  if (n === 4 && p.state === 'idle' && e.state === 'recover' && d < p.w.atk[0].reach + 40) return { m: '振り終わりの隙！ 攻撃' + coachKey('atk'), b: 'atk' };
   if (near && n === 3) return { m: '輪が縮む → 金色の「今」でガード' + coachKey('grd') + '＝はじき', b: 'grd' };
   if (near) return { m: '相手が構えた！ ガード' + coachKey('grd') + 'で受ける', b: 'grd' };
   if (n === 3 && p.state === 'idle' && e.state === 'stun' && e.stunKind === 'parry') return { m: 'はじいた！ 今のうちに攻撃' + coachKey('atk'), b: 'atk' };
