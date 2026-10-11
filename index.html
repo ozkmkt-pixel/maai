@@ -7000,6 +7000,136 @@ if (/[?&]i18nmiss\b/.test(location.search)) addEventListener('load', () => { con
   b.style.cssText = 'position:fixed;right:4px;bottom:4px;z-index:999;font-size:11px;padding:2px 6px;'; document.body.appendChild(b);
   setInterval(() => { b.textContent = 'miss ' + I18N_MISS.size; }, 500); b.onclick = () => console.log([...I18N_MISS].join('\n')); });
 
+// v0.76 一本・KO のとき、倒れた側がばらばらになる：その武者の装備の部品（頭・胴と背中の物・両腕・両脚・武器）が回りながら飛び、
+// 歯車・ネジ・板金・バネ・煙も散る。体は消す（f.__burst）
+// ko・meleeKO を包んで出し、drawOfx を包んで世界の座標で描く。動きは描くときに実時間で進める（ヒットストップ中は止め、スローは 0.3 倍）
+const DEB = { list: [], last: 0, spr: {}, K: 2 };   // K：1ドットの大きさ（キャラの元の1ドットと同じ2）
+const debRnd = (a, b) => a + Math.random()*(b - a);
+function debHex(h, k){   // 色を明るく（k>0）・暗く（k<0）
+  const n = parseInt(h.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255;
+  const f = v => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v)*k : v*(1 + k))));
+  return '#' + [f(r), f(g), f(b)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function debTeam(f){ return f && f.color && /^#[0-9a-f]{6}$/i.test(f.color) ? f.color : f && f.team === 'red' ? '#D8483E' : '#3E7FD8'; }
+// 歯車のドット絵（半径 R ドット、歯 n 枚、回転は fr/6 歯ぶん）。描くときに DEB.K 倍
+function debGear(R, n, col, fr){
+  const key = R + n + col + fr; if (DEB.spr[key]) return DEB.spr[key];
+  const S = 2*R + 5, c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d');
+  const hi = debHex(col, .55), mid = col, lo = debHex(col, -.25), ol = debHex(col, -.62), ph = fr/6*Math.PI*2/n;
+  const rr = (px, py) => Math.hypot(px - S/2 + .5, py - S/2 + .5);
+  const inside = (px, py) => { const dx = px - S/2 + .5, dy = py - S/2 + .5, r = Math.hypot(dx, dy);
+    if (r < R*.3) return 0;   // 真ん中の穴（小さめ）
+    const a = Math.atan2(dy, dx) - ph, tooth = Math.cos(a*n) > .25; return r <= R + .35 || (tooth && r <= R + 1.75) ? 1 : 0; };
+  for (let py = 0; py < S; py++) for (let px = 0; px < S; px++) {
+    if (!inside(px, py)) continue;
+    const r = rr(px, py), outer = [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([ox, oy]) => !inside(px + ox, py + oy) && rr(px + ox, py + oy) > R*.5);   // 縁は外側だけ
+    const hole = r < R*.3 + 1.2;   // 穴のまわりは暗く
+    const dx = px - S/2 + .5, dy = py - S/2 + .5, l = (-dx - dy)/(R*1.6);   // 左上から光
+    x.fillStyle = outer ? ol : hole ? lo : l > .3 ? hi : l < -.35 ? lo : mid; x.fillRect(px, py, 1, 1);
+  }
+  return DEB.spr[key] = c;
+}
+// その武者の部品を1つずつ絵にする（drawMech に1つの部品の位置だけ渡すと、その部品だけ描かれる）。1ドット＝世界の1
+function debPartImg(f, name){
+  const c = document.createElement('canvas'); c.width = c.height = 72; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  try { drawMech(x, 36, 36, f.face, f.skin, f.team, { [name]: [0, 0, 0] }, { px: MECH_PX, warm: true }); } catch (e) { return null; }
+  return c;
+}
+function debWeaponImg(f){
+  const L = Math.round((f.w && f.w.len || 34)*1.25), c = document.createElement('canvas'); c.width = L + 24; c.height = 40; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  try { drawWeaponPix(x, 12, 20, 0, f.wk || 'katana', MECH_PX, L, f.skin && f.skin.blade, false, 1); } catch (e) { return null; }
+  return c;
+}
+function debParts(loser, away, big){
+  const sp = big ? 1.2 : 1;
+  // [部品, 高さ（世界の単位）, 横へのずれ, 上への勢い]
+  const L = [['head', 37, 0, 330], ['body', 18, 0, 200], ['handL', 17, -1, 260], ['handR', 17, 1, 260], ['footL', 3, -1, 170], ['footR', 3, 1, 170]];
+  const side = away + Math.PI/2;
+  for (const [n, z, sd, vz] of L) {
+    const img = debPartImg(loser, n); if (!img) continue;
+    const a = away + debRnd(-.9, .9) + sd*.7, v = debRnd(60, 170)*sp;
+    DEB.list.push({ kind: 'img', img, x: loser.x + Math.cos(side)*sd*6, y: loser.y + Math.sin(side)*sd*4, z,
+      vx: Math.cos(a)*v, vy: Math.sin(a)*v*.7, vz: debRnd(vz*.8, vz*1.1)*sp, a: 0, va: debRnd(-9, 9), t: 0, life: 7, rest: false, big: 1 });
+  }
+  const w = debWeaponImg(loser);
+  if (w) { const a = away + debRnd(-.6, .6), v = debRnd(150, 230)*sp;   // 武器はくるくる回って遠くへ
+    DEB.list.push({ kind: 'img', img: w, x: loser.x, y: loser.y, z: 20, vx: Math.cos(a)*v, vy: Math.sin(a)*v*.7, vz: debRnd(300, 380)*sp, a: 0, va: debRnd(14, 20)*(Math.random() < .5 ? -1 : 1), t: 0, life: 7, rest: false, big: 1 }); }
+}
+function debBurst(loser, big){
+  if (!G || !loser) return;
+  const other = G.melee ? null : (loser === G.p ? G.e : G.p);
+  const away = other ? Math.atan2(loser.y - other.y, loser.x - other.x) : debRnd(0, Math.PI*2);
+  const metal = '#C3CAD4', team = debTeam(loser), brass = '#E0AE4A';   // 歯車・ネジは明るい鋼と真鍮（体の金属色だと黒鉄のとき黒い塊に見えた）
+  loser.__burst = true; debParts(loser, away, big);
+  const N = big ? 12 : 8;
+  for (let i = 0; i < N; i++) {
+    const r = Math.random(), kind = r < .38 ? 'gear' : r < .62 ? 'bolt' : r < .86 ? 'plate' : 'spring';
+    const a = away + debRnd(-1.3, 1.3)*(i % 4 === 0 ? 2.2 : 1), v = debRnd(70, big ? 300 : 240);
+    DEB.list.push({ kind, x: loser.x + debRnd(-6, 6), y: loser.y + debRnd(-4, 4), z: debRnd(10, 30),
+      vx: Math.cos(a)*v, vy: Math.sin(a)*v*.7, vz: debRnd(120, big ? 300 : 250), a: debRnd(0, 6.3), va: debRnd(-14, 14),
+      R: kind === 'gear' ? [3, 4, 4, 5][i % 4] : 0, n: [6, 7, 8, 9][i % 4],
+      col: kind === 'gear' ? (i % 3 === 0 ? brass : metal) : kind === 'plate' ? team : kind === 'spring' ? '#9AA3AE' : metal,
+      t: 0, life: debRnd(2.2, 3), rest: false });
+  }
+  for (let i = 0; i < (big ? 9 : 6); i++) {   // 煙（ふわっと広がって消える）
+    const a = debRnd(0, Math.PI*2), v = debRnd(10, 40);
+    DEB.list.push({ kind: 'smoke', x: loser.x + debRnd(-8, 8), y: loser.y + debRnd(-4, 4), z: debRnd(8, 30), vx: Math.cos(a)*v, vy: Math.sin(a)*v*.6, vz: debRnd(10, 40), t: 0, life: debRnd(.6, 1.1), s: debRnd(5, 9) });
+  }
+  if (typeof spark === 'function') { spark(loser.x, loser.y - 22, '#FFD27A', big ? 22 : 14, 280); spark(loser.x, loser.y - 22, '#FFFFFF', 6, 200); }
+  if (DEB.list.length > 160) DEB.list.splice(0, DEB.list.length - 160);
+}
+function debStep(dt){
+  for (const p of DEB.list) {
+    p.t += dt;
+    if (p.kind === 'smoke') { p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt; p.vx *= .96; p.vy *= .96; continue; }
+    if (p.rest) continue;
+    p.vz -= 700*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt; p.a += p.va*dt;
+    if (p.z <= 0) {   // 床で跳ねる
+      p.z = 0;
+      if (Math.abs(p.vz) < 60) { p.vz = 0; p.vx *= .82; p.vy *= .82; p.va *= .8; if (Math.hypot(p.vx, p.vy) < 6) p.rest = true; }
+      else { p.vz = -p.vz*(p.big ? .32 : .42); p.vx *= p.big ? .55 : .66; p.vy *= p.big ? .55 : .66; p.va *= p.big ? .45 : .6; }
+    }
+  }
+  DEB.list = DEB.list.filter(p => p.t < p.life);
+}
+function debDraw(ctx){
+  const now = performance.now(), raw = DEB.last ? Math.min(.05, (now - DEB.last)/1000) : 0; DEB.last = now;
+  if (!DEB.list.length) return;
+  let dt = raw; if (G && G.hitstop > 0) dt = 0; else if (G && G.slowT > 0) dt *= .55;   // スロー中も少し速く（飛び散るのが見えるように）
+  debStep(dt);
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+  for (const p of DEB.list) {   // 影
+    if (p.kind === 'smoke') continue;
+    const fade = Math.min(1, (p.life - p.t)/.5), k = Math.max(.35, 1 - p.z/120);
+    const rr = p.big ? 9 : ((p.R || 3) + 1)*DEB.K; ctx.globalAlpha = .28*fade*k; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(p.x, p.y + 1, rr, rr*.45, 0, 0, Math.PI*2); ctx.fill();
+  }
+  const order = DEB.list.slice().sort((a, b) => a.y - b.y);
+  for (const p of order) {
+    const fade = Math.min(1, (p.life - p.t)/.5), sx = Math.round(p.x), sy = Math.round(p.y - p.z);
+    if (p.kind === 'smoke') { const k = p.t/p.life; ctx.globalAlpha = .55*(1 - k); ctx.fillStyle = k < .3 ? '#E8E2D6' : '#8E8A84';
+      ctx.beginPath(); ctx.arc(sx, sy, p.s*1.5*(1 + k*1.6), 0, Math.PI*2); ctx.fill(); continue; }
+    ctx.globalAlpha = fade;
+    if (p.kind === 'img') {   // 装備の部品：回して描く（床に止まったら45度ずつに丸めてドットを崩さない）
+      ctx.save(); ctx.translate(sx, sy); ctx.rotate(p.rest ? Math.round(p.a/(Math.PI/4))*(Math.PI/4) : p.a); ctx.drawImage(p.img, -p.img.width/2, -p.img.height/2); ctx.restore();
+    } else if (p.kind === 'gear') {
+      const fr = ((Math.floor(p.a/(Math.PI*2/p.n)*6) % 6) + 6) % 6, img = debGear(p.R, p.n, p.col, fr);
+      ctx.drawImage(img, sx - img.width*DEB.K/2, sy - img.height*DEB.K/2, img.width*DEB.K, img.height*DEB.K);
+    } else {
+      ctx.save(); ctx.translate(sx, sy); ctx.scale(DEB.K, DEB.K); ctx.rotate(Math.round(p.a/(Math.PI/4))*(Math.PI/4));   // 45度ずつ（ドットが崩れにくい）
+      if (p.kind === 'bolt') { ctx.fillStyle = debHex(p.col, -.6); ctx.fillRect(-3, -1.5, 7, 3); ctx.fillStyle = p.col; ctx.fillRect(-2, -.5, 5, 1); ctx.fillStyle = debHex(p.col, .4); ctx.fillRect(-4, -2.5, 2, 5); }
+      else if (p.kind === 'plate') { ctx.fillStyle = debHex(p.col, -.55); ctx.fillRect(-4, -3, 8, 6); ctx.fillStyle = p.col; ctx.fillRect(-3, -2, 6, 4); ctx.fillStyle = debHex(p.col, .45); ctx.fillRect(-3, -2, 6, 1); ctx.fillStyle = '#E9E4D8'; ctx.fillRect(1, 0, 1, 1); }
+      else { ctx.fillStyle = debHex(p.col, -.5); for (let i = 0; i < 4; i++) ctx.fillRect(-4 + i*2, i % 2 ? -2 : 0, 2, 2); ctx.fillStyle = p.col; for (let i = 0; i < 4; i++) ctx.fillRect(-4 + i*2, i % 2 ? -2 : 0, 1, 1); }
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = sm;
+}
+{ const _ko = ko; ko = function(loser){ _ko(loser); debBurst(loser, G.pw >= 2 || G.ew >= 2); }; }
+{ const _mk = meleeKO; meleeKO = function(def){ _mk(def); debBurst(def, G.phase === 'ko'); }; }
+{ const _nr = newRound; newRound = function(...a){ DEB.list = []; if (G) for (const f of [G.p, G.e, ...(G.fs || [])]) if (f) f.__burst = false; return _nr(...a); }; }
+{ const _df = drawF; drawF = function(f){ if (f && f.__burst) return; return _df(f); }; }
+{ const _do = drawOfx; drawOfx = function(...a){ const r = _do(...a); if (!a.length || a[0] === MAIN_CTX) debDraw(MAIN_CTX); return r; }; }
+
 title();
 requestAnimationFrame(loop);
 // ===== v0.65 最初の3面（1-1〜1-3）の案内：試合中に「今やること」を1つだけ出し、押すボタンを光らせる =====
