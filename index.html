@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -690,6 +690,10 @@
     .hpList>.hpKeys{grid-column:1 / -1;}
   }
 
+/* v0.69 iPhone の横向き：画面の端まで描く（viewport-fit=cover）。メニューはノッチの内側に */
+#overlay{padding-left:max(16px, env(safe-area-inset-left));padding-right:max(16px, env(safe-area-inset-right));}
+html #overlay:has(>.eq){padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left);}
+
   /* v0.58 PC でも横画面（yoko.css の横画面の分を写したもの） */
   :where(html.pcy) .eq{max-width:none;max-height:none;border-radius:0;border:0;}
   :where(html.pcy) .hm{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-rows:auto 1fr auto auto;}
@@ -957,14 +961,15 @@ try { bestLv = +localStorage.getItem('maai_best') || 1; myW = WEAPONS[localStora
 function resize(){
   pcFit();   // v0.58 PC：箱をウィンドウに合わせて拡大。画面上の大きさ（getBoundingClientRect）は PCK 倍なので割り戻す
   const ar = document.getElementById('app').getBoundingClientRect(), dpr = (devicePixelRatio || 1)*PCK, a = { width: ar.width/PCK, height: ar.height/PCK, left: ar.left/PCK, top: ar.top/PCK };
+  yokoFit(a);   // v0.69 横画面は画面の形に合わせて W・H を広げる
   scale = Math.min(a.width/W, a.height/H);
   cv.style.width = W*scale + 'px'; cv.style.height = H*scale + 'px';
   cv.width = W*scale*dpr; cv.height = H*scale*dpr;
   ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
   // 「練習をやめる」「やめる」は操作パネルの左上（空いている場所）に置く
   const cr = cv.getBoundingClientRect(), c = { left: cr.left/PCK, top: cr.top/PCK };
-  sndBtn.style.left = (c.left - a.left + (W - 42)*scale) + 'px'; sndBtn.style.top = (c.top - a.top + (YOKO ? 88 : 82)*scale) + 'px'; sndBtn.style.transform = `scale(${scale})`; sndBtn.style.transformOrigin = '0 0';
-  quitBtn.style.left = (c.left - a.left + 10*scale) + "px"; quitBtn.style.top = (c.top - a.top + (YOKO ? 90 : 440)*scale) + "px"; quitBtn.style.fontSize = 11*scale + "px"; quitBtn.style.padding = `${5*scale}px ${11*scale}px`;
+  sndBtn.style.left = (c.left - a.left + (W - 42 - (YOKO ? SAFE.r : 0))*scale) + 'px'; sndBtn.style.top = (c.top - a.top + (YOKO ? 88 : 82)*scale) + 'px'; sndBtn.style.transform = `scale(${scale})`; sndBtn.style.transformOrigin = '0 0';
+  quitBtn.style.left = (c.left - a.left + (YOKO ? 10 + SAFE.l : 10)*scale) + "px"; quitBtn.style.top = (c.top - a.top + (YOKO ? 90 : 440)*scale) + "px"; quitBtn.style.fontSize = 11*scale + "px"; quitBtn.style.padding = `${5*scale}px ${11*scale}px`;
 }
 addEventListener('resize', resize);
 const rnd = (a,b) => a + Math.random()*(b-a);
@@ -3043,7 +3048,7 @@ function draw(){
   ctx.restore();
   if (G.cam) drawOffscreen();
   if (G.mikiriT > 0) { ctx.fillStyle = `rgba(150,130,255,${Math.min(.14, G.mikiriT*.2)})`; ctx.fillRect(0, YOKO ? 0 : 76, W, YOKO ? H : 354); }   // 奥義「見切り」の間は紫がかる
-  if (YOKO) drawHUDYoko(); else drawHUD(); drawControls(); coachKeys(); coachDraw();
+  if (YOKO) yokoSafeHUD(drawHUDYoko); else drawHUD(); drawControls(); coachKeys(); coachDraw();
   if (G.phase === 'intro') banner(G.melee ? `乱戦 ${G.fs.length}人` : G.practice ? `練習：${G.e.name}` : G.round === 1 && G.pw + G.ew === 0 ? `${G.e.name}` : `ラウンド ${G.round}`, G.phaseT > .6 ? '始め！' : '');
   if (G.phase === 'ko') banner(G.melee ? (G.meleeRank === 1 ? '勝ち残り！' : '撃破された') : G.e.hp <= 0 ? '一本！' : '一本取られた', '');
 }
@@ -4952,7 +4957,7 @@ function drawControls(){
   ctx.fillStyle = '#0B0F18'; ctx.fillRect(0, y0, W, 6); for (let x = 0; x < W; x += 12) { ctx.fillStyle = '#E8B020'; ctx.fillRect(x, y0 + 1, 6, 4); } }
   ctx.textAlign = 'center';
   // 左：移動スティック（押した場所が中心になる）
-  const sx = stick ? stick.ox : (YOKO ? 108 : 88), sy = stick ? stick.oy : (YOKO ? 270 : 548);
+  const sx = stick ? stick.ox : (YOKO ? 108 + SAFE.l : 88), sy = stick ? stick.oy : (YOKO ? H - 90 - SAFE.b : 548);
   ctx.fillStyle = 'rgba(237,230,214,.08)'; ctx.beginPath(); ctx.arc(sx, sy, 44, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = 'rgba(237,230,214,.25)'; ctx.lineWidth = 2; ctx.stroke();
   let kx = sx, ky = sy; if (stick) { const dx = stick.x - sx, dy = stick.y - sy, l = Math.hypot(dx, dy), m = Math.min(l, 40); if (l > 0) { kx = sx + dx/l*m; ky = sy + dy/l*m; } }
@@ -5735,10 +5740,34 @@ function pcFit(){
   const app = document.getElementById('app');
   document.documentElement.classList.toggle('pcy', PC_MODE);
   if (!PC_MODE) { PCK = 1; return; }
-  const Lw = 844, Lh = Math.max(390, Math.min(600, Math.round(Lw*innerHeight/innerWidth)));   // 幅はスマホの横画面と同じ844、高さはウィンドウの形に合わせて390〜600
-  PCK = Math.max(.05, Math.min(innerWidth/Lw, innerHeight/Lh));   // 窓の大きさが0（隠れている）でも0にしない
+  // v0.69 余白をなくす：倍率は今まで通り（幅844・高さ390〜600が収まる大きさ）で決め、箱はウィンドウいっぱいに広げる（幅1400・高さ900まで）
+  const Lh0 = Math.max(390, Math.min(600, Math.round(844*innerHeight/innerWidth)));
+  PCK = Math.max(.05, Math.min(innerWidth/844, innerHeight/Lh0));   // 窓の大きさが0（隠れている）でも0にしない
+  const Lw = Math.round(Math.min(1400, innerWidth/PCK)), Lh = Math.round(Math.min(900, innerHeight/PCK));
   app.style.cssText = `position:absolute;left:${(innerWidth - Lw*PCK)/2}px;top:${(innerHeight - Lh*PCK)/2}px;width:${Lw}px;height:${Lh}px;transform:scale(${PCK});transform-origin:0 0;`;
 }
+
+// ================= v0.69 余白をなくす：横画面の試合は画面の形に合わせて広げる =================
+// 今までは 740×360 の決まった形を拡大していたので、画面の形が違うと左右・上下に帯が残った。
+//   W・H を #app の形に合わせる（740×360 より狭くはしない）。ボタンは右下から測った位置、体力などの表示は左右の端から。
+//   iPhone の横向きのノッチ側（safe area）には、ボタン・表示を置かない（床や背景は描く）
+// resize は yoko.js より前にも呼ばれるので、ここの変数は var（まだ無ければ safe area は0）
+var SAFE = { l: 0, r: 0, b: 0 }, safeProbe = null;
+function yokoFit(a){   // a：#app の大きさ（論理）。resize で scale を決める前に呼ぶ
+  if (!YOKO) return;
+  const asp = a.width/Math.max(1, a.height);
+  W = Math.round(Math.max(740, 360*asp)); H = Math.round(Math.max(360, 740/asp));
+  YK.W = W; YK.H = H; YK.cx = W/2; YK.cy = H/2 + 6;
+  if (!safeProbe && document.body) { safeProbe = document.createElement('div');
+    safeProbe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);';
+    document.body.appendChild(safeProbe); }
+  if (safeProbe) { const cs = getComputedStyle(safeProbe), k = Math.min(a.width/W, a.height/H) || 1;
+    SAFE.l = (parseFloat(cs.paddingLeft) || 0)/k; SAFE.r = (parseFloat(cs.paddingRight) || 0)/k; SAFE.b = Math.min(24, (parseFloat(cs.paddingBottom) || 0)/k); }
+  const R = W - SAFE.r, B = H - SAFE.b, pos = { atk: [88, 90], grd: [180, 54], thr: [184, 136], dash: [92, 184], ougi: [168, 214] };   // 右端・下端からの距離（740×360 のときの並びと同じ）
+  for (const k in pos) { BTN_Y[k].x = R - pos[k][0]; BTN_Y[k].y = B - pos[k][1]; if (BTN[k]) { BTN[k].x = BTN_Y[k].x; BTN[k].y = BTN_Y[k].y; } }
+}
+// 上の表示をノッチの内側に：左を SAFE.l ずらし、W をその分せまくして描く
+function yokoSafeHUD(fn){ const W0 = W; ctx.save(); ctx.translate(SAFE.l, 0); W = W0 - SAFE.l - SAFE.r; try { fn(); } finally { W = W0; ctx.restore(); } }
 
 // ================= ホーム画面（v0.39、ブロスタ風） =================
 // 真ん中に自分のからくり武者、上に持ち物と到達Lv、左右に店・ガチャなどの丸いボタン、下に「モード」と大きな「勝負」。
