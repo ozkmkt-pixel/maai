@@ -1127,11 +1127,11 @@ for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) a
 // アプリを切り替えて戻ってきたときも、止まった音を戻す
 document.addEventListener('visibilitychange', () => { if (!document.hidden) SFX.init(); });
 // ================= BGM（v0.30） =================
-// 場面ごとの曲：タイトル＝「剣の舞」（t.tam／OpenTracks）、装備＝「和風でアップテンポ 戦闘時に使えるBGM」、1対1＝「真剣勝負」、乱戦＝「疾風雷電」（3FreeBGM）
+// 場面ごとの曲：タイトル＝装備と同じ曲（v0.75 で「剣の舞」をやめた）、装備＝「和風でアップテンポ 戦闘時に使えるBGM」、1対1＝「真剣勝負」、乱戦＝「疾風雷電」（3FreeBGM）
 // 1曲4〜5MB と大きいので、ページに埋め込まず、横に置いた mp3 をその場面に入ったときに読み込む
 // <audio> は1つを使い回す（iPhone は、指で触れたときに一度鳴らした <audio> でないと、あとから鳴らせないため）
 // 場面が変わったら、今の曲を小さくしてから次の曲へ（iPhone は音量を変えられないので、すぐ切り替わる）。オン／オフは効果音と同じ
-const BGM_TRACKS = { title: ['bgm_title.mp3', .5], loadout: ['bgm_loadout.mp3', .42], duel: ['bgm_duel.mp3', .45], melee: ['bgm_melee.mp3', .42] };
+const BGM_TRACKS = { title: ['bgm_loadout.mp3', .42], loadout: ['bgm_loadout.mp3', .42], duel: ['bgm_duel.mp3', .45], melee: ['bgm_melee.mp3', .42] };
 const BGM = (() => {
   const a = new Audio(); a.loop = true; a.preload = 'auto';
   let want = null, cur = null, ok = false, fadeT = null;
@@ -6349,7 +6349,7 @@ function helpScreen(){
     ['地形', '乱戦には<b>崖</b>（強く吹き飛ばされると落ちて退場）、<b>草むら</b>（中にいると近くからしか見えない）、<b>柱</b>（通れない。柱をはさむと攻撃も投げも届かない）']];
   screen('遊び方', `<div class="hpList">${rows.map(([h, t], i) => `<div class="hpRow" style="animation-delay:${i*40}ms"><b>${h}</b><p>${t}</p></div>`).join('')}
     <div class="hpKeys">キーボード：WASD 移動 ／ J 攻撃 ／ K ガード ／ U 投げ ／ Space 回避</div>
-    <div class="hpKeys">音楽：「剣の舞」t.tam（OpenTracks）／「和風でアップテンポ 戦闘時に使えるBGM」「真剣勝負」「疾風雷電」3FreeBGM<br>効果音：効果音ラボ</div></div>`);
+    <div class="hpKeys">音楽：「和風でアップテンポ 戦闘時に使えるBGM」「真剣勝負」「疾風雷電」3FreeBGM<br>効果音：効果音ラボ</div></div>`);
   document.getElementById('back').onclick = title;
 }
 addEventListener('keydown', e => { if (e.code === 'Escape') quitPractice(); });   // 練習中は Esc でもやめられる
@@ -6864,7 +6864,7 @@ const I18N_EN = {
   '乱戦には': 'Brawl has ', '崖': 'cliffs', '（強く吹き飛ばされると落ちて退場）、': ' (knocked off = out), ', '柱': 'pillars', '（通れない。柱をはさむと攻撃も投げも届かない）': " (impassable; attacks and throws can't pass)",
   '草むら': 'tall grass', '（中にいると近くからしか見えない）、': ' (you can only be seen up close inside), ',
   'ときどき落ちてくる。回復・攻撃力UP・速度UP・スタミナ。相手より先に拾う': 'They drop in now and then: Heal, ATK UP, SPD UP, Stamina. Grab them first',
-  '効果音：効果音ラボ': 'Sound effects: Koukaon Lab', '音楽：「剣の舞」t.tam（OpenTracks）／「和風でアップテンポ 戦闘時に使えるBGM」「真剣勝負」「疾風雷電」{0}FreeBGM': 'Music: "Sword Dance" t.tam (OpenTracks) / "Upbeat Japanese Battle BGM", "Shinken Shobu", "Shippu Raiden" {0}FreeBGM',
+  '効果音：効果音ラボ': 'Sound effects: Koukaon Lab', '音楽：「和風でアップテンポ 戦闘時に使えるBGM」「真剣勝負」「疾風雷電」{0}FreeBGM': 'Music: "Upbeat Japanese Battle BGM", "Shinken Shobu", "Shippu Raiden" — {0}FreeBGM',
   '勝つともらえる。見た目はガチャ、仕掛けは試合の戦利品と店の箱で手に入る': 'Earned by winning. Looks come from Gacha; gear from match drops and Shop boxes',
   // ---- 宝箱・装い ----
   '宝箱（★{0}）': 'Chest (★{0})', '店で、まだ持っていない見た目と交換できます': "Trade them in the Shop for looks you don't own", '今すぐ装う': 'Wear Now',
