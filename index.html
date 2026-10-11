@@ -17,6 +17,7 @@
 <style>
   :root{ color-scheme: dark; --bg:#15181D; --ink:#EDE6D6; --paper:#F4EEDF; --dark:#1E222A; --red:#E0493E; --blue:#3E8EDE; --gold:#E8B23A; }
   html,body{height:100%;overscroll-behavior:none;}
+  html{background:#15181D;}   /* v0.68 まわりの余白をいつも暗く */
   /* iPhone でスティックの指がずれても画面ごと上下しないように、ページを固定する */
   body{position:fixed;inset:0;width:100%;}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:"M PLUS Rounded 1c",system-ui,sans-serif;overflow:hidden;
@@ -796,7 +797,7 @@
   :where(html.pcy) .hpList{display:grid;grid-template-columns:1fr 1fr;align-items:start;}
   :where(html.pcy) .hpList>.hpKeys{grid-column:1 / -1;}
   /* ===== v0.60 ロゴ（からくりチャンバラ）：白地のデザインなので、起動画面は白、ホームは白い札に乗せる ===== */
-  #splash{position:fixed;inset:0;z-index:60;background:radial-gradient(circle at 50% 45%,#FFFFFF 0%,#EEF6FF 70%,#DCEBFA 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vh;cursor:pointer;transition:opacity .45s;}
+  #splash{position:absolute;inset:0;z-index:60;background:radial-gradient(circle at 50% 45%,#FFFFFF 0%,#EEF6FF 70%,#DCEBFA 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vh;cursor:pointer;transition:opacity .45s;}
   #splash.out{opacity:0;pointer-events:none;}
   #splash img{width:min(78vw,640px);max-height:62vh;object-fit:contain;animation:spIn .9s ease-out both;}
   #splash b{font-family:"M PLUS Rounded 1c",sans-serif;font-weight:800;font-size:15px;letter-spacing:.2em;color:#1B2F5C;animation:spBlink 1.4s ease-in-out .9s infinite both;}
