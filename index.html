@@ -5849,7 +5849,7 @@ function title(){
         <canvas id="hmCv" width="680" height="680"></canvas>
         <div class="hmPlate"><b>${WEAPONS[myW].name}</b><small>タップで装備</small></div>
       </div>
-      <div class="hmSide"><button id="hH"><i>📜</i>遊び方</button><button id="hU" class="${ranPref ? '' : 'off'}"><i>🛡️</i>乱入受付<br>${ranPref ? 'オン' : 'オフ'}</button><button id="hM" class="${SFX.muted ? 'off' : ''}"><i>${SFX.muted ? '🔇' : '🔊'}</i>音</button></div>
+      <div class="hmSide"><button id="hH"><i>📜</i>遊び方</button><button id="hU" class="${ranPref ? '' : 'off'}"><i>🛡️</i>乱入受付<br>${ranPref ? 'オン' : 'オフ'}</button><button id="hM" class="${SFX.muted ? 'off' : ''}"><i>${SFX.muted ? '🔇' : '🔊'}</i>音</button><button id="hL"><i>🌐</i>${LANG === 'en' ? '日本語' : 'English'}</button></div>
     </div>
     <div class="hmRoad" id="hRoad"><span>${stAll ? `${CHAPTERS[sn.ch].n} <b>クリア</b>` : toBoss > 0 ? `強敵まで あと<b>${toBoss}</b>面` : '次は<b>強敵</b>！'}</span><div class="hmNodes">${road}</div></div>
     <div class="hmModes">${Object.entries(HM_MODES).map(([k, m]) => `<button class="hmMd${k === hmMode ? ' on' : ''}" data-k="${k}" style="--mc:${m.c}"><i>${m.ic}</i><b>${m.n}</b></button>`).join('')}</div><div class="hmMdD" id="hMdD">${md.d}</div>
@@ -5869,6 +5869,7 @@ function title(){
   $('hPlay').onclick = () => { SFX.coin(); HM_MODES[hmMode].go(); };
   $('hU').onclick = () => { ranPref = !ranPref; try { localStorage.setItem('maai_ran', ranPref ? '1' : '0'); } catch(x) {} SFX.coin(); title(); };
   $('hM').onclick = () => { SFX.toggle(); BGM.sync(); SFX.coin(); title(); };
+  $('hL').onclick = () => setLang(LANG === 'en' ? 'ja' : 'en');   // v0.74 言語（読み込み直す）
   $('hMode').onclick = () => { $('hSheet').hidden = false; SFX.coin(); };
   $('hClose').onclick = () => { $('hSheet').hidden = true; };
   ov.querySelectorAll('.hmMd').forEach(b => b.onclick = () => {   // v0.56 横画面：モードをホームで直接選ぶ
@@ -6585,7 +6586,9 @@ function logo2Gears(img, t){
 // ---- 文字：フォントを小さく描いて、にじみを捨てて（しきい値）ドットにし、縁取り・影・色の段をつける ----
 const LG_FONT5 = { K: ['10001', '10010', '10100', '11000', '10100', '10010', '10001'], A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
   U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'], I: ['111', '010', '010', '010', '010', '010', '111'], C: ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
-  H: ['10001', '10001', '10001', '11111', '10001', '10001', '10001'], N: ['10001', '11001', '10101', '10011', '10001', '10001', '10001'], B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'], ' ': ['00', '00', '00', '00', '00', '00', '00'] };
+  H: ['10001', '10001', '10001', '11111', '10001', '10001', '10001'], N: ['10001', '11001', '10101', '10011', '10001', '10001', '10001'], B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'], ' ': ['00', '00', '00', '00', '00', '00', '00'],
+  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'], O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'], W: ['10001', '10001', '10001', '10101', '10101', '10101', '01010'],
+  S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'], M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'] };
 function logo2Text(){
   const c = document.createElement('canvas'); c.width = LG.W; c.height = LG.H; const x = c.getContext('2d');
   const mask = (str, px, cy, sp) => { const m = document.createElement('canvas'); m.width = LG.W; m.height = LG.H; const mx = m.getContext('2d');
@@ -6603,10 +6606,12 @@ function logo2Text(){
       else if (has(xx - 3, yy - 3) || has(xx - 2, yy - 3) || has(xx - 3, yy - 2)) { x.fillStyle = shadow; x.fillRect(xx, yy, 1, 1); } }
     for (let yy = top; yy <= bot; yy++) { const k = (yy - top)/Math.max(1, bot - top), col = cols[Math.min(cols.length - 1, Math.floor(k*cols.length))];
       for (let xx = 0; xx < W; xx++) if (has(xx, yy)) { x.fillStyle = !has(xx, yy - 1) ? cols[0] : col; x.fillRect(xx, yy, 1, 1); } } };
-  paint(mask('からくり', 27, 27, 2), ['#FFFFFF', '#E4ECF6', '#B8C6D8', '#8A9AB0', '#6A7890'], '#1A2030', 'rgba(0,0,0,.55)');
-  paint(mask('チャンバラ', 33, 62, 1), ['#FFFBE0', '#FFE680', '#FFC830', '#F09A18', '#D0600C', '#A03808'], '#3A1404', 'rgba(0,0,0,.55)');
+  // 英語のときは KARAKURI / CHANBARA を大きく（canvas の文字は訳さないよう、日本語のときだけかなを描く）
+  const en = typeof LANG !== 'undefined' && LANG === 'en';
+  paint(mask(en ? 'KARAKURI' : 'からくり', en ? 24 : 27, 27, 2), ['#FFFFFF', '#E4ECF6', '#B8C6D8', '#8A9AB0', '#6A7890'], '#1A2030', 'rgba(0,0,0,.55)');
+  paint(mask(en ? 'CHANBARA' : 'チャンバラ', en ? 30 : 33, 62, 1), ['#FFFBE0', '#FFE680', '#FFC830', '#F09A18', '#D0600C', '#A03808'], '#3A1404', 'rgba(0,0,0,.55)');
   // 英字の帯：暗い札に 5×7 の字
-  const str = 'KARAKURI CHANBARA', gw = [...str].map(ch => LG_FONT5[ch][0].length), tw = gw.reduce((a, b) => a + b + 1, -1), bx = Math.round(LG.W/2 - tw/2), by = 138;
+  const str = en ? 'CLOCKWORK SAMURAI' : 'KARAKURI CHANBARA', gw = [...str].map(ch => LG_FONT5[ch][0].length), tw = gw.reduce((a, b) => a + b + 1, -1), bx = Math.round(LG.W/2 - tw/2), by = 138;
   x.fillStyle = '#0C0A12'; x.fillRect(bx - 6, by - 3, tw + 12, 13); x.fillStyle = '#7A1E14'; x.fillRect(bx - 5, by - 2, tw + 10, 11); x.fillStyle = '#B8322C'; x.fillRect(bx - 5, by - 2, tw + 10, 1);
   let px = bx; [...str].forEach((ch, i) => { const g = LG_FONT5[ch]; g.forEach((row, yy) => [...row].forEach((b, xx) => { if (b === '1') { x.fillStyle = yy < 2 ? '#FFFFFF' : '#FFE6B0'; x.fillRect(px + xx, by + yy, 1, 1); } })); px += gw[i] + 1; });
   return c;
@@ -6629,6 +6634,371 @@ if (/[?&]logo2\b/.test(location.search)) addEventListener('load', () => {
   const sp = document.getElementById('splash'); if (sp) sp.remove();
   (document.fonts ? document.fonts.load('33px "Dela Gothic One"') : Promise.resolve()).then(() => logo2Start(c));
 });
+
+// v0.74 英語の辞書（i18n.js の tr が引く）。見出しは日本語の全文（数字は {0},{1}…）か、日本語の語
+// 用語：小判 Coins／欠片 Shards／はじき Parry／投げ Throw／回避 Dodge／ガード Guard／重い一撃 Heavy Blow／奥義 Ultimate／強敵 Boss／面 Stage／章 Chapter
+//   仕掛け Gear（眼 Eye・ゼンマイ Spring・歯車 Cog）／銘 Crest／心臓 Heart／鍔玉 Tsuba Orb／並 上 極 伝 Common Rare Epic Legendary
+const I18N_EN = {
+  // ---- 共通・ホーム ----
+  'からくり武者': 'Karakuri Warrior', '到達 Lv{0}': 'Best Lv{0}', '店': 'Shop', 'ガチャ': 'Gacha', '蔵': 'Collection', '遊び方': 'How to Play',
+  '乱入受付': 'Invasions', 'オン': 'ON', 'オフ': 'OFF', '音': 'Sound', '効果音の切り替え': 'Toggle sound', 'タップで装備': 'Tap to equip',
+  'ステージ': 'Stages', '乱戦': 'Brawl', '乱入': 'Invade', '通信対戦': 'Versus', '練習': 'Practice', '勝負！': 'FIGHT!', '勝負': 'FIGHT',
+  'モード': 'Mode', 'モードを選ぶ': 'Choose a mode', '章を進めて、強敵を倒す': 'Clear chapters and defeat the bosses',
+  '縮む結界の中、{0}人で最後の{1}人まで': '{0} fighters in a shrinking barrier, last one standing wins', 'CPU戦中の誰かに挑む': "Crash someone's CPU match",
+  'コードで{0}台をつなぐ': 'Link {0} devices with a code', '体力が減らない。はじきの練習に': "HP doesn't drop. Practice your parries",
+  '強敵まで あと{0}面': '{0} stages to the boss', 'クリア': 'Clear', '戻る': 'Back', '閉じる': 'Close', 'タイトルへ': 'To Title', 'タイトルへ戻る': 'Back to Title',
+  'スマホを横にしてください': 'Please rotate your phone', 'このゲームは横画面で遊びます': 'This game is played in landscape',
+  '練習をやめる': 'Quit Practice', 'やめる': 'Quit', '続ける': 'Continue', 'やめますか？': 'Quit?',
+  '小判': 'Coins', '欠片': 'Shards', '枚': '', '+{0}枚': '+{0}', '持っている小判：{0}': 'Coins owned: {0}', '小判 {0}': 'Coins {0}',
+  // ---- 武器・相手 ----
+  '刀': 'Katana', '大剣': 'Greatsword', '短剣': 'Dagger', '槍': 'Spear', '武器': 'Weapon', '使う武器': 'Weapon',
+  '剣士': 'Swordsman', '大剣使い': 'Greatsword User', '短剣使い': 'Dagger User', '槍使い': 'Spear User', '練習相手': 'Sparring Partner',
+  '鬼丸': 'Onimaru', '月影': 'Tsukikage', '雷電': 'Raiden', '影法師': 'Kageboshi', 'からくり将軍': 'Karakuri Shogun', '将軍': 'Shogun', '強敵': 'Boss',
+  'バランス型。はじきの受付が長い': 'Balanced. Long parry window', '重い{0}段。ガードが固いが、動きが遅い': 'Heavy {0}-hit combo. Sturdy guard, but slow',
+  '出が速いがリーチが短い。回避が軽い': 'Fast but short reach. Cheap dodge', 'リーチが長いが突きは細い。懐に弱い': 'Long reach but narrow thrusts. Weak up close',
+  '性格': 'Style', '猪突': 'Rusher', '慎重': 'Cautious', '返し狙い': 'Parrier', '投げ好き': 'Grappler', '逃げ回り': 'Evasive', '漁夫': 'Opportunist',
+  '性格「猪突」どんどん攻めてくる。守りは甘い': 'Style "Rusher": attacks relentlessly. Weak defense',
+  '性格「慎重」間合いの外で様子を見る。ガードが固い（投げが効く）': 'Style "Cautious": waits out of range. Solid guard (throws work)',
+  '性格「返し狙い」はじきを狙ってくる（投げが効く）': 'Style "Parrier": goes for parries (throws work)',
+  '性格「投げ好き」ガードを見ると投げてくる（攻めれば勝てる）': 'Style "Grappler": throws when you guard (attack to win)',
+  '性格「逃げ回り」斬ったらすぐ離れる。回避が多い': 'Style "Evasive": hits and backs off. Dodges a lot',
+  '次の相手': 'Next opponent', '今': 'NOW',
+  // ---- ステージ ----
+  '第{0}章': 'Chapter {0}', '前の章': 'Previous chapter', '次の章': 'Next chapter', '挑む': 'Challenge', 'もう一度挑む': 'Try Again', '面の選択へ': 'Stage Select',
+  '地下{0}階「見習い場」': 'B{0}F "Training Hall"', '地下{0}階「からくり工房」': 'B{0}F "Clockwork Workshop"', '地下{0}階「炉の間」': 'B{0}F "Furnace Room"',
+  '地下{0}階「蒸気の迷路」': 'B{0}F "Steam Maze"', '最上階「からくり天守」': 'Top Floor "Clockwork Keep"',
+  '第{0}章「炉の間」が開きました': 'Chapter {0} "Furnace Room" unlocked', '第{0}章「蒸気の迷路」が開きました': 'Chapter {0} "Steam Maze" unlocked',
+  '{0}-{1} が開きました': 'Stage {0}-{1} unlocked', '{0}-{1} クリア！': 'Stage {0}-{1} cleared!', '次の面へ（{0}-{1}）': 'Next stage ({0}-{1})',
+  'すべての章をクリア！ おみごと': 'All chapters cleared! Splendid!', '第{0}章の星を{1}個集めると手に入る': 'Get {1} stars in Chapter {0} to unlock',
+  '勝つ': 'Win', '体力を半分以上残して勝つ': 'Win with at least half HP', '敗北': 'Defeat', '勝利': 'Victory', '初クリア': 'First clear', '新しい★×{0}': 'New ★×{0}',
+  '{0}本×{1} {2}　勝利 {3}　初クリア {4}　新しい★×{5} {6}　はじき×{7} {8}': 'Rounds×{1} {2}　Win {3}　First clear {4}　New ★×{5} {6}　Parries×{7} {8}',
+  '{0}本×{1} {2}　はじき×{3} {4}': 'Rounds×{1} {2}　Parries×{3} {4}', 'はじき×{0} {1}': 'Parries×{0} {1}',
+  '装備を見直して、もう一度挑めます。': 'Review your gear and try again.',
+  '⚙ 床のベルトコンベアに乗ると流される。流れは{0}秒ごとに逆になる（矢印が赤く光ったら合図）': '⚙ Conveyor belts carry you along. They reverse every {0}s (arrows flash red first)',
+  '⚙ 赤く光った床板は{0}秒後に{1}秒間火を噴く。上にいると体力が減る（相手も同じ）': '⚙ Glowing floor plates spout fire after {0}s for {1}s. Standing on them drains HP (for both of you)',
+  '⚙ 鉄柱をはさむと攻撃も投げも届かない。床の噴き出し口が光ったら、その線に蒸気が噴いて吹き飛ばされる': '⚙ Iron pillars block attacks and throws. When a vent glows, steam blasts along that line',
+  '⚙ 時間がたつと外側から床が抜ける（赤く点滅したら合図）。落ちたら{0}本取られる。端で重い一撃や投げを受けても落ちる': '⚙ The floor falls away from the edge over time (flashing red first). Falling costs {0} round. Heavy blows and throws near the edge can knock you off',
+  // 面のヒント・お題
+  '攻撃ボタンを続けて押すと{0}段目まで出る。{1}段目は重い一撃で、途中で斬られても止まらない': 'Keep pressing Attack for a {0}-hit combo. Hit {1} is a Heavy Blow that keeps going even if you get hit',
+  '「投げ」はガードの上からでも決まる。相手の目の前で投げボタン': 'Throws work even through a guard. Press Throw right in front of the opponent',
+  '相手が構えると自分のまわりの輪が縮む。金色で「今」と出たらガードを押すと「はじき」。はじいた後は斬り放題': 'When the opponent winds up, the ring around you shrinks. Press Guard when it turns gold and says "NOW" to Parry, then strike freely',
+  '大剣の重い一撃は、ガードより回避でかわす': "Dodge the Greatsword's Heavy Blow rather than guarding",
+  '槍は遠くから届く。懐に入れば柄しか当たらない': 'The Spear hits from afar. Get up close and only the shaft can hit you',
+  '体力の多い大剣の強敵。重い一撃は振り終わりに大きな隙がある。そこを斬る': 'A tough Greatsword boss. Its Heavy Blow leaves a big opening afterward. Strike then',
+  '短剣は出が速い。見てからではなく、間合いに入る前からガードの準備を': "Daggers are fast. Don't react — be ready to guard before you're in range",
+  '槍の先が届く距離にいると一方的に突かれる。回避で一気に懐へ飛び込む': "At spear's length you'll get poked. Dodge in close in one go",
+  'つかみに来た所を斬れば投げは止まる（カウンター）。相手が寄ってきたら先に手を出す': 'Hit them as they reach for a grab to stop the throw (Counter). Strike first when they close in',
+  '大剣は振りが遅い。こちらからは手を出さず、相手の重い一撃をかわしてから{0}段斬り返す': "The Greatsword is slow. Don't attack first — dodge its Heavy Blow, then hit back with a {0}-hit combo",
+  '短剣は間合いが短い。届かない距離を保ち、相手が踏み込んできた所を迎え撃つ': 'Daggers have short reach. Stay out of range and meet them as they step in',
+  '奥義のゲージは、はじきを決めると大きくたまる。たまったら、相手が離れる前に使う': 'Parries fill the Ultimate gauge fast. Use it before the opponent backs off',
+  '槍は突きが長く、構えが見えやすい。手を出すのは、相手の突きをかわした直後だけにする': 'Spear thrusts are long and easy to read. Only attack right after dodging a thrust',
+  'ガードの上から当て続けるとスタミナが尽きて崩れる。{0}段目の重い一撃がよく削る': 'Keep hitting a guard until their stamina breaks. The Heavy Blow (hit {0}) drains the most',
+  'つかみに来る出かかりを斬ると「カウンター」。投げを止めて、ダメージも増える': 'Hit the start of a grab for a "Counter". It stops the throw and deals extra damage',
+  '投げや重い一撃で吹き飛ばして、火を噴く床の上へ送り込む': 'Knock them onto the fire plates with throws and Heavy Blows',
+  '逃げる先が赤く光ったら、そこで足が止まる。火で逃げ道をふさいでから詰める': 'When their escape path glows red, they stop. Let the fire cut them off, then close in',
+  '強敵 雷電。槍の突きが速く体力も多い。突きの戻りに懐へ入り、投げで崩す': 'Boss Raiden. Fast spear thrusts and lots of HP. Get close as the thrust recovers and throw',
+  '柱のかげで相手に空振りさせ、出てきた所に{0}段斬りを合わせる': 'Make them whiff behind a pillar, then catch them with a {0}-hit combo as they come out',
+  '逃げる先に蒸気が噴くと足が止まる。追い回さず、噴く線の手前で待ち構える': "Steam stops them in their tracks. Don't chase — wait just before the steam line",
+  '大剣の相手は動きが重い。つかみに来る出かかりを、間合いの外から斬る': 'Greatsword users are sluggish. Hit the start of their grab from outside their range',
+  '槍の突きは柱をはさめば届かない。柱を盾にして、横から回り込む': "Spear thrusts can't reach through pillars. Use them as shields and circle around",
+  '噴き出し口が光った線の上へ、投げや重い一撃で押し込む。よろめいた所を斬る': 'Push them onto the glowing vent line with throws or Heavy Blows, then strike while they stagger',
+  '強敵 影法師。刀の名手。柱を盾にスタミナを戻しながら、はじきの機会を待つ': 'Boss Kageboshi, a katana master. Recover stamina behind pillars and wait for a chance to parry',
+  '相手を端に追い込み、重い一撃か投げで床の外へ': 'Corner them at the edge and knock them off with a Heavy Blow or throw',
+  '床が抜けるほど逃げ場は減る。狭くなるまでは無理に追わない': "As the floor falls, there's less room to run. Don't chase until it's narrow",
+  '短剣の速さに焦って手を出さない。端を背負わない位置に立つ': "Don't panic at the dagger's speed. Keep your back away from the edge",
+  '再戦の鬼丸。重い一撃で端から落とされないよう、真ん中で戦う': "Onimaru's rematch. Fight in the middle so his Heavy Blow can't knock you off",
+  '再戦の雷電。固いガードを重い一撃で削り切る': "Raiden's rematch. Break his solid guard with Heavy Blows",
+  '最後の強敵 からくり将軍。{0}本ごとに大剣→槍→刀と持ちかえる。武器ごとの間合いを思い出す': 'The final boss, Karakuri Shogun. Switches Greatsword → Spear → Katana each round. Remember each range',
+  '★お題：最後の段（重い一撃）を当てる': '★Goal: land the final hit (Heavy Blow)',
+  '最後の段を当てて勝つ': 'Win after landing the final hit', '最後の段を{0}回当てて勝つ': 'Win after landing the final hit {0} times',
+  '投げを決めて勝つ': 'Win after landing a throw', '投げを{0}回決めて勝つ': 'Win after landing {0} throws',
+  'はじきを決めて勝つ': 'Win after a parry', 'はじきを{0}回決めて勝つ': 'Win after {0} parries',
+  '回避で{0}回かわして勝つ': 'Win after dodging {0} times', '被弾{0}回以下で勝つ': 'Win taking {0} hits or fewer',
+  '一度も投げられずに勝つ': 'Win without being thrown', '一度もはじかれずに勝つ': 'Win without being parried',
+  'ガードブレイクさせて勝つ': 'Win after a Guard Break', 'ガードブレイクを{0}回させて勝つ': 'Win after {0} Guard Breaks',
+  'カウンターを決めて勝つ': 'Win after a Counter', 'カウンターを{0}回決めて勝つ': 'Win after {0} Counters',
+  '奥義を使って勝つ': 'Win after using your Ultimate', '奥義を使わずに勝つ': 'Win without using your Ultimate',
+  '相手を火で{0}回焼いて勝つ': 'Win after burning them {0} times', '柱で{0}回防いで勝つ': 'Win after blocking {0} times with pillars',
+  '相手を蒸気に{0}回当てて勝つ': 'Win after steaming them {0} times', '相手を落として勝つ': 'Win after a ring-out',
+  '重い一撃': 'Heavy Blow', '投げられた': 'Thrown', 'はじかれた': 'Parried', '被弾': 'Hits taken', '火で焼く': 'Burn', '柱で防ぐ': 'Pillar block',
+  '蒸気に当てる': 'Steam', '落とす': 'Ring-out', 'ガードブレイク': 'Guard Break', 'カウンター': 'Counter',
+  // ---- 案内（最初の面） ----
+  'WASD（矢印）で近づく': 'Move closer with WASD (arrows)', '左側をなぞって近づく': 'Drag on the left to move closer', 'WASD・矢印': 'WASD / Arrows',
+  '攻撃（J）を続けて押す → {0}段目は重い一撃': 'Keep pressing Attack (J) → hit {0} is a Heavy Blow', '攻撃を続けて押す → {0}段目は重い一撃': 'Keep pressing Attack → hit {0} is a Heavy Blow',
+  '相手が構えた！ ガード（K）で受ける': 'They are winding up! Block with Guard (K)', '相手が構えた！ ガードで受ける': 'They are winding up! Block with Guard',
+  'ガードしている相手には「投げ」（U）': 'Use Throw (U) on a guarding opponent', 'ガードしている相手には「投げ」': 'Use Throw on a guarding opponent',
+  '相手の目の前で「投げ」（U）：ガードの上から決まる': 'Throw (U) up close: it beats a guard', '相手の目の前で「投げ」：ガードの上から決まる': 'Throw up close: it beats a guard',
+  '輪が縮む → 金色の「今」でガード（K）＝はじき': 'Ring shrinks → Guard (K) at the gold "NOW" = Parry', '輪が縮む → 金色の「今」でガード＝はじき': 'Ring shrinks → Guard at the gold "NOW" = Parry',
+  'はじいた！ 今のうちに攻撃（J）': 'Parried! Attack (J) now', 'はじいた！ 今のうちに攻撃': 'Parried! Attack now',
+  '重い一撃！ 回避（Space）でかわす': 'Heavy Blow! Dodge (Space)', '重い一撃！ 回避でかわす': 'Heavy Blow! Dodge it',
+  '振り終わりの隙！ 攻撃（J）': 'Opening after the swing! Attack (J)', '振り終わりの隙！ 攻撃': 'Opening after the swing! Attack',
+  // ---- 試合 ----
+  '攻撃': 'Attack', 'ガード': 'Guard', '回避': 'Dodge', '投げ': 'Throw', '奥義': 'Ult', '移動': 'Move', 'はじき': 'Parry', '始め！': 'FIGHT!', '一本！': 'POINT!',
+  '一本取られた': 'Lost the round', 'ラウンド {0}': 'Round {0}', 'はじき！': 'PARRY!', '回避！': 'DODGE!', 'ガードブレイク！': 'GUARD BREAK!', '緊急回避': 'Emergency dodge',
+  '空振り': 'Miss', '投げ空振り': 'Whiffed throw', '掴んだ': 'Grabbed', 'はじき投げ！ {0}': 'Parry throw! {0}', '投げ！ {0}': 'Throw! {0}', 'スタミナ不足': 'Out of stamina',
+  '奥義 準備よし': 'Ultimate ready', '場外！': 'RING OUT!', '落下！': 'FELL!', '床が抜けた！': 'The floor gave way!', '流れが逆に！': 'Belts reversed!', '熱っ！': 'Hot!', '蒸気！': 'Steam!',
+  '先に{0}本取った方が勝ち': 'First to {0} rounds wins', '練習　はじき{0}　被弾{1}　命中{2}': 'Practice　Parries {0}　Hits taken {1}　Hits {2}',
+  '乱入受付中': 'Open to invasions', '槍に持ちかえた！': 'Switched to the Spear!', '大剣に持ちかえた！': 'Switched to the Greatsword!', '刀に持ちかえた！': 'Switched to the Katana!',
+  'キーボード：WASD 移動 ／ J 攻撃 ／ K ガード ／ U 投げ ／ Space 回避': 'Keyboard: WASD Move / J Attack / K Guard / U Throw / Space Dodge',
+  'キーボード：WASD移動 / J攻撃 / Kガード / U投げ / I奥義 / Space回避': 'Keyboard: WASD Move / J Attack / K Guard / U Throw / I Ultimate / Space Dodge',
+  '撃破 {0}　はじき {1}': 'KOs {0}　Parries {1}', '残り {0}体': '{0} left', '結界 縮小まで {0}': 'Barrier shrinks in {0}', '結界 縮小中': 'Barrier shrinking', '結界 最小': 'Barrier at minimum',
+  '撃破された': 'Knocked out', '{0}位': '#{0}', '{0}位 {1}': '#{0} {1}', '{0}人の乱戦で {1}位（撃破 {2}）': '#{1} of {0} in the brawl (KOs {2})', '乱戦 {0}人': 'Brawl ({0})',
+  '武器強化 ★': 'Weapon up ★', '攻撃力UP': 'ATK UP', '速度UP': 'SPD UP', '回復': 'Heal', 'スタミナ': 'Stamina', '油差し！': 'Oil!',
+  // ---- 装備画面 ----
+  '装備': 'Gear', '仕掛け': 'Gear', '眼': 'Eye', 'ゼンマイ': 'Spring', '歯車': 'Cog', '心臓': 'Heart', '鍔玉': 'Tsuba Orb', '銘': 'Crest',
+  '頭': 'Head', '胴': 'Body', '腕': 'Arms', '脚': 'Legs', '背中': 'Back', '刃': 'Blade', '飾り': 'Ornament', '金属': 'Metal', '胴の色': 'Body Color',
+  '体力': 'HP', 'はじき受付': 'Parry window', '速さ': 'Speed', '攻撃力': 'Attack', '吹き飛び': 'Knockback', '怯みの長さ': 'Stagger time', '受けるダメージ': 'Damage taken',
+  'ガードで減るスタミナ': 'Guard stamina cost', 'ガードの消費': 'Guard cost', 'スタミナ回復': 'Stamina regen', '回避のスタミナ': 'Dodge stamina', '回避の無敵': 'Dodge i-frames', '回避の距離': 'Dodge distance',
+  '詳細 ▾': 'Details ▾', '今の能力': 'Current stats', '全部の能力': 'All stats', '装備する': 'Equip', '装備中': 'Equipped', '外す': 'Remove', '強化 最大': 'Max upgrade', '強化 +{0}': 'Upgrade +{0}',
+  '分解': 'Scrap', '分解する': 'Scrap', '一括分解': 'Bulk scrap', '個を分解 → 小判': 'items to scrap → Coins', '鍵': 'Lock', 'はめる': 'Socket', '所持': 'Owned',
+  '分解する等級を選んでください（眼・ゼンマイ・歯車の全部から）。': 'Choose which grades to scrap (from all Eyes, Springs and Cogs).',
+  '鍵をかけた品と装備中の品は分解しません': 'Locked and equipped items are never scrapped',
+  '見た目だけ': 'Cosmetic only', '試着中（持っていない）': 'Trying on (not owned)', 'ガチャ・店で手に入る': 'Get it from Gacha or the Shop', '見た目をランダムに': 'Random look',
+  '特殊能力': 'Special Ability', '装備すると': 'When equipped', '並': 'Common', '上': 'Rare', '極': 'Epic', '伝': 'Legendary',
+  '{0}つそろえると：はじき受付+{1}秒・はじき成功でスタミナ+{2}': 'Set of {0}: Parry window +{1}s · Stamina +{2} on parry',
+  '{0}つそろえると：はじき受付+{1}秒・攻撃力+{2}%': 'Set of {0}: Parry window +{1}s · Attack +{2}%',
+  '{0}つそろえると：スタミナ回復+{1}%・速さ+{2}%': 'Set of {0}: Stamina regen +{1}% · Speed +{2}%',
+  '{0}つそろえると：体力+{1}・吹き飛び-{2}%': 'Set of {0}: HP +{1} · Knockback -{2}%',
+  '{0}つそろえると：体力+{1}・攻撃力+{2}%': 'Set of {0}: HP +{1} · Attack +{2}%',
+  '{0}つそろえると：回避の無敵+{1}秒・回避のスタミナ-{2}': 'Set of {0}: Dodge i-frames +{1}s · Dodge stamina -{2}',
+  '{0}つそろえると：攻撃力+{1}%・ガードの上から削るスタミナ+{2}%': 'Set of {0}: Attack +{1}% · Guard damage +{2}%',
+  '{0}つそろえると：速さ+{1}%・回避のスタミナ-{2}': 'Set of {0}: Speed +{1}% · Dodge stamina -{2}',
+  'はじき受付+{0}秒・はじき成功でスタミナ+{1}': 'Parry window +{0}s · Stamina +{1} on parry', 'はじき受付+{0}秒・攻撃力+{1}%': 'Parry window +{0}s · Attack +{1}%',
+  'スタミナ回復+{0}%・速さ+{1}%': 'Stamina regen +{0}% · Speed +{1}%', '体力+{0}・吹き飛び-{1}%': 'HP +{0} · Knockback -{1}%', '体力+{0}・攻撃力+{1}%': 'HP +{0} · Attack +{1}%',
+  '回避の無敵+{0}秒・回避のスタミナ-{1}': 'Dodge i-frames +{0}s · Dodge stamina -{1}', '攻撃力+{0}%・ガードの上から削るスタミナ+{1}%': 'Attack +{0}% · Guard damage +{1}%',
+  '速さ+{0}%・回避のスタミナ-{1}': 'Speed +{0}% · Dodge stamina -{1}',
+  'はじき受付+{0}秒': 'Parry window +{0}s', 'ガード時のスタミナ減-{0}%': 'Guard stamina cost -{0}%', 'ガード時のスタミナ減+{0}%': 'Guard stamina cost +{0}%', 'スタミナ上限+{0}': 'Max stamina +{0}',
+  'スタミナ回復+{0}%': 'Stamina regen +{0}%', 'スタミナ回復-{0}%': 'Stamina regen -{0}%', '体力+{0}': 'HP +{0}', '体力-{0}': 'HP -{0}', '受けるダメ-{0}%': 'Damage taken -{0}%', '受けるダメ+{0}%': 'Damage taken +{0}%',
+  '吹き飛び-{0}%': 'Knockback -{0}%', '回避の無敵+{0}秒': 'Dodge i-frames +{0}s', '回避スタミナ-{0}': 'Dodge stamina -{0}', '回避スタミナ+{0}': 'Dodge stamina +{0}', '回避距離+{0}%': 'Dodge distance +{0}%',
+  '怯み-{0}%': 'Stagger -{0}%', '移動+{0}%': 'Move speed +{0}%', '移動-{0}%': 'Move speed -{0}%',
+  'はじき受付+{0}秒 → +{1}秒': 'Parry window +{0}s → +{1}s', 'ガード時のスタミナ減-{0}% → -{1}%・体力+{2} → +{3}': 'Guard stamina cost -{0}% → -{1}% · HP +{2} → +{3}',
+  'スタミナ上限+{0} → +{1}・スタミナ回復+{2}% → +{3}%': 'Max stamina +{0} → +{1} · Stamina regen +{2}% → +{3}%', '体力+{0} → +{1}': 'HP +{0} → +{1}',
+  '体力を{0}回復する／ゲージのたまり +{1}%': 'Restore {0} HP / gauge fill +{1}%', '受けるダメ-{0}% → -{1}%': 'Damage taken -{0}% → -{1}%',
+  '吹き飛び-{0}% → -{1}%・怯み-{2}% → -{3}%': 'Knockback -{0}% → -{1}% · Stagger -{2}% → -{3}%', '回避の無敵+{0}秒 → +{1}秒': 'Dodge i-frames +{0}s → +{1}s',
+  '回避スタミナ-{0} → -{1}・回避距離+{2}% → +{3}%': 'Dodge stamina -{0} → -{1} · Dodge distance +{2}% → +{3}%', '移動+{0}% → +{1}%': 'Move speed +{0}% → +{1}%',
+  '当てると相手が燃え、{0}秒間じわじわ体力が減る（毎秒{1}）。燃えている間、相手のスタミナは回復しない': "Hits set them on fire: they lose HP for {0}s ({1}/s) and can't regain stamina while burning",
+  '当てると相手が濡れて、{0}秒間「ため」と移動が遅くなる（はじきやすくなる）': 'Hits soak them: wind-ups and movement slow for {0}s (easier to parry)',
+  '当てたときの吹き飛ばしが{0}倍。乱戦では崖に落としやすい': 'Knockback ×{0} on hit. Great for knocking foes off cliffs in Brawl',
+  'はじきに成功すると相手が凍り、よろめきが{0}秒長くなる': 'Parries freeze the opponent: their stagger lasts {0}s longer',
+  '最後の段（重い一撃）が当たると、相手がしびれて{0}秒長く止まる（相手の重い一撃の最中でも止める）': 'Your final hit (Heavy Blow) stuns them {0}s longer (even mid Heavy Blow)',
+  '体力{0}割以下で受けるダメ-{1}%': 'Below {0}0% HP: damage taken -{1}%', '回避してから{0}秒以内の攻撃+{1}%': 'Attack +{1}% within {0}s after a dodge',
+  '最後の段の攻撃+{0}%': 'Final hit damage +{0}%', '撃破すると体力+{0}・スタミナ全回復（乱戦）': 'On KO: HP +{0} and full stamina (Brawl)',
+  '体力を{0}回復する': 'Restore {0} HP', '{0}秒間、まわりがスローになる': 'Slows down everything around you for {0}s',
+  '{0}秒間、ガードしてもスタミナが減らず、崩れない': "For {0}s your guard costs no stamina and can't break",
+  '{0}秒以内に受ける次の一撃（投げも）を自動でかわし、相手の背後へ回る': 'Within {0}s, auto-dodges the next hit (or throw) and slips behind the attacker',
+  '遠くの相手まで一気に飛び込んで斬る（{0}ダメージ、はじけない）': 'Dash in and slash a distant foe ({0} damage, unparryable)',
+  'あなただけの部位。奥義が使える': 'Your own special part. Unlocks an Ultimate', 'からくり心臓（奥義が使える。あなただけの部位）': 'Karakuri Heart (unlocks an Ultimate; yours alone)',
+  '鍔玉（属性）': 'Tsuba Orb (element)', '鍔玉（武器に属性をつける。あなただけ）': 'Tsuba Orb (gives your weapon an element; yours alone)',
+  '武器の鍔にはめると、刃が属性の色に光る。はめられるのは{0}つだけ。いつでも付け替えられる': "Socket it into your weapon's guard and the blade glows with its element. Only {0} at a time. Swap anytime",
+  '店で{0}枚。強敵を倒すと、ときどき手に入る': '{0} coins in the Shop. Sometimes dropped by bosses',
+  '心臓・奥義': 'Heart · Ultimate', '火の属性': 'Fire element',
+  // 心臓・奥義
+  'からくり心臓': 'Karakuri Heart', '油差しの心臓': 'Oiler Heart', '鉄壁の心臓': 'Ironwall Heart', '身代わりの心臓': 'Decoy Heart', '迅雷の心臓': 'Thunderbolt Heart', '見切りの心臓': 'Foresight Heart',
+  '油差し': 'Oiler', '鉄壁': 'Ironwall', '身代わり': 'Decoy', '迅雷': 'Thunderbolt', '見切り': 'Foresight',
+  // 鍔玉
+  '火': 'Fire', '水': 'Water', '雷': 'Thunder', '風': 'Wind', '氷': 'Ice',
+  '🔥 火の鍔玉': '🔥 Fire Orb', '💧 水の鍔玉': '💧 Water Orb', '⚡ 雷の鍔玉': '⚡ Thunder Orb', '🌀 風の鍔玉': '🌀 Wind Orb', '❄ 氷の鍔玉': '❄ Ice Orb',
+  '火の鍔玉': 'Fire Orb', '水の鍔玉': 'Water Orb', '雷の鍔玉': 'Thunder Orb', '風の鍔玉': 'Wind Orb', '氷の鍔玉': 'Ice Orb',
+  // 仕掛けの型・銘
+  '鷹の眼': 'Hawk Eye', '鉄眼': 'Iron Eye', '心眼': 'Mind Eye', '鋼ゼンマイ': 'Steel Spring', '二重ゼンマイ': 'Twin Spring', '大ゼンマイ': 'Great Spring',
+  '早歯車': 'Swift Cog', '重歯車': 'Heavy Cog', '跳ね歯車': 'Spring Cog', '眼の箱': 'Eye Box', 'ゼンマイの箱': 'Spring Box', '歯車の箱': 'Cog Box',
+  '明鏡': 'Meikyo', '疾風': 'Shippu', '金剛': 'Kongo', '追い風': 'Tailwind', '渾身': 'All-Out', '不屈': 'Undaunted', '吸魂': 'Soul Drain', '総仕上げ': 'Finisher', '透視': 'X-ray',
+  '銘の図鑑': 'Crest Book', '銘の図鑑（同じ銘を{0}つそろえると効果）': 'Crest Book (matching {0} crests grants a bonus)',
+  '仕掛けを手に入れた': 'Got Gear', '仕掛けの箱：上以上が{0}つ出る。型と銘はランダム。試合に勝っても手に入る': 'Gear Box: contains {0} Rare+ item. Type and crest are random. You also earn gear by winning',
+  // ---- 見た目の名前 ----
+  'なし': 'None', '鍬形': 'Kuwagata', '鉢巻': 'Headband', '赤い鉢巻': 'Red Headband', '陣笠': 'Jingasa Hat', '大鍬形': 'Great Kuwagata', '面頬': 'Mempo Mask', '狐面': 'Fox Mask',
+  '金の兜': 'Golden Helm', '鬼の角': 'Oni Horns', 'どくろ': 'Skull', '天狗': 'Tengu', '獅子頭': 'Lion Head', '提灯お化け': 'Lantern Ghost', '花ハート': 'Flower Heart', 'ゼンマイ頭': 'Wind-up Head', '金鬼の角': 'Golden Oni Horns',
+  'いつもの胴': 'Standard Body', '細身': 'Slim', '樽': 'Barrel', '法衣': 'Monk Robe', '重装甲': 'Heavy Armor', 'からくり時計': 'Clockwork Clock', 'おえかき胴': 'Doodle Body', '胴丸': 'Domaru Armor',
+  'だんだら羽織': 'Dandara Haori', '歯車胴': 'Cog Body', '蒸気釜': 'Steam Boiler', 'からくり箱': 'Puzzle Box', '雷太鼓': 'Thunder Drum', '桜紋': 'Sakura Crest', '鎖帷子': 'Chain Mail',
+  'いつもの手': 'Standard Hands', '大拳': 'Big Fists', 'かぎ爪': 'Claws', '扇': 'Fan', '鎖分銅': 'Chain Weight', '籠手': 'Gauntlets', '蟹ばさみ': 'Crab Claws', 'ドリル': 'Drill',
+  '磁石': 'Magnet', '小盾': 'Buckler', '提灯持ち': 'Lantern Bearer', 'バネの拳': 'Spring Fist', '炎の手': 'Flame Hands', '金の手': 'Golden Hands', '骨の手': 'Bone Hands',
+  'いつもの足': 'Standard Feet', '一本下駄': 'Tengu Geta', '車輪': 'Wheels', 'たこ足': 'Octopus Legs', 'ジェット': 'Jets', '草鞋': 'Straw Sandals', '足袋': 'Tabi', 'バネ足': 'Spring Legs',
+  'キャタピラ': 'Treads', '金の足': 'Golden Feet', '骨の足': 'Bone Feet', '猫の足': 'Cat Paws', '浮遊機': 'Hover Unit', '鉄下駄': 'Iron Geta', '蜘蛛脚': 'Spider Legs',
+  '旗指物': 'Banner', '陣羽織': 'War Coat', '金の旗': 'Golden Banner', '母衣': 'Horo Cape', 'ハート': 'Heart', '背負い歯車': 'Back Cog', 'からくりの翼': 'Clockwork Wings', '雷神の太鼓': 'Thunder God Drums',
+  '背負い籠': 'Back Basket', '矢筒': 'Quiver', '大太刀': 'Odachi', '煙突': 'Chimneys', '大扇': 'Great Fan', '月光の翼': 'Moonlight Wings', '金雷の太鼓': 'Golden Thunder Drums', '紅金の大ゼンマイ': 'Crimson-Gold Great Key',
+  'いつもの刃': 'Standard Blade', '朱の柄': 'Vermilion Hilt', '青い刃': 'Blue Blade', '桜の刃': 'Sakura Blade', '妖刀': 'Cursed Blade', '金の刃': 'Golden Blade', '黒刃': 'Black Blade',
+  '銅の刃': 'Copper Blade', '白刃': 'White Blade', '翠刃': 'Jade Blade', '氷刃': 'Ice Blade', '琥珀': 'Amber', '炎刃': 'Flame Blade', '紫電': 'Violet Spark', '闇刃': 'Dark Blade', '影法師の刃': "Kageboshi's Blade",
+  '房飾り': 'Tassel', '一本角': 'Single Horn', '長い房': 'Long Tassel', '二本角': 'Twin Horns', '羽根飾り': 'Feather', 'アンテナ': 'Antenna', '猫耳': 'Cat Ears', '三日月': 'Crescent Moon',
+  '金の冠': 'Golden Crown', '星': 'Star', 'プロペラ': 'Propeller', '鬼火': 'Will-o-Wisp', '花飾り': 'Flower',
+  '鋼': 'Steel', '銅': 'Copper', '藍鉄': 'Indigo Iron', '朱': 'Vermilion', '銀': 'Silver', '白磁': 'Porcelain', '金': 'Gold', '黒鉄': 'Black Iron', '真鍮': 'Brass', '青銅': 'Bronze',
+  '橙': 'Orange', '翡翠': 'Jade', '紫紺': 'Royal Purple', '桜色': 'Cherry Pink', '夜光': 'Glow',
+  '生成り': 'Natural', '紺': 'Navy', '紅': 'Crimson', '墨': 'Ink', '忍び': 'Shinobi', '白': 'White', '鉄': 'Iron', '黒漆': 'Black Lacquer', '萌黄': 'Spring Green', '藤': 'Wisteria',
+  '茶': 'Brown', '桜': 'Sakura', '群青': 'Ultramarine', '玉虫': 'Iridescent',
+  // ---- 店・ガチャ・蔵 ----
+  '欠片交換': 'Shard Exchange', '日替わり': 'Daily', 'まだ持っていない見た目を、欠片で選んで手に入れる': "Pick a look you don't own and get it with shards",
+  '毎日変わる{0}品。小判で買える（ガチャより割高）': '{0} items that change daily. Buy with coins (pricier than Gacha)',
+  '出るのは見た目だけ（{0}種）。だぶりは欠片になり、店で好きな見た目と交換できます': 'Looks only ({0} kinds). Duplicates become shards you can trade for any look in the Shop',
+  '並 {0}%': 'Common {0}%', '上 {0}%': 'Rare {0}%', '極 {0}%': 'Epic {0}%', '伝 {0}%': 'Legendary {0}%', '極まで あと': 'Epic guaranteed in', '回': '', '{0}回': '×{0}', '{0}連': '×{0}',
+  '小判 {0}・上以上{1}つ確定': 'Coins {0} · {1} Rare+ guaranteed', 'もう{0}回': '×{0} again', 'もう{0}連': '×{0} again', '昇格！': 'UPGRADE!', '伝説': 'LEGEND',
+  '{0}個': '{0}', '{0}個／全部で {1}/{2}': '{0} / total {1}/{2}', '見た目': 'Looks',
+  // ---- 通信対戦・乱入 ----
+  '部屋を作る': 'Create Room', '部屋に入る': 'Join Room', 'コード{0}文字': '{0}-character code', 'コードを相手に伝える': 'Share the code with your opponent', '乱入する': 'Invade',
+  '受付中の人を探す': 'Looking for players...', 'もう一度': 'Rematch',
+  '{0}台をコードでつないで{1}対{2}（{3}本先取）。武器・見た目・仕掛け・心臓・鍔玉は、今の装備のまま使えます。': 'Link {0} devices with a code for a {1}v{2} duel (first to {3}). Your weapon, look, gear, heart and orb carry over.',
+  'いま CPU 戦をしている誰かの試合に割り込んで{0}対{1}（{2}本先取）。勝てば小判 {3}。装備は今のまま使えます。': "Crash someone's ongoing CPU match for a {0}v{1} duel (first to {2}). Win to earn {3} coins. Your current gear carries over.",
+  // ---- 遊び方 ----
+  '操作を{0}つずつ覚える': 'Learn the controls {0} at a time', '武器ごとの癖を知る': 'Know each weapon', '性格を読む': "Read the opponent's style", '地形を使う': 'Use the terrain', 'アイテム': 'Items',
+  '一瞬だけ無敵。スティックの方向へ跳ぶ': 'Brief invincibility. Leap in the stick direction', 'すぐ近くの相手を掴んで投げる。': 'Grab and throw a nearby opponent. ',
+  '続けて押すと連続攻撃。最後の段は重いが、ためが長い（': 'Press repeatedly for a combo. The last hit is heavy but has a long wind-up (', 'が出る）': ' appears)',
+  '相手の攻撃が当たる直前にガード。自分のまわりの輪が': 'Guard right before the attack lands — when the ring around you is ', '（「今」）のときに押す。連打はきかない': ' ("NOW"). Mashing won\'t work',
+  'はじいた直後': 'Right after a parry', 'は少し離れていても飛び込んで投げられる（はじき投げ、ダメージ{0}倍）': ' you can leap in and throw from a bit farther away (Parry Throw, ×{0} damage)',
+  'はじかれてよろめいている間も、回避だけはできる（スタミナを多く使う）': 'Even while staggered by a parry, you can still dodge (costs extra stamina)',
+  '早めのガードは受け止めるだけ。スタミナが削れ、なくなるとガードブレイク': 'An early guard just blocks. It drains stamina, and running out means Guard Break',
+  'ガード（はじきも）に勝ち、攻撃に負ける': 'Beats Guard (and Parry), loses to Attack', '。空振りすると隙が大きい。攻撃＞投げ＞ガード＞攻撃の三すくみ。': '. Whiffs leave a big opening. Attack > Throw > Guard > Attack. ',
+  '攻撃・ガード・回避で減る。足元の黄色いバー': 'Used by attacks, guards and dodges. The yellow bar at your feet',
+  '奥義ゲージは、はじき・斬って当てる・投げる・斬られるでたまる。満タンで「奥義」ボタン（キーボードは I）': 'The Ultimate gauge fills by parrying, hitting, throwing and getting hit. When full, press "Ult" (keyboard: I)',
+  '相手には性格がある（猪突・慎重・返し狙い・投げ好き・逃げ回り・漁夫）。癖を読んで戦う。何度も投げると、相手はガードを固めるのをやめる': 'Opponents have styles (Rusher, Cautious, Parrier, Grappler, Evasive, Opportunist). Read their habits. Throw them often and they stop turtling',
+  '名前つきのボス武者。{0}対{1}ではLv{2}・{3}・{4}…、乱戦ではときどき混ざる。倒すと、その武者だけの銘の仕掛けが手に入る': 'Named boss warriors. In {0}v{1} they appear at Lv{2}, {3}, {4}..., and sometimes join a Brawl. Defeat one to get gear with its unique crest',
+  '武器と仕掛け（眼・ゼンマイ・歯車＝からくりの中の部品）で能力が変わる。見た目の着せ替えは能力に関係しない': 'Your weapon and gear (Eye, Spring, Cog — the parts inside the machine) change your stats. Looks are purely cosmetic',
+  '仕掛けには銘がある。同じ銘を眼・ゼンマイ・歯車の{0}つそろえると、銘の効果がつく': 'Gear has crests. Match the same crest on Eye, Spring and Cog ({0} pieces) to gain its bonus',
+  '型ごとに長所と短所がある。品位（並・上・極・': 'Each type has strengths and weaknesses. The higher the grade (Common/Rare/Epic/', '）が高いほど、小判で強化するほど長所が大きくなる（伝を最大まで強化すると並の{0}倍）。極・伝には': ') and the more you upgrade with coins, the bigger the strengths (a maxed Legendary is ×{0} a Common). Epic and Legendary have a ',
+  '。いらない物は分解して小判に（鍵をかければ守れる）': '. Scrap what you don\'t need for coins (lock items to protect them)',
+  'からくり心臓は、あなただけの第四の部位。つけると': 'The Karakuri Heart is your exclusive fourth part. Equip it to use an ',
+  'が使える。はじき・斬って当てる・投げる・斬られるで奥義ゲージがたまり、満タンで「奥義」ボタン。心臓は{0}種類（油差し・鉄壁・身代わり・迅雷・見切り）で、店で買えるほか、強敵を倒すとときどき手に入る。強化するとゲージが早くたまり、奥義も強くなる':
+    '. Parrying, hitting, throwing and getting hit fill the gauge; when full, press "Ult". There are {0} hearts (Oiler, Ironwall, Decoy, Thunderbolt, Foresight), sold in the Shop and sometimes dropped by bosses. Upgrades fill the gauge faster and strengthen the Ultimate',
+  '武器の鍔に玉をはめると属性がつく（あなただけ）。🔥火＝燃やしてじわじわ／💧水＝濡らして遅くする／⚡雷＝重い一撃でしびれさせる／🌀風＝大きく吹き飛ばす／❄氷＝はじくと凍らせる。装備画面の「武器」→「鍔玉」で付け替え・強化。最初に火の鍔玉を{0}つ持っている':
+    'Socket an orb into your weapon guard to add an element (yours alone). 🔥Fire = burn over time / 💧Water = soak and slow / ⚡Thunder = Heavy Blows stun / 🌀Wind = huge knockback / ❄Ice = parries freeze. Swap and upgrade in Gear → "Weapon" → "Tsuba Orb". You start with {0} Fire Orb',
+  '{0}人で最後の{1}人まで。画面は自分を追い、画面の外の相手は端の矢印で分かる。紫の': '{0} fighters, last {1} standing. The camera follows you; off-screen foes are shown by edge arrows. The purple ',
+  '結界': 'barrier', 'がだんだん縮み、外にいると体力が減る（白い点線が次の輪）。倒した相手が落とす': ' slowly shrinks and drains HP outside it (the white dotted line is the next ring). Defeated foes drop ',
+  '気': 'spirit', 'を拾うと武器強化（★{0}つで攻撃力+{1}%、★{2}まで）': ' — pick it up to power up your weapon (+{1}% Attack per {0}★, up to {2}★)',
+  '乱戦には': 'Brawl has ', '崖': 'cliffs', '（強く吹き飛ばされると落ちて退場）、': ' (knocked off = out), ', '柱': 'pillars', '（通れない。柱をはさむと攻撃も投げも届かない）': " (impassable; attacks and throws can't pass)",
+  '草むら': 'tall grass', '（中にいると近くからしか見えない）、': ' (you can only be seen up close inside), ',
+  'ときどき落ちてくる。回復・攻撃力UP・速度UP・スタミナ。相手より先に拾う': 'They drop in now and then: Heal, ATK UP, SPD UP, Stamina. Grab them first',
+  '効果音：効果音ラボ': 'Sound effects: Koukaon Lab', '音楽：「剣の舞」t.tam（OpenTracks）／「和風でアップテンポ 戦闘時に使えるBGM」「真剣勝負」「疾風雷電」{0}FreeBGM': 'Music: "Sword Dance" t.tam (OpenTracks) / "Upbeat Japanese Battle BGM", "Shinken Shobu", "Shippu Raiden" {0}FreeBGM',
+  '勝つともらえる。見た目はガチャ、仕掛けは試合の戦利品と店の箱で手に入る': 'Earned by winning. Looks come from Gacha; gear from match drops and Shop boxes',
+  // ---- 宝箱・装い ----
+  '宝箱（★{0}）': 'Chest (★{0})', '店で、まだ持っていない見た目と交換できます': "Trade them in the Shop for looks you don't own", '今すぐ装う': 'Wear Now',
+  '限定の見た目「': 'Exclusive look "', '」と、': '" and ', 'の見た目一式を手に入れた！': "'s full outfit acquired!", 'の装い': "'s Outfit",
+  '🎁 第{0}章の宝箱が開けられます（面の選択の右上）': '🎁 A Chapter {0} chest can be opened (top right of Stage Select)', 'タップで飛ばす': 'Tap to skip',
+  // ---- 追加（2回目の洗い出し） ----
+  '強敵まで あと': 'Boss in ', '次は': 'Next: ', '金色': 'gold', '地形': 'Terrain', '{0}秒': '{0}s', '回避スタミナ': 'Dodge stamina', 'スタミナ上限': 'Max stamina',
+  'ゲージのたまり +{0}%': 'Gauge fill +{0}%', '{0} 懐': '{0} shaft',
+  // ---- 追加（ソースからの洗い出し：通信・乱入・やめる・お題など） ----
+  '発動': 'activated', '武器強化': 'Weapon Up', '吹き飛び半減': 'Knockback halved', '受けるダメ': 'Damage taken', 'ガード時のスタミナ減': 'Guard stamina cost', '怯み': 'Stagger', '回避距離': 'Dodge distance', '秒': 's',
+  'この面をやめて、面の選択に戻りますか？': 'Quit this stage and return to Stage Select?', '（この勝負の小判はもらえません）': "(You won't earn coins for this match)",
+  '勝負をやめてタイトルに戻りますか？': 'Quit the match and return to the title?', '★最大 → 回復': '★MAX → Heal', '凍結': 'Frozen', '返し': 'Riposte', 'はじき成功で体力+{0}': 'HP +{0} on parry',
+  'どんどん攻めてくる。守りは甘い': 'Attacks relentlessly. Weak defense', '間合いの外で様子を見る。ガードが固い（投げが効く）': 'Waits out of range. Solid guard (throws work)',
+  'はじきを狙ってくる（投げが効く）': 'Goes for parries (throws work)', 'ガードを見ると投げてくる（攻めれば勝てる）': 'Throws when you guard (attack to win)',
+  '斬ったらすぐ離れる。回避が多い': 'Hits and backs off. Dodges a lot', '弱った相手・戦っている相手を狙う。隠れる': 'Targets weakened or busy foes. Hides',
+  '初勝利': 'First win', '次の相手は少し強くなります。': 'The next opponent will be a bit stronger.', '装備を見直す': 'Review Gear', '本当に？': 'Really?', '極が出た！': 'Got an Epic!',
+  '結果': 'Results', '装備へ': 'To Gear', '見た目は全部そろっています': 'You own every look', '箱を開けた': 'Opened the box', 'もう{0}つ': '{0} more',
+  '通信の部品を読み込めませんでした': "Couldn't load the network module", '相手は対戦を抜けました': 'Your opponent left the match', '通信が切れました': 'Connection lost', '準備中…': 'Preparing...',
+  '部屋のコード': 'Room code', '相手がこのコードで入るのを待っています…': 'Waiting for your opponent to join with this code...', 'コードは{0}文字です': 'The code is {0} characters', '接続中…': 'Connecting...',
+  'その部屋は見つかりませんでした': 'Room not found', '相手に届きませんでした（ネットワークによっては直接つながりません）': "Couldn't reach your opponent (some networks block direct connections)",
+  'つながりました。始めます…': 'Connected. Starting...', '相手との接続が切れました': 'Disconnected from your opponent', '通信でエラーが起きました': 'A network error occurred',
+  'その部屋はもう対戦中です': 'That room is already in a match', '相手は今、乱入を受け付けていません': 'That player is not accepting invasions right now',
+  '相手とゲームの版が違います。どちらも読み込み直してください': 'Game versions differ. Please reload on both devices', '相手が対戦をやめました': 'Your opponent quit',
+  'やめてタイトルへ': 'Quit to Title', '相手を待っています…': 'Waiting for your opponent...', '相手が再戦を申し込んでいます': 'Your opponent wants a rematch', '相手は「もう一度」を押しました': 'Your opponent pressed "Rematch"',
+  '乱入者との対戦をやめて、CPU戦に戻りますか？': 'Stop fighting the invader and return to your CPU match?', 'CPU戦に戻る': 'Back to CPU Match', '通信対戦をやめてタイトルに戻りますか？': 'Quit Versus and return to the title?',
+  '乱入者との接続が切れました': 'Lost connection to the invader', '乱入者あらわる！': 'A CHALLENGER APPEARS!', '受付中の人を探しています…': 'Looking for players...',
+  '今は乱入を受け付けている人がいません。しばらくしてからもう一度': 'Nobody is accepting invasions right now. Try again later', '受付中の人を探しています…（あと{0}秒）': 'Looking for players... ({0}s left)',
+  '相手が CPU 戦を始めたら入れます': "You'll join as soon as someone starts a CPU match", 'つなぎ直しています': 'Reconnecting', '見つけました！': 'Found one!', '相手の試合に割り込みます…': 'Crashing their match...',
+  '返り討ち！': 'Repelled!', '乱入者に敗れた…': 'Defeated by the invader...', '乱入成功！': 'Invasion success!', '返り討ちにあった…': 'You were repelled...', '再戦する': 'Rematch',
+  '別の相手に乱入する': 'Invade someone else', '乱入戦が終わりました': 'The invasion match is over', 'もう一度乱入する': 'Invade again', '勝ち残り！': 'Last one standing!', 'ラウンド': 'Round',
+  '仕掛けの副効果をなくしました（小判 +{0}）': 'Gear sub-effects were removed (Coins +{0})', 'しびれ': 'Stunned', '結界の外！': 'Outside the barrier!', '命中': 'Hits',
+  'からくり武者の読み合い': 'A clockwork samurai mind game', '全章を開放しました（テスト用）': 'All chapters unlocked (test)', '回避で抜けられる': 'Dodge to escape',
+  '最後の段（重い一撃）を当てる': 'Land the final hit (Heavy Blow)', '投げを{0}回決める': 'Land {0} throw(s)', 'はじきを{0}回決める': 'Parry {0} time(s)', '回避で{0}回かわす': 'Dodge {0} times',
+  '被弾{0}回以下': 'Take {0} hits or fewer', '一度も投げられない': 'Never get thrown', '最後の段を{0}回当てる': 'Land the final hit {0} times', '奥義を{0}回使う': 'Use your Ultimate {0} time(s)',
+  '一度もはじかれない': 'Never get parried', 'ガードブレイクさせる': 'Cause a Guard Break', 'カウンターを{0}回決める': 'Land {0} Counter(s)', '相手を火で{0}回焼く': 'Burn them {0} times',
+  '柱で攻撃を{0}回防ぐ': 'Block {0} attacks with pillars', '相手を蒸気に{0}回当てる': 'Steam them {0} times', '相手を床の外へ落とす': 'Knock them off the floor', '奥義を使わない': "Don't use your Ultimate",
+  'ガードブレイクを{0}回': '{0} Guard Breaks',
+  '{0}本×{1} {2}': 'Rounds×{1} {2}', '勝利 {0}': 'Victory {0}', '初クリア {0}': 'First clear {0}', '新しい★×{0} {1}': 'New ★×{0} {1}',
+  // ---- 語（語ごとに訳すときに使う） ----
+  'あなた': 'You', '一本': 'Round', '本': 'rounds', '倒しました': 'defeated', '負けました': 'lost', '手に入れた': 'got', 'お題': 'Goal', 'ヒント': 'Tip', '章': 'Chapter', '面': ' stages',
+  '地下': 'B', '階': 'F', '入る': 'Enter', '準備': 'Ready', '練習の準備': 'Practice setup', '撃破': 'KOs', '残り': 'Left', '速': 'SPD', '攻': 'ATK', '星': 'Star', '装い': 'Outfit', '限定': 'Exclusive',
+  'からくりチャンバラ KARAKURI CHANBARA': 'KARAKURI CHANBARA',
+};
+
+// ================= v0.74 英語化：画面に出る直前の文字を辞書で置き換える =================
+// ソースの日本語はそのまま。英語のときだけ、①メニューなどの文字（DOM の文字・aria-label・title）を MutationObserver で、
+//   ②試合中などの canvas の文字（fillText・strokeText・measureText）を差し替えて訳す。
+// 引き方：数字を {0},{1}… に置き換えた全文を I18N_EN（i18n_en.js）で引く。なければ日本語のかたまり（語）ごとに引いて並べる。
+//   それでも日本語が残った文は I18N_MISS に記録（確認用。?i18nmiss で画面の右下に数を出す）
+// 言語：?lang=en / ?lang=ja ＞ localStorage maai_lang ＞ 端末の言語（ja 以外は英語）。setLang で切り替え（読み込み直す）
+let LANG = (() => { const q = location.search.match(/[?&]lang=(en|ja)\b/); if (q) return q[1];
+  try { const v = localStorage.getItem('maai_lang'); if (v === 'en' || v === 'ja') return v; } catch(e) {}
+  return /^ja\b/i.test(navigator.language || '') ? 'ja' : 'en'; })();
+function setLang(l){ try { localStorage.setItem('maai_lang', l); } catch(e) {} location.href = location.pathname + location.search.replace(/[?&]lang=(en|ja)\b/, '') + location.hash; }
+const I18N_JP = /[぀-ヿ㐀-鿿　-〿！-｠]/;   // ★☆ は記号なので英語でもそのまま
+const I18N_MISS = new Set(), I18N_C = new Map();
+const I18N_PUNCT = { '、': ', ', '。': '. ', '「': '"', '」': '"', '『': '"', '』': '"', '（': ' (', '）': ')', '・': ' · ', '：': ': ', '！': '!', '？': '?', '〜': '~', '　': ' ', '，': ', ', '．': '.', '／': '/', '＋': '+', '－': '-', '％': '%', '…': '...' };
+function tr(s){
+  if (LANG !== 'en' || typeof s !== 'string' || !I18N_JP.test(s)) return s;
+  const hit = I18N_C.get(s); if (hit !== undefined) return hit;
+  const m = s.match(/^(\s*)([\s\S]*?)(\s*)$/), nums = [];
+  const key = m[2].replace(/[0-9０-９]+(?:\.[0-9]+)?/g, d => { nums.push(d); return '{' + (nums.length - 1) + '}'; });
+  let out = I18N_EN[key];
+  if (out != null) out = out.replace(/\{(\d+)\}/g, (_, i) => nums[+i] ?? '');
+  else if ((out = trPat(m[2])) != null) {}
+  else {   // 語ごと：日本語のかたまりを辞書で引く（なければそのまま）。記号は英語の記号に
+    out = m[2].replace(/[぀-ヿ㐀-鿿ー々]+/g, w => I18N_EN[w] ?? w)
+      .replace(/[、。「」『』（）・：！？〜　，．／＋－％…]/g, c => I18N_PUNCT[c] ?? c).replace(/ {2,}/g, ' ').replace(/^ | $/g, '');
+  }
+  out = out.replace(/　/g, '  ');   // 全角スペースは半角2つに
+  if (I18N_JP.test(out)) I18N_MISS.add(key);
+  out = m[1] + out + m[3];
+  if (I18N_C.size > 5000) I18N_C.clear();
+  I18N_C.set(s, out); I18N_C.set(out, out); return out;   // 訳した結果をもう一度通しても同じ（書き直しの繰り返しを防ぐ）
+}
+// 型で訳す：中身（名前など）だけ違う文。中身はもう一度 tr で訳す
+const I18N_PAT = [
+  [/^🔒(.+)$/, (a) => '🔒' + tr(a)],
+  [/^(.+?)　(.+)$/s, (a, b) => `${tr(a)}  ${tr(b)}`],   // 全角スペースで並べた項目（小判の内訳など）は1つずつ
+  [/^★お題：(.+)$/, (a) => '★Goal: ' + tr(a)],
+  [/^第(\d+)章「(.+)」が開きました$/, (a, b) => `Chapter ${a} "${tr(b)}" unlocked`],
+  [/^(.+)を持った乱入者が勝負を挑んできた$/, (a) => `An invader with a ${tr(a)} challenges you!`],
+  [/^(.+)が出た！$/, (a) => `${tr(a)}!`],
+  [/^ヒント：(.+)$/s, (a) => 'Tip: ' + tr(a)],
+  [/^(.+?) に (\d+)-(\d+) で負けました。$/, (a, b, c) => `Lost to ${tr(a)} ${b}-${c}.`],
+  [/^(.+?) を (\d+)-(\d+) で倒しました。$/, (a, b, c) => `Defeated ${tr(a)} ${b}-${c}.`],
+  [/^強敵「(.+)」の銘を手に入れた！$/, (a) => `Got the "${tr(a)}" Crest!`],
+  [/^強敵「(.+)」がいる！$/, (a) => `Boss "${tr(a)}" is here!`],
+  [/^からくり心臓「(.+)」を手に入れた！$/, (a) => `Got the ${tr(a)}!`],
+  [/^(.+)を手に入れた！$/, (a) => `Got ${tr(a)}!`],
+  [/^強敵 (.+?) Lv(\d+)$/, (a, b) => `Boss ${tr(a)} Lv${b}`],
+  [/^強敵 (.+?)（(.+)）$/, (a, b) => `Boss ${tr(a)} (${tr(b)})`],
+  [/^強敵 (.+)$/, (a) => `Boss ${tr(a)}`],
+  [/^練習：(.+)$/, (a) => `Practice: ${tr(a)}`],
+  [/^(.+?) Lv(\d+)( ›)?$/, (a, b, c) => `${tr(a)} Lv${b}${c || ''}`],
+  [/^あなた（(.+)）$/, (a) => `You (${tr(a)})`],
+  [/^お題 (.+?) (\d+)\/(\d+)( ✓)?$/, (a, b, c, d) => `Goal: ${tr(a)} ${b}/${c}${d || ''}`],
+  [/^お題 (.+?) (\d+)回（(\d+)回まで）$/, (a, b, c) => `Goal: ${tr(a)} ${b} (max ${c})`],
+  [/^銘「(.+)」(\d+)\/(\d+)$/, (a, b, c) => `Crest "${tr(a)}" ${b}/${c}`],
+  [/^銘 (.+)$/, (a) => `Crest: ${tr(a)}`],
+  [/^奥義「(.+)」$/, (a) => `Ultimate: ${tr(a)}`],
+  [/^強化すると：(.+)$/s, (a) => `When upgraded: ${tr(a)}`],
+  [/^(.+?) ?\+(\d+)$/, (a, b) => `${tr(a)} +${b}`],
+  [/^([＋－])(.+)$/, (a, b) => (a === '＋' ? '+ ' : '- ') + tr(b)],
+  [/^(.+)・(.+)$/, (a, b) => `${tr(a)} · ${tr(b)}`],
+  [/^(.+)／(.+)$/s, (a, b) => `${tr(a)} / ${tr(b)}`],
+];
+function trPat(s){ for (const [re, f] of I18N_PAT) { const m = s.match(re); if (m) { const o = f(...m.slice(1)); if (!I18N_JP.test(o)) return o; } } return null; }
+if (LANG === 'en') {
+  document.documentElement.lang = 'en'; document.title = 'Karakuri Chanbara';
+  // ① DOM：文字と、読み上げ・ヒントの属性
+  const ATTR = ['aria-label', 'title', 'placeholder', 'alt'];
+  // 変わったときだけ書き直す（同じ値でも書くと変更の知らせが来て、終わりなく繰り返す）
+  const doAttr = n => { for (const a of ATTR) { const v = n.getAttribute && n.getAttribute(a); if (v && I18N_JP.test(v)) { const t = tr(v); if (t !== v) n.setAttribute(a, t); } } };
+  const doNode = n => {
+    if (n.nodeType === 3) { if (I18N_JP.test(n.data)) { const t = tr(n.data); if (t !== n.data) n.data = t; } return; }
+    if (n.nodeType !== 1 || n.tagName === 'SCRIPT' || n.tagName === 'STYLE') return;
+    doAttr(n);
+    for (let c = n.firstChild; c; c = c.nextSibling) doNode(c);
+  };
+  new MutationObserver(ms => { for (const m of ms) {
+    if (m.type === 'characterData') doNode(m.target);
+    else if (m.type === 'attributes') doAttr(m.target);
+    else m.addedNodes.forEach(doNode); } })
+    .observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTR });
+  doNode(document.body);
+  // ② canvas の文字
+  const CP = CanvasRenderingContext2D.prototype;
+  for (const k of ['fillText', 'strokeText', 'measureText']) { const f = CP[k]; CP[k] = function(t, ...a){ return f.call(this, typeof t === 'string' ? tr(t) : t, ...a); }; }
+}
+// 確認用：?i18nmiss で、訳せなかった文の数を右下に出す（押すと一覧をコンソールに）
+if (/[?&]i18nmiss\b/.test(location.search)) addEventListener('load', () => { const b = document.createElement('button');
+  b.style.cssText = 'position:fixed;right:4px;bottom:4px;z-index:999;font-size:11px;padding:2px 6px;'; document.body.appendChild(b);
+  setInterval(() => { b.textContent = 'miss ' + I18N_MISS.size; }, 500); b.onclick = () => console.log([...I18N_MISS].join('\n')); });
 
 title();
 requestAnimationFrame(loop);
