@@ -573,6 +573,9 @@
   .stMap.ch2{background:rgba(80,20,8,.72);}
   .stMap.ch3{background:rgba(10,40,32,.72);} .stMap.ch4{background:rgba(30,16,24,.78);}
 
+/* v0.78 結果の札：小判の内訳は出さない（合計と持っている数だけ） */
+.card .earn small{display:block;font-size:0;line-height:0;margin:0;}
+
   /* ===== 横画面（v0.55）：スマホを横にしたとき（高さが低い横長の画面）だけ、メニューを画面いっぱいの2列に ===== */
   @media (orientation: landscape) and (max-height: 600px) {
     .eq{max-width:none;max-height:none;border-radius:0;border:0;}
@@ -662,6 +665,7 @@
     .card.cols .cL button.sub{display:inline-block;width:calc(50% - 4px);margin:6px 0 0;padding:7px 0;font-size:14px;}
     .card.cols .cL button.sub~button.sub{margin-left:8px;}
     .card.cols .cL br{display:none;}
+    .card.cols .cL .stUnlock{display:block;}
     .card.cols .cL:not(:has(.sub~.sub)) .sub{width:100%;}
     .card.cols .cR .earn{margin:0 0 4px;padding:6px 8px;}
     .card.cols .cR .dropT{margin:6px 0 4px;}
@@ -778,6 +782,7 @@ html #overlay:has(>.eq){padding:0 env(safe-area-inset-right) 0 env(safe-area-ins
   :where(html.pcy) .card.cols .cL button.sub{display:inline-block;width:calc(50% - 4px);margin:6px 0 0;padding:7px 0;font-size:14px;}
   :where(html.pcy) .card.cols .cL button.sub~button.sub{margin-left:8px;}
   :where(html.pcy) .card.cols .cL br{display:none;}
+  :where(html.pcy) .card.cols .cL .stUnlock{display:block;}
   :where(html.pcy) .card.cols .cL:not(:has(.sub~.sub)) .sub{width:100%;}
   :where(html.pcy) .card.cols .cR .earn{margin:0 0 4px;padding:6px 8px;}
   :where(html.pcy) .card.cols .cR .dropT{margin:6px 0 4px;}
@@ -5090,7 +5095,7 @@ function title(){
 // お題 goal：k＝数える物（G.count の名前）、n＝回数、max＝「n 回以下」で勝つ
 const CHAPTERS = [
   { n: '第1章', place: '地下1階「見習い場」', d: '操作を1つずつ覚える', stages: [
-    { id: '1-1', wk: 'katana', per: 'tosshin', lv: 1, coach: 1, ai: { react: .6, parryRate: 0, blockRate: .12, aggression: .35 }, hand: { atk: .6, hp: .75 }, goal: { k: 'heavy', h: '重い一撃', n: 1, t: '最後の段（重い一撃）を当てる', s: '最後の段を当てて勝つ' }, tip: '攻撃ボタンを続けて押すと3段目まで出る。3段目は重い一撃で、途中で斬られても止まらない' },
+    { id: '1-1', wk: 'katana', per: 'tosshin', lv: 1, coach: 1, ai: { react: .6, parryRate: 0, blockRate: .12, aggression: .35 }, hand: { atk: .45, hp: .75 }, goal: { k: 'heavy', h: '重い一撃', n: 1, t: '最後の段（重い一撃）を当てる', s: '最後の段を当てて勝つ' }, tip: '攻撃ボタンを続けて押すと3段目まで出る。3段目は重い一撃で、途中で斬られても止まらない' },
     { id: '1-2', wk: 'dagger', per: 'shincho', lv: 1, coach: 2, ai: { react: .55, parryRate: .01, blockRate: .2, aggression: .4 }, hand: { atk: .8, hp: .9 }, goal: { k: 'thr', h: '投げ', n: 1, t: '投げを1回決める', s: '投げを決めて勝つ' }, tip: '「投げ」はガードの上からでも決まる。相手の目の前で投げボタン' },
     { id: '1-3', wk: 'katana', per: 'kaeshi', lv: 1, coach: 3, ai: { react: .55, parryRate: .01, blockRate: .2, aggression: .4 }, hand: { atk: .8, hp: .9 }, goal: { k: 'parry', h: 'はじき', n: 1, t: 'はじきを1回決める', s: 'はじきを決めて勝つ' }, tip: '相手が構えると自分のまわりの輪が縮む。金色で「今」と出たらガードを押すと「はじき」。はじいた後は斬り放題' },
     { id: '1-4', wk: 'great', per: 'tosshin', lv: 2, coach: 4, goal: { k: 'dodge', h: '回避', n: 3, t: '回避で3回かわす', s: '回避で3回かわして勝つ' }, tip: '大剣の重い一撃は、ガードより回避でかわす' },
@@ -5160,6 +5165,8 @@ const stHead = def => CUR_STAGE ? `<span class="stTag">${CUR_STAGE.id}</span>${d
 const stGoalLine = () => CUR_STAGE ? `<small class="stGoal">★お題：${CUR_STAGE.goal.t}</small>` : '';
 // 面に挑む（装備画面へ）。again：負けた相手（防具）をそのまま
 function stGo(st, again){ CUR_STAGE = st; loadout(st.lv, stWk(st), again || null); }
+// v0.78 装備画面を飛ばしてすぐ試合へ（結果の札の「次の面へ」「もう一度」、ホームの勝負）
+function stFight(st, again){ stGo(st, again); const b = document.getElementById('go'); if (b) b.click(); }
 
 // ---- 面の選択画面 ----
 function stageScreen(sel){
@@ -5227,12 +5234,13 @@ function stageEnd(win){
   card(win ? `<h2>${st.id} クリア！</h2><p>${name} を ${G.pw}-${G.ew} で倒しました。${first && nx ? `<br><b class="stUnlock">${nx.ch !== st.ch ? `${CHAPTERS[nx.ch].n}「${CHAPTERS[nx.ch].place.replace(/^.*「|」$/g, '')}」が開きました` : `${nx.id} が開きました`}</b>` : ''}${chEnd && first ? `<br><b class="stUnlock">すべての章をクリア！ おみごと</b>` : ''}</p>${stars}${earn}${got}
        ${nx ? `<button id="b1">次の面へ（${nx.id}）</button>` : `<button id="b1">面の選択へ</button>`}<button id="stRe" class="sub">もう一度</button>`
      : `<h2>敗北</h2><p>${name} に ${G.pw}-${G.ew} で負けました。<br>装備を見直して、もう一度挑めます。</p><p class="stHint">ヒント：${st.tip}</p>${earn}${got}<button id="b1">もう一度挑む</button>`,
-    () => win ? (nx ? stGo(nx) : stageScreen()) : stGo(st, G.eGear));
+    () => win ? (nx ? stFight(nx) : stageScreen()) : stFight(st, G.eGear));
   paintThumbs();
   quitBtn.hidden = true;
   const c = ov.querySelector('.card');
-  if (win) { const eG = G.eGear; document.getElementById('stRe').onclick = () => stGo(st, eG); }
-  if (!win || nx) { c.insertAdjacentHTML('beforeend', '<br><button id="stSel" class="sub">面の選択へ</button>'); document.getElementById('stSel').onclick = () => stageScreen(st); }
+  if (win) { const eG = G.eGear; document.getElementById('stRe').onclick = () => stFight(st, eG); }
+  else { const eG = G.eGear; c.insertAdjacentHTML('beforeend', '<button id="stEq" class="sub">装備を見直す</button>'); document.getElementById('stEq').onclick = () => stGo(st, eG); }
+  if (!win || nx) { c.insertAdjacentHTML('beforeend', '<br><button id="stSel" class="sub">面の選択へ</button>'); document.getElementById('stSel').onclick = () => stageScreen(win && nx ? nx : st); }
 }
 
 // ---- 闘技場のギミック（v0.45）：第2章＝ベルトコンベア ----
@@ -6746,7 +6754,7 @@ const I18N_EN = {
   '武器強化 ★': 'Weapon up ★', '攻撃力UP': 'ATK UP', '速度UP': 'SPD UP', '回復': 'Heal', 'スタミナ': 'Stamina', '油差し！': 'Oil!',
   // ---- 装備画面 ----
   '装備': 'Gear', '仕掛け': 'Gear', '眼': 'Eye', 'ゼンマイ': 'Spring', '歯車': 'Cog', '心臓': 'Heart', '鍔玉': 'Tsuba Orb', '銘': 'Crest',
-  '頭': 'Head', '胴': 'Body', '腕': 'Arms', '脚': 'Legs', '背中': 'Back', '刃': 'Blade', '飾り': 'Ornament', '金属': 'Metal', '胴の色': 'Body Color',
+  '頭': 'Head', '胴': 'Body', '腕': 'Arms', '脚': 'Legs', '背中': 'Back', '刃': 'Blade', '飾り': 'Deco', '金属': 'Metal', '胴の色': 'Body Color',
   '体力': 'HP', 'はじき受付': 'Parry window', '速さ': 'Speed', '攻撃力': 'Attack', '吹き飛び': 'Knockback', '怯みの長さ': 'Stagger time', '受けるダメージ': 'Damage taken',
   'ガードで減るスタミナ': 'Guard stamina cost', 'ガードの消費': 'Guard cost', 'スタミナ回復': 'Stamina regen', '回避のスタミナ': 'Dodge stamina', '回避の無敵': 'Dodge i-frames', '回避の距離': 'Dodge distance',
   '詳細 ▾': 'Details ▾', '今の能力': 'Current stats', '全部の能力': 'All stats', '装備する': 'Equip', '装備中': 'Equipped', '外す': 'Remove', '強化 最大': 'Max upgrade', '強化 +{0}': 'Upgrade +{0}',
@@ -6908,6 +6916,10 @@ const I18N_EN = {
   '地下': 'B', '階': 'F', '入る': 'Enter', '準備': 'Ready', '練習の準備': 'Practice setup', '撃破': 'KOs', '残り': 'Left', '速': 'SPD', '攻': 'ATK', '星': 'Star', '装い': 'Outfit', '限定': 'Exclusive',
   'からくりチャンバラ KARAKURI CHANBARA': 'KARAKURI CHANBARA',
 };
+// v0.78 案内の短いことば（coach.js の s）
+Object.assign(I18N_EN, { '重い一撃！ 回避': 'Heavy blow! Dodge', '隙！ 攻撃': 'Opening! Attack', '「今」でガード＝はじき': 'Guard at "NOW" = Parry', 'ガード！': 'Guard!',
+  'はじいた！ 攻撃': 'Parried! Attack', 'ガードには投げ': 'Throw beats Guard', '近づく': 'Get close', '{0}回目が重い一撃': 'Hit {0} = Heavy Blow', '目の前で投げ': 'Throw up close',
+  '装備を見直す': I18N_EN['装備を見直す'] || 'Change Gear' });
 
 // ================= v0.74 英語化：画面に出る直前の文字を辞書で置き換える =================
 // ソースの日本語はそのまま。英語のときだけ、①メニューなどの文字（DOM の文字・aria-label・title）を MutationObserver で、
@@ -7130,6 +7142,108 @@ function debDraw(ctx){
 { const _df = drawF; drawF = function(f){ if (f && f.__burst) return; return _df(f); }; }
 { const _do = drawOfx; drawOfx = function(...a){ const r = _do(...a); if (!a.length || a[0] === MAIN_CTX) debDraw(MAIN_CTX); return r; }; }
 
+// ===== v0.77 PC：スマホ用のスティックと大きなボタンは出さず、画面の下にキーの札を1列に並べる =====
+// 一度でもタッチされたら（タッチ画面のパソコン）元のスティックとボタンに戻す
+let TOUCH_SEEN = false;
+addEventListener('touchstart', () => { TOUCH_SEEN = true; }, { capture: true, passive: true });
+const pcKeysOn = () => PC_MODE && !TOUCH_SEEN;
+// マウスで画面を押したら攻撃（見えないスティックやボタンが反応しないように、元の処理には渡さない）
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' || e.pointerType === 'pen') { TOUCH_SEEN = true; return; }
+  if (!pcKeysOn()) return; e.stopImmediatePropagation(); e.preventDefault();
+  if (e.button === 0 && G && G.phase === 'fight') P.attack = true; }, true);
+const PCK_ROW = [['mv', 'WASD', '移動'], ['atk', 'J', '攻撃'], ['grd', 'K', 'ガード'], ['thr', 'U', '投げ'], ['dash', 'Space', '回避'], ['ougi', 'I', '奥義']];
+const PCK_HELD = { mv: () => keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight,
+  atk: () => keys.KeyJ, grd: () => keys.KeyK, thr: () => keys.KeyU, dash: () => keys.Space, ougi: () => keys.KeyI };
+const PCK_COL = { mv: '#8A93A0', atk: '#C8463C', grd: '#3E7FC4', thr: '#2E8A6A', dash: '#5B6573' };
+function drawKeyRow(){
+  const f = G && G.p, q = coachNow(), hot = q && q.b, t = performance.now()/1000;
+  const row = PCK_ROW.filter(r => r[0] !== 'ougi' || (f && f.heart));
+  ctx.save(); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const KF = '800 11px "M PLUS Rounded 1c", sans-serif', LF = '800 12px "M PLUS Rounded 1c", sans-serif', h = 26, gap = 8;
+  const items = row.map(([k, key, lab]) => { ctx.font = KF; const kw = Math.max(18, ctx.measureText(key).width + 10); ctx.font = LF; const lw = ctx.measureText(lab).width;
+    return { k, key, lab, kw, w: 6 + kw + 6 + lw + 9 }; });
+  const total = items.reduce((a, b) => a + b.w, 0) + gap*(items.length - 1);
+  let x = W/2 - total/2; const y = H - h - 10 - (typeof SAFE !== 'undefined' ? SAFE.b : 0);
+  for (const it of items) {
+    const on = PCK_HELD[it.k](), lit = hot === it.k;
+    ctx.fillStyle = on ? 'rgba(40,46,58,.92)' : 'rgba(12,16,24,.72)'; ctx.beginPath(); ctx.roundRect(x, y, it.w, h, 8); ctx.fill();
+    if (it.k === 'ougi') {   // 奥義はゲージ：下の線が満ちていく。満タンで心臓の色に光る
+      const c = HEARTS[f.heart.k].c, full = f.ougi >= 100;
+      ctx.fillStyle = c; ctx.globalAlpha = full ? .75 + .25*Math.sin(t*8) : .9; ctx.fillRect(x + 4, y + h - 4, (it.w - 8)*Math.min(1, f.ougi/100), 2); ctx.globalAlpha = 1;
+      if (full) { ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(x, y, it.w, h, 8); ctx.stroke(); } }
+    else { ctx.fillStyle = PCK_COL[it.k]; ctx.fillRect(x + 4, y + h - 4, it.w - 8, 2); }
+    if (lit) { const k = (Math.sin(t*8) + 1)/2; ctx.strokeStyle = `rgba(255,216,74,${.55 + .45*k})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x - 3, y - 3, it.w + 6, h + 6, 10); ctx.stroke(); }
+    ctx.fillStyle = '#F4EEDF'; ctx.beginPath(); ctx.roundRect(x + 6, y + 4, it.kw, h - 10, 4); ctx.fill();
+    ctx.font = KF; ctx.textAlign = 'center'; ctx.fillStyle = '#1A1222'; ctx.fillText(it.key, x + 6 + it.kw/2, y + h/2 - 1);
+    ctx.font = LF; ctx.textAlign = 'left'; ctx.fillStyle = on ? '#FFFFFF' : '#D9DEE6'; ctx.fillText(it.lab, x + 6 + it.kw + 6, y + h/2 - 1);
+    x += it.w + gap; }
+  ctx.restore();
+}
+{ const dc0 = drawControls, ck0 = coachKeys, cd0 = coachDraw;
+  drawControls = () => pcKeysOn() ? drawKeyRow() : dc0();
+  coachKeys = () => { if (!pcKeysOn()) ck0(); };
+  // 案内の文字はそのまま。大きなボタンのまわりの輪は出さない（キーの札のほうを光らせる）
+  coachDraw = () => { if (!pcKeysOn()) return cd0(); const sv = {}; for (const k in BTN) { sv[k] = BTN[k].x; BTN[k].x = -9999; }
+    try { cd0(); } finally { for (const k in BTN) BTN[k].x = sv[k]; } }; }
+
+// ===== v0.78 案内を「絵＋短いことば」に：押すキー（スマホはボタン）が押される動きを見せる =====
+// PC：キーの形（3回なら J が順に光る、移動は WASD の相手の方向が光る）／スマホ：ボタンの小さな絵＋本物のボタンのまわりの輪
+const CV_COL = { atk: '#C8463C', grd: '#3E7FC4', dash: '#5B6573', thr: '#2E8A6A' };
+function cvKey(x, y, w, h, s, on){
+  const dy = on ? 2 : 0;
+  ctx.fillStyle = '#5A5F6A'; ctx.beginPath(); ctx.roundRect(x, y + 3, w, h, 5); ctx.fill();   // キーの側面
+  ctx.fillStyle = on ? '#FFE680' : '#F4EEDF'; ctx.beginPath(); ctx.roundRect(x, y + dy, w, h, 5); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#1A1222'; ctx.font = '900 12px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(s, x + w/2, y + h/2 + dy);
+}
+function cvBtn(x, y, k, on){   // スマホのボタンの小さな絵
+  const r = 14, dy = on ? 2 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(x, y + 3, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = CV_COL[k]; ctx.beginPath(); ctx.arc(x, y + dy, r, 0, Math.PI*2); ctx.fill();
+  if (on) { ctx.strokeStyle = '#FFE680'; ctx.lineWidth = 2.5; ctx.stroke(); }
+  ctx.fillStyle = '#F4EEDF'; ctx.font = '9px "Dela Gothic One", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lw = ctx.measureText(BTN[k].label).width; if (lw > 24) ctx.font = `${Math.max(6, 9*24/lw).toFixed(1)}px "Dela Gothic One", sans-serif`;   // 英語の長い名前は小さく
+  ctx.fillText(BTN[k].label, x, y + dy + 1);
+}
+// 絵の幅を返し、draw なら描く
+function cvIcon(q, x, cy, t, draw){
+  const pc = pcKeysOn(), ph = (t*1.6) % 1, press = ph < .3;
+  if (q.mv) {
+    const p = G.p, e = G.e, dx = e.x - p.x, dy = e.y - p.y, l = Math.hypot(dx, dy) || 1, ux = dx/l, uy = dy/l;
+    if (pc) { const s = 17, g = 2, w = s*3 + g*2; if (!draw) return w;
+      const lit = { W: uy < -.38, A: ux < -.38, S: uy > .38, D: ux > .38 };
+      cvKey(x + s + g, cy - s - 1, s, s, 'W', lit.W && press); cvKey(x, cy + 1, s, s, 'A', lit.A && press);
+      cvKey(x + s + g, cy + 1, s, s, 'S', lit.S && press); cvKey(x + 2*(s + g), cy + 1, s, s, 'D', lit.D && press); return w; }
+    const w = 34; if (!draw) return w;   // スティックの絵：つまみが相手の方へ動く
+    const ox = x + 17, k = Math.min(1, ph*2.2)*10;
+    ctx.fillStyle = 'rgba(237,230,214,.18)'; ctx.beginPath(); ctx.arc(ox, cy, 16, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = 'rgba(237,230,214,.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#EDE6D6'; ctx.beginPath(); ctx.arc(ox + ux*k, cy + uy*k, 7, 0, Math.PI*2); ctx.fill(); return w;
+  }
+  if (!q.b) return 0;
+  const n = q.rep || 1, cur = Math.floor(t*4) % (n + 1);   // 続けて押すとき：左から順に光る（最後に一拍休む）
+  if (pc) { const key = COACH_KEY[q.b], kw = key.length > 1 ? 52 : 24, h = 24, g = 6, w = n*kw + (n - 1)*g; if (!draw) return w;
+    for (let i = 0; i < n; i++) cvKey(x + i*(kw + g), cy - h/2 - 1, kw, h, key, n > 1 ? cur === i : press); return w; }
+  const g = 6, w = n*28 + (n - 1)*g; if (!draw) return w;
+  for (let i = 0; i < n; i++) cvBtn(x + 14 + i*(28 + g), cy - 1, q.b, n > 1 ? cur === i : press); return w;
+}
+coachDraw = function(){
+  const q = coachNow(); if (!q) return;
+  const t = performance.now()/1000, cy = YOKO ? 70 : 122, s = q.s || q.m;
+  ctx.save(); ctx.font = '900 16px "M PLUS Rounded 1c", sans-serif';
+  const tw = ctx.measureText(s).width, iw = cvIcon(q, 0, cy, t, false), gap = iw ? 12 : 0, w = 24 + iw + gap + tw, h = 42, x0 = W/2 - w/2;
+  ctx.fillStyle = 'rgba(12,16,24,.84)'; ctx.beginPath(); ctx.roundRect(x0, cy - h/2, w, h, 21); ctx.fill();
+  ctx.strokeStyle = '#FFD84A'; ctx.lineWidth = 2; ctx.stroke();
+  cvIcon(q, x0 + 12, cy, t, true);
+  ctx.font = '900 16px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#FFE680';
+  ctx.fillText(s, x0 + 12 + iw + gap, cy + 1);
+  // スマホ：本物のボタンのまわりに脈打つ輪（PC はキーの札のほうが光る）
+  if (!pcKeysOn() && q.b && BTN[q.b]) { const b = BTN[q.b], k = (Math.sin(t*8) + 1)/2;
+    ctx.strokeStyle = `rgba(255,216,74,${.55 + .45*k})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 6 + 5*k, 0, Math.PI*2); ctx.stroke(); }
+  ctx.restore();
+};
+
 title();
 requestAnimationFrame(loop);
 // ===== v0.65 最初の3面（1-1〜1-3）の案内：試合中に「今やること」を1つだけ出し、押すボタンを光らせる =====
@@ -7144,15 +7258,16 @@ function coachNow(){
   const near = e.state === 'windup' && d < e.w.atk[e.atk].reach + 70, heavy = near && e.w.atk[e.atk].heavy;
   // 相手が構えたら、最初の数回はゆっくりにして見せる（はじきの面は多め）
   if (near && e.windId !== cs.wid) { cs.wid = e.windId; if (n === 4 ? heavy && cs.warn < 3 : cs.warn < (n === 3 ? 4 : 2) && !p.guard) { cs.warn++; G.slowT = Math.max(G.slowT, n >= 3 ? .55 : .4); } }
-  if (heavy && n === 4) return { m: '重い一撃！ 回避' + coachKey('dash') + 'でかわす', b: 'dash' };
-  if (n === 4 && p.state === 'idle' && e.state === 'recover' && d < p.w.atk[0].reach + 40) return { m: '振り終わりの隙！ 攻撃' + coachKey('atk'), b: 'atk' };
-  if (near && n === 3) return { m: '輪が縮む → 金色の「今」でガード' + coachKey('grd') + '＝はじき', b: 'grd' };
-  if (near) return { m: '相手が構えた！ ガード' + coachKey('grd') + 'で受ける', b: 'grd' };
-  if (n === 3 && p.state === 'idle' && e.state === 'stun' && e.stunKind === 'parry') return { m: 'はじいた！ 今のうちに攻撃' + coachKey('atk'), b: 'atk' };
-  if (n === 2 && !(c.thr > 0) && e.guard && d < 112 && p.state === 'idle') return { m: 'ガードしている相手には「投げ」' + coachKey('thr'), b: 'thr' };
-  if (d > p.w.atk[0].reach + 34 && !(c.given > 2)) return { m: PC_MODE ? 'WASD（矢印）で近づく' : '左側をなぞって近づく', b: null };
-  if (n === 1 && !(c.heavy > 0) && d < p.w.atk[0].reach + 34) return { m: '攻撃' + coachKey('atk') + 'を続けて押す → 3段目は重い一撃', b: 'atk' };
-  if (n === 2 && !(c.thr > 0) && d < 112) return { m: '相手の目の前で「投げ」' + coachKey('thr') + '：ガードの上から決まる', b: 'thr' };
+  // v0.78 s＝絵の横に出す短いことば（m は前の長い文。今は使わない）、rep＝続けて押す回数、mv＝移動の絵
+  if (heavy && n === 4) return { m: '重い一撃！ 回避' + coachKey('dash') + 'でかわす', b: 'dash', s: '重い一撃！ 回避' };
+  if (n === 4 && p.state === 'idle' && e.state === 'recover' && d < p.w.atk[0].reach + 40) return { m: '振り終わりの隙！ 攻撃' + coachKey('atk'), b: 'atk', s: '隙！ 攻撃' };
+  if (near && n === 3) return { m: '輪が縮む → 金色の「今」でガード' + coachKey('grd') + '＝はじき', b: 'grd', s: '「今」でガード＝はじき' };
+  if (near) return { m: '相手が構えた！ ガード' + coachKey('grd') + 'で受ける', b: 'grd', s: 'ガード！' };
+  if (n === 3 && p.state === 'idle' && e.state === 'stun' && e.stunKind === 'parry') return { m: 'はじいた！ 今のうちに攻撃' + coachKey('atk'), b: 'atk', s: 'はじいた！ 攻撃' };
+  if (n === 2 && !(c.thr > 0) && e.guard && d < 112 && p.state === 'idle') return { m: 'ガードしている相手には「投げ」' + coachKey('thr'), b: 'thr', s: 'ガードには投げ' };
+  if (d > p.w.atk[0].reach + 34 && !(c.given > 2)) return { m: PC_MODE ? 'WASD（矢印）で近づく' : '左側をなぞって近づく', b: null, s: '近づく', mv: true };
+  if (n === 1 && !(c.heavy > 0) && d < p.w.atk[0].reach + 34) return { m: '攻撃' + coachKey('atk') + 'を続けて押す → 3段目は重い一撃', b: 'atk', s: '3回目が重い一撃', rep: 3 };
+  if (n === 2 && !(c.thr > 0) && d < 112) return { m: '相手の目の前で「投げ」' + coachKey('thr') + '：ガードの上から決まる', b: 'thr', s: '目の前で投げ' };
   return null;
 }
 function coachDraw(){
@@ -7180,7 +7295,7 @@ function coachKeys(){
 }
 // 初めて遊ぶ人（どの面もクリアしていない）は、ホームの「勝負！」から面の選択・装備を飛ばして 1-1 へ
 { const g0 = HM_MODES.duel.go;
-  HM_MODES.duel.go = () => { if (Object.keys(stProg).length) return g0();
+  HM_MODES.duel.go = () => { if (Object.keys(stProg).length) return stFight(stNext());   // v0.78 2回目からも、ホームの勝負は次の面の試合へ直接（面の選択は道をタップ）
     stGo(STAGE_LIST[0]); const b = document.getElementById('go'); if (b) b.click(); else g0(); }; }
 
 // ================= v0.60 ロゴと起動画面（v0.73 ドット絵のロゴ logo2.js に差し替え） =================
