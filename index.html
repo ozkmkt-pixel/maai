@@ -883,6 +883,18 @@ html #overlay:has(>.eq){padding:0 env(safe-area-inset-right) 0 env(safe-area-ins
   .ghPickBot button{padding:8px 20px;border-radius:10px;border:0;font:inherit;font-weight:800;background:linear-gradient(#FFC93A,#E8A21E);color:#2A1A00;}
   .ghPickBot button.sub{background:#3A3350;color:#CFC3E8;}
   @keyframes ghIn{from{transform:translate(-50%,-40%);opacity:0;}}
+  .presHud{position:absolute;top:26px;left:50%;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .presHud[hidden]{display:none;}
+  .presN{display:flex;align-items:center;gap:5px;padding:2px 9px;border-radius:10px;background:rgba(0,0,0,.55);color:#DDE;font-size:11px;font-weight:700;pointer-events:none;}
+  .presN i,.presInv i,.ranCnt i{width:7px;height:7px;border-radius:50%;background:#4BE07A;box-shadow:0 0 5px #4BE07A;display:inline-block;}
+  .presGo{padding:4px 12px;border-radius:10px;border:2px solid #000;background:linear-gradient(#FF7A4A,#C8361E);color:#fff;font:inherit;font-size:12px;font-weight:900;
+    letter-spacing:.04em;box-shadow:0 2px 0 #000;animation:presP 1.2s ease-in-out infinite;cursor:pointer;}
+  @keyframes presP{50%{filter:brightness(1.35);}}
+  .presInv{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;padding:6px 10px;border-radius:10px;background:rgba(200,54,30,.18);border:1px solid rgba(255,122,74,.6);}
+  .presInv span{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;}
+  .presInv button{margin:0;padding:6px 14px;border-radius:9px;border:2px solid #000;background:linear-gradient(#FF7A4A,#C8361E);color:#fff;font:inherit;font-size:13px;font-weight:900;}
+  .ranCnt{display:flex;align-items:center;gap:6px;font-size:12px;color:#B9B1A0;}
+  .ranCnt.on{font-size:14px;font-weight:800;color:#FFD2C4;}
 </style>
 
 <div id="app">
@@ -6978,6 +6990,9 @@ Object.assign(I18N_EN, { '道場': 'Dojo', 'ほかの人の武者と戦う': "Fi
   '留守のあいだに': 'While you were away', 'あなたの武者が{0}戦 {1}勝{2}敗': 'Your warrior fought {0}: {1}W {2}L', '小判 +{0}': '+{0} koban', '受け取る': 'Collect' });
 Object.assign(I18N_EN, { 'あなたの武者：': 'Your warrior: ', '名前を変える': 'Rename', '名前を選ぶ': 'Choose a name', '前': 'First', '後': 'Last', '決める': 'OK',
   '1面クリアすると、あなたの武者も道場に並びます': 'Clear one stage and your warrior will join the dojo' });
+// v0.81 試合中・結果の札・乱入の画面の人数
+Object.assign(I18N_EN, { 'ほか{0}人': '{0} online', '⚔ {0}人が受付中　乱入する': '⚔ {0} open — Invade!', 'いま{0}人が乱入受付中': '{0} open to invasions now', '乱入する': I18N_EN['乱入する'] || 'Invade',
+  'いま乱入を受け付けている人はいません（探しているあいだに CPU 戦を始めた人がいれば入れます）': "No one is open to invasions right now (if someone starts a CPU match while you search, you'll get in)" });
 
 // ================= v0.74 英語化：画面に出る直前の文字を辞書で置き換える =================
 // ソースの日本語はそのまま。英語のときだけ、①メニューなどの文字（DOM の文字・aria-label・title）を MutationObserver で、
@@ -7361,6 +7376,43 @@ function presSync(){
 }
 setTimeout(presStart, 1500);
 setInterval(presSync, 500);
+
+// ---------- v0.81 試合中・結果の札・乱入の画面にも人数。受付中の人がいれば「乱入する」（押すとすぐ今の試合をやめて乱入） ----------
+// 試合中の札は画面の上の真ん中（操作のボタンは下と左右なので離れている）
+function presInvade(){
+  if (!(PRES.open > 0) || (G && G.net)) return;
+  SFX.coin(); G = null; quitBtn.hidden = true; P.attack = P.dash = P.throw = P.ougi = false;
+  ranScreen(); setTimeout(ranJoin, 0);
+}
+function presHud(){
+  let el = document.getElementById('presHud');
+  if (!el) { el = document.createElement('div'); el.id = 'presHud'; el.className = 'presHud'; document.getElementById('app').appendChild(el);
+    el.addEventListener('click', e => { if (e.target.closest('.presGo')) { e.stopPropagation(); presInvade(); } }); }
+  const show = !!(G && !G.net && ov.hidden && (G.phase === 'intro' || G.phase === 'fight' || G.phase === 'ko') && PRES.others > 0);
+  if (el.hidden === show) el.hidden = !show;
+  if (!show) return;
+  const html = `<span class="presN"><i></i>ほか${PRES.others}人</span>` + (PRES.open ? `<button class="presGo">⚔ ${PRES.open}人が受付中　乱入する</button>` : '');
+  if (el.__h !== html) { el.__h = html; el.innerHTML = html; }
+}
+// CPU 戦（ステージ・道場を含む）の結果の札に誘いを足す
+function presCard(){
+  const c = ov.hidden ? null : ov.querySelector('.card'); if (!c || !G || G.net || G.phase !== 'over') return;
+  let el = c.querySelector('.presInv');
+  if (!(PRES.open > 0)) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.className = 'presInv'; c.appendChild(el);
+    el.addEventListener('click', e => { if (e.target.closest('button')) presInvade(); }); }
+  const html = `<span><i></i>いま${PRES.open}人が乱入受付中</span><button>乱入する</button>`;
+  if (el.__h !== html) { el.__h = html; el.innerHTML = html; }
+}
+// 乱入の画面：受付中の人数
+function presRan(){
+  const box = document.getElementById('nRan'); if (!box) return;
+  let el = document.getElementById('ranCnt');
+  if (!el) { el = document.createElement('div'); el.id = 'ranCnt'; el.className = 'ranCnt'; box.before(el); }
+  const html = PRES.open > 0 ? `<i></i>いま${PRES.open}人が乱入受付中` : 'いま乱入を受け付けている人はいません（探しているあいだに CPU 戦を始めた人がいれば入れます）';
+  if (el.__h !== html) { el.__h = html; el.innerHTML = html; el.classList.toggle('on', PRES.open > 0); }
+}
+setInterval(() => { try { presHud(); presCard(); presRan(); } catch(e) {} }, 400);
 
 // ================= v0.80 道場：ほかの人の武者（ゴースト）と戦う =================
 // 自分の武者（見た目・武器・仕掛け・心臓・鍔玉・到達Lv・戦い方のくせ）を Firebase の gh/<uid> に1体だけ置く（上書き）
