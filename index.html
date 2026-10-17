@@ -839,6 +839,13 @@ html #overlay:has(>.eq){padding:0 env(safe-area-inset-right) 0 env(safe-area-ins
   .cxChest.drop{animation:gxDrop .45s cubic-bezier(.3,1.6,.5,1);}
   .cx .gxTxt{top:auto;bottom:13%;margin:0;} .gxTxt .cxT{font-size:44px;white-space:nowrap;} .gxTxt .t3.cxT{font-size:48px;-webkit-text-stroke:2px #C8180C;} .gxTxt .t2.cxT{-webkit-text-stroke:1.5px #7A4E08;}
 
+  .hmOn{position:absolute;top:44px;left:50%;transform:translateX(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:1px;
+    padding:3px 12px 4px;border-radius:12px;background:rgba(0,0,0,.62);border:2px solid #000;color:#fff;font:inherit;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;}
+  .hmOn[hidden]{display:none;}
+  .hmOn span{display:flex;align-items:center;gap:6px;}
+  .hmOn i{flex:none;width:8px;height:8px;border-radius:50%;background:#4BE07A;box-shadow:0 0 6px #4BE07A;animation:hmOnB 1.6s ease-in-out infinite;}
+  .hmOn small{font-size:10px;color:#FFC93A;}
+  @keyframes hmOnB{50%{opacity:.35;}}
 </style>
 
 <div id="app">
@@ -2729,8 +2736,8 @@ try { ranPref = localStorage.getItem('maai_ran') !== '0'; } catch(e) {}
 const ranShuffle = n => { const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 // ---------- 受ける側：待ち席 ----------
-const ranDuel = () => G && !G.net && !G.melee && !G.practice && !(G.stage && G.stage.coach);   // 1対1の CPU 戦（練習・乱戦・最初の3面は除く）
-const ranReady = () => ranDuel() && ov.hidden && (G.phase === 'intro' || G.phase === 'fight') && !NET && !RAN_HOLD;
+const ranDuel = () => G && !G.net && !G.melee && !G.practice;   // 1対1の CPU 戦（練習・乱戦は除く）。v0.79：案内つきの 1-1〜1-4 も受ける（ユーザー判断）
+const ranReady = () => !document.hidden && ranDuel() && ov.hidden && (G.phase === 'intro' || G.phase === 'fight') && !NET && !RAN_HOLD;
 function ranTick(){
   const now = performance.now(), want = ranPref && ranDuel() && !RAN_HOLD;
   if (want) ranWantAt = now;
@@ -6920,6 +6927,8 @@ const I18N_EN = {
 Object.assign(I18N_EN, { '重い一撃！ 回避': 'Heavy blow! Dodge', '隙！ 攻撃': 'Opening! Attack', '「今」でガード＝はじき': 'Guard at "NOW" = Parry', 'ガード！': 'Guard!',
   'はじいた！ 攻撃': 'Parried! Attack', 'ガードには投げ': 'Throw beats Guard', '近づく': 'Get close', '{0}回目が重い一撃': 'Hit {0} = Heavy Blow', '目の前で投げ': 'Throw up close',
   '装備を見直す': I18N_EN['装備を見直す'] || 'Change Gear' });
+// v0.79 いま遊んでいる人の数（presence.js）
+Object.assign(I18N_EN, { 'ほかに{0}人が遊んでいます': '{0} other players online', '{0}人が乱入受付中': '{0} open to invasions' });
 
 // ================= v0.74 英語化：画面に出る直前の文字を辞書で置き換える =================
 // ソースの日本語はそのまま。英語のときだけ、①メニューなどの文字（DOM の文字・aria-label・title）を MutationObserver で、
@@ -7195,7 +7204,7 @@ function cvKey(x, y, w, h, s, on){
   ctx.fillStyle = '#5A5F6A'; ctx.beginPath(); ctx.roundRect(x, y + 3, w, h, 5); ctx.fill();   // キーの側面
   ctx.fillStyle = on ? '#FFE680' : '#F4EEDF'; ctx.beginPath(); ctx.roundRect(x, y + dy, w, h, 5); ctx.fill();
   ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.fillStyle = '#1A1222'; ctx.font = '900 12px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1A1222'; ctx.font = '800 12px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(s, x + w/2, y + h/2 + dy);
 }
 function cvBtn(x, y, k, on){   // スマホのボタンの小さな絵
@@ -7231,18 +7240,71 @@ function cvIcon(q, x, cy, t, draw){
 coachDraw = function(){
   const q = coachNow(); if (!q) return;
   const t = performance.now()/1000, cy = YOKO ? 70 : 122, s = q.s || q.m;
-  ctx.save(); ctx.font = '900 16px "M PLUS Rounded 1c", sans-serif';
+  ctx.save(); ctx.font = '800 16px "M PLUS Rounded 1c", sans-serif';
   const tw = ctx.measureText(s).width, iw = cvIcon(q, 0, cy, t, false), gap = iw ? 12 : 0, w = 24 + iw + gap + tw, h = 42, x0 = W/2 - w/2;
   ctx.fillStyle = 'rgba(12,16,24,.84)'; ctx.beginPath(); ctx.roundRect(x0, cy - h/2, w, h, 21); ctx.fill();
   ctx.strokeStyle = '#FFD84A'; ctx.lineWidth = 2; ctx.stroke();
   cvIcon(q, x0 + 12, cy, t, true);
-  ctx.font = '900 16px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#FFE680';
+  ctx.font = '800 16px "M PLUS Rounded 1c", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#FFE680';
   ctx.fillText(s, x0 + 12 + iw + gap, cy + 1);
   // スマホ：本物のボタンのまわりに脈打つ輪（PC はキーの札のほうが光る）
   if (!pcKeysOn() && q.b && BTN[q.b]) { const b = BTN[q.b], k = (Math.sin(t*8) + 1)/2;
     ctx.strokeStyle = `rgba(255,216,74,${.55 + .45*k})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 6 + 5*k, 0, Math.PI*2); ctx.stroke(); }
   ctx.restore();
 };
+// 案内の字を先に読み込む（字体は字ごとに分かれて届くので、canvas に描く前に取り寄せておかないと化けることがある）
+try { document.fonts.load('800 16px "M PLUS Rounded 1c"', '重い一撃！回避隙攻撃「今」でガード＝はじきはじいたガードには投げ近づく3回目が重い一撃目の前で投げ'); } catch (e) {}
+
+// ================= v0.79 いま遊んでいる人の数（Firebase Realtime Database） =================
+// 開いている間だけ online/<自分の id> に { t: 時刻, r: 乱入を受けられるか } を書き、閉じたら（onDisconnect で）消える
+// ホームに「ほかに◯人が遊んでいます」を出す。ほかに誰もいないときは出さない。タップで乱入の画面へ
+// 裏に回って3分たったら消し、戻ったら書き直す。CrazyGames 版（CG_BUILD）では動かさない
+// ルール（Firebase コンソール）：online/$id だけ読み書き可、id は英小文字・数字 8〜16字、中身は t（サーバーの時刻）と r（真偽）だけ
+const PRES_URL = 'https://karakuri-chanbara-default-rtdb.firebaseio.com', PRES_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+const PRES = { db: null, fb: null, me: null, id: Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6),
+  others: 0, open: 0, r: false, on: false, el: null };
+async function presStart(){
+  if (typeof CG_BUILD !== 'undefined') return;
+  try {
+    const app = await import(PRES_SDK + 'firebase-app.js'), fb = await import(PRES_SDK + 'firebase-database.js');
+    PRES.fb = fb; PRES.db = fb.getDatabase(app.initializeApp({ databaseURL: PRES_URL }, 'maai-pres'));
+    PRES.me = fb.ref(PRES.db, 'online/' + PRES.id);
+    fb.onValue(fb.ref(PRES.db, 'online'), snap => {
+      let n = 0, r = 0; snap.forEach(c => { if (c.key !== PRES.id) { n++; if (c.val() && c.val().r) r++; } });
+      PRES.others = n; PRES.open = r; presSync();
+    }, () => {});
+    // つなぎ直すたびに書き直す（切れている間にサーバー側で消えるため）
+    fb.onValue(fb.ref(PRES.db, '.info/connected'), s => { if (s.val() === true) { PRES.on = false; presWrite(); } });
+    document.addEventListener('visibilitychange', presWrite);
+  } catch(e) { PRES.db = null; }
+}
+// 裏に回っても（PC では別の窓に隠れただけでも hidden になる）すぐには消さず、3分たったら消す。裏の間は乱入を受けられない扱い
+function presWrite(){
+  const fb = PRES.fb; if (!fb || !PRES.me) return;
+  if (document.hidden) { if (!PRES.hidAt) PRES.hidAt = Date.now(); } else PRES.hidAt = 0;
+  if (PRES.hidAt && Date.now() - PRES.hidAt > 180000) { if (PRES.on) { PRES.on = false; fb.remove(PRES.me).catch(() => {}); } return; }
+  const r = !!(RAN && RAN.open) && !document.hidden;
+  if (PRES.on && r === PRES.r) return;
+  PRES.on = true; PRES.r = r;
+  fb.onDisconnect(PRES.me).remove();
+  fb.set(PRES.me, { t: fb.serverTimestamp(), r }).catch(() => { PRES.on = false; });
+}
+// ホームの札（ホームを描き直すたびに消えるので、毎フレーム確かめて差し込む）
+function presSync(){
+  if (PRES.fb) presWrite();
+  const st = document.getElementById('hStage');
+  if (!st) return;
+  let el = document.getElementById('hOn');
+  if (!el) { el = document.createElement('button'); el.id = 'hOn'; el.className = 'hmOn';
+    el.onclick = e => { e.stopPropagation(); SFX.coin(); ranScreen(); }; st.appendChild(el); }
+  const show = PRES.others > 0;
+  if (el.hidden === show) el.hidden = !show;
+  if (!show) return;
+  const html = `<span><i></i>ほかに${PRES.others}人が遊んでいます</span>` + (PRES.open ? `<small>${PRES.open}人が乱入受付中</small>` : '');
+  if (el.__h !== html) { el.__h = html; el.innerHTML = html; }
+}
+setTimeout(presStart, 1500);
+setInterval(presSync, 500);
 
 title();
 requestAnimationFrame(loop);
