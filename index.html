@@ -895,6 +895,22 @@ html #overlay:has(>.eq){padding:0 env(safe-area-inset-right) 0 env(safe-area-ins
   .presInv button{margin:0;padding:6px 14px;border-radius:9px;border:2px solid #000;background:linear-gradient(#FF7A4A,#C8361E);color:#fff;font:inherit;font-size:13px;font-weight:900;}
   .ranCnt{display:flex;align-items:center;gap:6px;font-size:12px;color:#B9B1A0;}
   .ranCnt.on{font-size:14px;font-weight:800;color:#FFD2C4;}
+  .xfBtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 8px;padding:9px 12px;border-radius:12px;border:1px solid rgba(110,180,255,.6);
+    background:linear-gradient(#1F4A72,#0E2236);color:#E6F2FF;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
+  .xfBtn i{font-style:normal;font-size:18px;} .xfBtn small{font-size:11px;font-weight:500;color:#9CC3E8;}
+  .xfBox{display:flex;flex-direction:column;gap:10px;}
+  .xfBox>.nNote{padding:0 4px;}
+  .xfSec{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.06);text-align:left;}
+  .xfSec>b{font-size:14px;color:#FFD98A;} .xfSec p{margin:0;font-size:12px;line-height:1.6;color:#C9C1B0;}
+  .xfGo{align-self:flex-start;margin:0;padding:7px 16px;border-radius:10px;border:2px solid #000;background:linear-gradient(#FFC830,#E8A21E);color:#1A1222;font:inherit;font-size:14px;font-weight:900;box-shadow:0 2px 0 #000;cursor:pointer;}
+  .xfGo:disabled{filter:grayscale(.7) brightness(.7);} .xfWarn{margin-top:6px;background:linear-gradient(#FF7A4A,#C8361E);color:#fff;}
+  .xfCode{text-align:center;font-size:12px;color:#B9B1A0;} .xfCode:empty{display:none;}
+  .xfBig{font:900 32px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.12em;color:#FFE6A0;user-select:all;-webkit-user-select:all;}
+  .xfIn{display:flex;gap:8px;align-items:center;}
+  .xfIn input{flex:1;min-width:0;max-width:220px;padding:7px 10px;border-radius:9px;border:1px solid #556;background:#0E131C;color:#FFE6A0;font:800 20px ui-monospace,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase;}
+  .xfSec .nSt{text-align:left;}
+  @media (orientation:landscape) and (max-height:500px){.xfBox{display:grid;grid-template-columns:1fr 1fr;}.xfBox>.nNote{grid-column:1 / -1;}}
+  :where(html.pcy) .xfBox{display:grid;grid-template-columns:1fr 1fr;} :where(html.pcy) .xfBox>.nNote{grid-column:1 / -1;}
 </style>
 
 <div id="app">
@@ -6994,6 +7010,25 @@ Object.assign(I18N_EN, { 'あなたの武者：': 'Your warrior: ', '名前を�
 // v0.81 試合中・結果の札・乱入の画面の人数
 Object.assign(I18N_EN, { 'ほか{0}人': '{0} online', '⚔ {0}人が受付中　乱入する': '⚔ {0} open — Invade!', 'いま{0}人が乱入受付中': '{0} open to invasions now', '乱入する': I18N_EN['乱入する'] || 'Invade',
   'いま乱入を受け付けている人はいません（探しているあいだに CPU 戦を始めた人がいれば入れます）': "No one is open to invasions right now (if someone starts a CPU match while you search, you'll get in)" });
+// v0.83 引き継ぎ
+Object.assign(I18N_EN, { '別の端末に引き継ぐ': 'Move to another device', 'スマホ ⇄ PC など': 'phone ⇄ PC, etc.', '引き継ぎ': 'Transfer',
+  'スマホと PC など、別の端末で続きを遊ぶときに使います。itch.io 版と GitHub 版のあいだでも使えます。': 'Use this to continue on another device, such as phone and PC. It also works between the itch.io and GitHub versions.',
+  'この端末から送る': 'Send from this device', 'この端末に受け取る': 'Receive on this device',
+  'コードを作って、もう一方の端末で入れてください。コードは24時間・1回だけ使えます。': 'Make a code and enter it on the other device. A code works once, for 24 hours.',
+  'コードを作る': 'Make a code', 'コードを作り直す': 'Make a new code', '作っています…': 'Making…',
+  'もう一方の端末で作ったコードを入れてください。この端末のデータは上書きされます。': 'Enter the code made on the other device. The data on this device will be overwritten.',
+  'コードを作って、もう一方の端末で入れてください。': 'Make a code and enter it on the other device.', 'コードは{0}時間・{1}回だけ使えます。': ' A code works once, for {0} hours.',
+  'もう一方の端末で作ったコードを入れてください。': 'Enter the code made on the other device.', 'この端末のデータは上書きされます。': ' The data on this device will be overwritten.',
+  '受け取る': 'Receive', 'さがしています…': 'Looking…',
+  '{0}時間・{1}回だけ使えます。作り直すと、このコードは使えなくなります': 'Works once, for {0} hours. Making a new code cancels this one.',
+  'つながりませんでした。通信を確かめてもう一度': 'Could not connect. Check your connection and try again',
+  'コードを作れませんでした。もう一度': 'Could not make a code. Try again',
+  'コードは{0}文字です（例：K{1}QF-M{2}XP）': 'The code has {0} characters (e.g. K{1}QF-M{2}XP)',
+  'そのコードは見つかりません。もう一度確かめてください': 'Code not found. Please check it again',
+  'そのコードは期限切れです（{0}時間）。もう一方の端末で作り直してください': 'That code has expired ({0} hours). Make a new one on the other device',
+  'データが読めませんでした': 'Could not read the data', '保存できませんでした': 'Could not save',
+  '見つかりました：': 'Found: ', 'この端末のデータを上書きします。': 'This will overwrite the data on this device.', '上書きして受け取る': 'Overwrite and receive',
+  '小判 {0}': 'Koban {0}', 'クリアした面 {0}': 'Stages cleared {0}', 'データあり': 'Has data' });
 
 // ================= v0.74 英語化：画面に出る直前の文字を辞書で置き換える =================
 // ソースの日本語はそのまま。英語のときだけ、①メニューなどの文字（DOM の文字・aria-label・title）を MutationObserver で、
@@ -7649,6 +7684,120 @@ function ghPick(){
     };
   };
   draw(); (ov.querySelector('.eq') || ov).appendChild(box);
+}
+
+// ================= v0.83 乱入の記録（作者用）と、端末をまたぐ引き継ぎコード =================
+// ---------- 乱入の記録：乱入する側だけが rl/<push id> に { t: 時刻, k: 何が起きたか, p: どこで遊んでいるか } を書く ----------
+//   k：try＝乱入ボタンを押した／hit＝相手が見つかって試合へ／none＝60秒探して誰もいなかった／quit＝探している途中でやめた／end＝乱入の試合が最後まで終わった
+//   名前・端末の id などは書かない。ルール：だれでも読める（数えるため）、ログインした人が新しく足すだけ
+const RL_P = /itch/.test(location.host) ? 'itch' : /github\.io$/.test(location.host) ? 'pages' : 'local';
+function rlLog(k){
+  if (typeof CG_BUILD !== 'undefined') return;
+  ghFB().then(g => { if (g) g.fb.push(g.fb.ref(g.db, 'rl'), { t: g.fb.serverTimestamp(), k, p: RL_P }).catch(() => {}); }).catch(() => {});
+}
+if (typeof ranJoin === 'function' && typeof ranOver === 'function') { const join = ranJoin;
+  ranJoin = function(){
+    rlLog('try');
+    const r = join.apply(this, arguments);
+    // 探し終わったら、見つかったか・あきらめたかを1回だけ書く（NET.search は部品を読み込んだ後にできるので、できるまで待つ）
+    let s = null, n = 0;
+    const iv = setInterval(() => {
+      if (!s) { s = NET && NET.search; if (!s) { if (++n > 20) { clearInterval(iv); rlLog(document.getElementById('nRan') ? 'none' : 'quit'); } return; } }
+      if (NET && NET.search === s && !s.chosen) return;
+      clearInterval(iv); rlLog(s.chosen ? 'hit' : document.getElementById('nRan') ? 'none' : 'quit');
+    }, 500);
+    return r;
+  };
+  const over = ranOver;
+  ranOver = function(){ if (NET && NET.role === 'guest') rlLog('end'); return over.apply(this, arguments); };
+}
+
+// ---------- 引き継ぎ：セーブを tr/<コード8文字> に置き、別の端末でコードを入れて受け取る ----------
+//   コードは24時間・1回だけ（受け取ったら消す。作り直すと前のコードは消す）。itch 版と Pages 版のあいだでも使える
+//   送るのは localStorage の maai_ で始まる物（言語・引き継ぎ自身の控えは除く）。受け取る前のデータは maai_xfBak に控える
+const XF_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', XF_TTL = 24*3600*1000, XF_SKIP = /^maai_(lang|ghDirty|xf)/;
+const xfFmt = c => c.slice(0, 4) + '-' + c.slice(4);
+function xfDump(){
+  try { saveBag(); } catch(e) {}
+  const o = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('maai_') && !XF_SKIP.test(k)) o[k] = localStorage.getItem(k); }
+  return o;
+}
+function xfNewCode(){ const a = new Uint32Array(8); crypto.getRandomValues(a); return [...a].map(x => XF_ABC[x % 32]).join(''); }
+function xfSummary(o){   // 受け取る前に見せる中身（小判・クリアした面の数）
+  let koban = null, clear = null;
+  try { koban = JSON.parse(o.maai_bag).koban; } catch(e) {}
+  try { clear = Object.values(JSON.parse(o.maai_stage) || {}).filter(v => Array.isArray(v) && v.some(Boolean)).length; } catch(e) {}
+  return [koban != null ? `小判 ${koban}` : '', clear ? `クリアした面 ${clear}` : ''].filter(Boolean).join('　') || 'データあり';
+}
+function xfScreen(msg){
+  screen('引き継ぎ', `<div class="xfBox">
+    <p class="nNote">スマホと PC など、別の端末で続きを遊ぶときに使います。itch.io 版と GitHub 版のあいだでも使えます。</p>
+    <div class="xfSec"><b>この端末から送る</b>
+      <p>コードを作って、もう一方の端末で入れてください。<b>コードは24時間・1回だけ使えます。</b></p>
+      <button id="xfMake" class="xfGo">コードを作る</button><div id="xfCode" class="xfCode"></div></div>
+    <div class="xfSec"><b>この端末に受け取る</b>
+      <p>もう一方の端末で作ったコードを入れてください。<b>この端末のデータは上書きされます。</b></p>
+      <div class="xfIn"><input id="xfInp" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false"><button id="xfGet" class="xfGo">受け取る</button></div>
+      <div id="xfSt" class="nSt">${msg || ''}</div></div></div>`);
+  const $ = id => document.getElementById(id), st = h => { const el = $('xfSt'); if (el) el.innerHTML = h; };
+  $('back').onclick = helpScreen;
+  $('xfMake').onclick = async () => {
+    const b = $('xfMake'); b.disabled = true; $('xfCode').innerHTML = '<small>作っています…</small>';
+    const g = await ghFB().catch(() => null);
+    if (!g) { b.disabled = false; $('xfCode').innerHTML = '<span class="ng">つながりませんでした。通信を確かめてもう一度</span>'; return; }
+    try { const old = localStorage.getItem('maai_xfCode'); if (old) await g.fb.remove(g.fb.ref(g.db, 'tr/' + old)).catch(() => {}); } catch(e) {}
+    const d = JSON.stringify(xfDump());
+    for (let i = 0; i < 3; i++) {   // 同じコードがもうあれば（まずないが）作り直す
+      const c = xfNewCode();
+      const ok = await g.fb.set(g.fb.ref(g.db, 'tr/' + c), { t: g.fb.serverTimestamp(), d }).then(() => true, () => false);
+      if (ok) { try { localStorage.setItem('maai_xfCode', c); } catch(e) {}
+        SFX.coin(); b.disabled = false; b.textContent = 'コードを作り直す';
+        $('xfCode').innerHTML = `<div class="xfBig">${xfFmt(c)}</div><small>24時間・1回だけ使えます。作り直すと、このコードは使えなくなります</small>`; return; }
+    }
+    b.disabled = false; $('xfCode').innerHTML = '<span class="ng">コードを作れませんでした。もう一度</span>';
+  };
+  $('xfGet').onclick = async () => {
+    const c = ($('xfInp').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.length !== 8 || [...c].some(x => !XF_ABC.includes(x))) return st('<span class="ng">コードは8文字です（例：K7QF-M2XP）</span>');
+    const b = $('xfGet'); b.disabled = true; st('さがしています…');
+    const g = await ghFB().catch(() => null);
+    if (!g) { b.disabled = false; return st('<span class="ng">つながりませんでした。通信を確かめてもう一度</span>'); }
+    const ref = g.fb.ref(g.db, 'tr/' + c);
+    const v = await g.fb.get(ref).then(s => s.val(), () => null);
+    b.disabled = false;
+    if (!v || !v.d) return st('<span class="ng">そのコードは見つかりません。もう一度確かめてください</span>');
+    if (Date.now() - v.t > XF_TTL) { g.fb.remove(ref).catch(() => {}); return st('<span class="ng">そのコードは期限切れです（24時間）。もう一方の端末で作り直してください</span>'); }
+    let o; try { o = JSON.parse(v.d); } catch(e) { o = null; }
+    if (!o || typeof o !== 'object' || Object.keys(o).some(k => !k.startsWith('maai_') || XF_SKIP.test(k))) return st('<span class="ng">データが読めませんでした</span>');
+    st(`見つかりました：${xfSummary(o)}<br><b>この端末のデータを上書きします。</b><br><button id="xfYes" class="xfGo xfWarn">上書きして受け取る</button>`);
+    $('xfYes').onclick = async () => {
+      $('xfYes').disabled = true;
+      try {
+        localStorage.setItem('maai_xfBak', JSON.stringify(xfDump()));   // 念のため、受け取る前のデータを控える
+        const mine = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('maai_') && !XF_SKIP.test(k)) mine.push(k); }
+        mine.forEach(k => localStorage.removeItem(k));
+        for (const [k, val] of Object.entries(o)) localStorage.setItem(k, val);
+        localStorage.setItem('maai_ghDirty', '1');   // この端末から道場の武者を置き直す
+      } catch(e) { return st('<span class="ng">保存できませんでした</span>'); }
+      await g.fb.remove(ref).catch(() => {});
+      XF_DONE = true; location.reload();
+    };
+  };
+}
+// 受け取った後、読み込み直すまで何も保存させない（古いデータで上書きされないように）
+let XF_DONE = false;
+{ const si = Storage.prototype.setItem; Storage.prototype.setItem = function(k, v){ if (XF_DONE && String(k).startsWith('maai_')) return; return si.call(this, k, v); }; }
+// 遊び方の画面のいちばん上に「別の端末に引き継ぐ」
+{ const hs = helpScreen;
+  helpScreen = function(){
+    hs.apply(this, arguments);
+    if (typeof CG_BUILD !== 'undefined') return;
+    const list = ov.querySelector('.hpList'); if (!list) return;
+    const b = document.createElement('button'); b.className = 'xfBtn'; b.innerHTML = '<i>📲</i>別の端末に引き継ぐ<small>スマホ ⇄ PC など</small>';
+    b.onclick = () => { SFX.coin(); xfScreen(); };
+    list.before(b);
+  };
 }
 
 title();
