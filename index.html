@@ -6673,7 +6673,8 @@ function logo2Text(){
   // 英語のときは KARAKURI / CHANBARA を大きく（canvas の文字は訳さないよう、日本語のときだけかなを描く）
   const en = typeof LANG !== 'undefined' && LANG === 'en';
   paint(mask(en ? 'KARAKURI' : 'からくり', en ? 24 : 27, 27, 2), ['#FFFFFF', '#E4ECF6', '#B8C6D8', '#8A9AB0', '#6A7890'], '#1A2030', 'rgba(0,0,0,.55)');
-  paint(mask(en ? 'CHANBARA' : 'チャンバラ', en ? 30 : 33, 62, 1), ['#FFFBE0', '#FFE680', '#FFC830', '#F09A18', '#D0600C', '#A03808'], '#3A1404', 'rgba(0,0,0,.55)');
+  paint(mask(en ? 'CHANBARA' : 'チャンバラ', en ? 27 : 33, 62, 1),   // v0.82：英語は 30 だと幅 220 から両端がはみ出していた → 27
+         ['#FFFBE0', '#FFE680', '#FFC830', '#F09A18', '#D0600C', '#A03808'], '#3A1404', 'rgba(0,0,0,.55)');
   // 英字の帯：暗い札に 5×7 の字
   const str = en ? 'CLOCKWORK SAMURAI' : 'KARAKURI CHANBARA', gw = [...str].map(ch => LG_FONT5[ch][0].length), tw = gw.reduce((a, b) => a + b + 1, -1), bx = Math.round(LG.W/2 - tw/2), by = 138;
   x.fillStyle = '#0C0A12'; x.fillRect(bx - 6, by - 3, tw + 12, 13); x.fillStyle = '#7A1E14'; x.fillRect(bx - 5, by - 2, tw + 10, 11); x.fillStyle = '#B8322C'; x.fillRect(bx - 5, by - 2, tw + 10, 1);
