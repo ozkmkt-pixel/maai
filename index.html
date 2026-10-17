@@ -846,6 +846,43 @@ html #overlay:has(>.eq){padding:0 env(safe-area-inset-right) 0 env(safe-area-ins
   .hmOn i{flex:none;width:8px;height:8px;border-radius:50%;background:#4BE07A;box-shadow:0 0 6px #4BE07A;animation:hmOnB 1.6s ease-in-out infinite;}
   .hmOn small{font-size:10px;color:#FFC93A;}
   @keyframes hmOnB{50%{opacity:.35;}}
+  .ghList{display:flex;flex-direction:column;gap:8px;}
+  .ghRow{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px;border-radius:12px;border:1px solid rgba(190,150,255,.45);
+    background:linear-gradient(#2A2140,#17121F);color:#EDE6D6;font:inherit;text-align:left;cursor:pointer;}
+  .ghRow canvas{width:56px;height:56px;flex:none;border-radius:10px;background:rgba(0,0,0,.35);image-rendering:pixelated;}
+  .ghInfo{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ghInfo b{font-size:16px;letter-spacing:.06em;color:#fff;}
+  .ghInfo b i{font-style:normal;font-size:12px;color:#FFC93A;margin-left:8px;}
+  .ghInfo span{font-size:12px;color:#CFC3E8;}
+  .ghInfo b em{font-style:normal;font-size:10px;margin-left:6px;padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.14);color:#CFC3E8;vertical-align:2px;}
+  .ghInfo small{font-size:11px;color:#9E95B5;}
+  .ghGo{flex:none;padding:8px 14px;border-radius:10px;background:linear-gradient(#B07CF0,#6A3FB8);color:#fff;font-weight:800;letter-spacing:.1em;}
+  .ghNote{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:16px 26px 14px;border-radius:16px;border:2px solid #000;background:linear-gradient(#3A2A55,#1B1428);color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.6);
+    animation:ghIn .35s ease-out;cursor:pointer;}
+  .ghNote b{font-size:13px;color:#CFC3E8;letter-spacing:.1em;}
+  .ghNote span{font-size:18px;font-weight:800;}
+  .ghNote em{font-style:normal;font-size:22px;font-weight:900;color:#FFC93A;}
+  .ghNote button{margin-top:4px;padding:8px 22px;border-radius:10px;border:0;background:linear-gradient(#FFC93A,#E8A21E);color:#2A1A00;font:inherit;font-weight:800;}
+  .ghSent{font-size:12px;color:#CFC3E8;}
+  @media (min-width:600px){.ghList{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;}.ghRow{padding:4px 8px 4px 4px;}.ghRow canvas{width:48px;height:48px;}}
+  .hm>.hmModes{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;}   /* 道場で6つになったので1列に */
+  .hmMd b{font-size:11px;letter-spacing:-.02em;}
+  .ghMe{display:flex;align-items:center;gap:8px;font-size:13px;color:#CFC3E8;}
+  .ghMe b{font-size:16px;color:#FFC93A;letter-spacing:.06em;}
+  .ghMe button{margin-left:auto;padding:5px 12px;border-radius:9px;border:1px solid rgba(190,150,255,.6);background:#2A2140;color:#EDE6D6;font:inherit;font-size:12px;}
+  .ghPick{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);}
+  .ghPickIn{width:min(560px,92%);max-height:92%;overflow:auto;padding:12px 16px;border-radius:16px;border:2px solid #000;background:linear-gradient(#3A2A55,#1B1428);color:#fff;}
+  .ghPickIn h3{margin:0 0 4px;font-size:15px;color:#CFC3E8;letter-spacing:.1em;}
+  .ghPrev{text-align:center;font-size:26px;font-weight:900;color:#FFC93A;letter-spacing:.1em;margin-bottom:4px;}
+  .ghLbl{font-size:11px;color:#9E95B5;margin:4px 0 3px;}
+  .ghWords{display:flex;flex-wrap:wrap;gap:5px;}
+  .ghWords button{min-width:40px;padding:5px 8px;border-radius:8px;border:1px solid rgba(190,150,255,.4);background:#2A2140;color:#EDE6D6;font:inherit;font-size:14px;font-weight:700;}
+  .ghWords button.on{background:linear-gradient(#B07CF0,#6A3FB8);border-color:#FFE45C;color:#fff;}
+  .ghPickBot{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+  .ghPickBot button{padding:8px 20px;border-radius:10px;border:0;font:inherit;font-weight:800;background:linear-gradient(#FFC93A,#E8A21E);color:#2A1A00;}
+  .ghPickBot button.sub{background:#3A3350;color:#CFC3E8;}
+  @keyframes ghIn{from{transform:translate(-50%,-40%);opacity:0;}}
 </style>
 
 <div id="app">
@@ -3222,7 +3259,7 @@ function drawTele(f){
   ctx.fillStyle = A.heavy ? `rgba(255,140,40,${.15 + .35*k + .1*Math.sin(G.now*40)})` : `rgba(230,60,50,${.12 + .3*k})`;
   ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0, 0, R, f.face - A.arc/2, f.face + A.arc/2); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = A.heavy ? '#FFB347' : 'rgba(255,120,110,.8)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, 0, R*k, f.face - A.arc/2, f.face + A.arc/2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, Math.max(0, R*k), f.face - A.arc/2, f.face + A.arc/2); ctx.stroke();
   ctx.restore();
   if (A.heavy) { ctx.save(); if (faint) ctx.globalAlpha = .45; ctx.font = '22px "Dela Gothic One", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#FFB347';
     ctx.lineWidth = 4; ctx.strokeStyle = '#15181D'; ctx.strokeText('!', f.x, f.y - 50); ctx.fillText('!', f.x, f.y - 50); ctx.restore(); }
@@ -6929,6 +6966,18 @@ Object.assign(I18N_EN, { '重い一撃！ 回避': 'Heavy blow! Dodge', '隙！ 
   '装備を見直す': I18N_EN['装備を見直す'] || 'Change Gear' });
 // v0.79 いま遊んでいる人の数（presence.js）
 Object.assign(I18N_EN, { 'ほかに{0}人が遊んでいます': '{0} other players online', '{0}人が乱入受付中': '{0} open to invasions' });
+// v0.80 道場（ghost.js）
+Object.assign(I18N_EN, { '道場': 'Dojo', 'ほかの人の武者と戦う': "Fight other players' warriors",
+  'ほかの人が育てた武者と戦う。武者は持ち主の装備と戦い方のくせで動く。勝てば小判、相手の持ち主にも小判が届く。': "Fight warriors built by other players. Each one uses its owner's gear and fighting habits. Win koban — and the owner gets koban too.",
+  '武者を呼んでいます…': 'Calling warriors...', '師範代': 'Master', '挑む': 'Fight', '戦績 {0}勝{1}敗': 'Record {0}W {1}L',
+  '攻め好き': 'Aggressive', 'はじき上手': 'Parry expert', '守りが固い': 'Solid guard', '回避が多い': 'Dodger', '投げ好き': 'Thrower', '間合いを取る': 'Keeps distance', '慎重': 'Cautious', '素直': 'Straightforward',
+  'つながらないので、道場の師範代だけです': "Offline — only the dojo masters are here",
+  '相手の持ち主にも、戦った知らせと小判が届きます': "The owner will get word of the fight, and some koban",
+  '相手の持ち主に、勝った知らせと小判が届きます': 'The owner will get word of the win, and koban',
+  '道場へ戻る': 'Back to Dojo', 'もう一度挑む': I18N_EN['もう一度挑む'] || 'Try Again',
+  '留守のあいだに': 'While you were away', 'あなたの武者が{0}戦 {1}勝{2}敗': 'Your warrior fought {0}: {1}W {2}L', '小判 +{0}': '+{0} koban', '受け取る': 'Collect' });
+Object.assign(I18N_EN, { 'あなたの武者：': 'Your warrior: ', '名前を変える': 'Rename', '名前を選ぶ': 'Choose a name', '前': 'First', '後': 'Last', '決める': 'OK',
+  '1面クリアすると、あなたの武者も道場に並びます': 'Clear one stage and your warrior will join the dojo' });
 
 // ================= v0.74 英語化：画面に出る直前の文字を辞書で置き換える =================
 // ソースの日本語はそのまま。英語のときだけ、①メニューなどの文字（DOM の文字・aria-label・title）を MutationObserver で、
@@ -7261,13 +7310,20 @@ try { document.fonts.load('800 16px "M PLUS Rounded 1c"', '重い一撃！回避
 // 裏に回って3分たったら消し、戻ったら書き直す。CrazyGames 版（CG_BUILD）では動かさない
 // ルール（Firebase コンソール）：online/$id だけ読み書き可、id は英小文字・数字 8〜16字、中身は t（サーバーの時刻）と r（真偽）だけ
 const PRES_URL = 'https://karakuri-chanbara-default-rtdb.firebaseio.com', PRES_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+// v0.80 道場（ghost.js）と同じアプリを使う。apiKey はゲームに入れて公開してよい物（守りはデータベースのルール）
+const FB_CFG = { apiKey: 'AIzaSyBZUxQbSemMQywvihfhuUZkWEz61QlSpOA', authDomain: 'karakuri-chanbara.firebaseapp.com', databaseURL: PRES_URL,
+  projectId: 'karakuri-chanbara', appId: '1:471966853166:web:82a74da21c786f372117bf' };
+let FB_READY = null;   // Promise<{ app, fb（database の関数） }>。読み込めなければ null を返す
 const PRES = { db: null, fb: null, me: null, id: Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6),
   others: 0, open: 0, r: false, on: false, el: null };
 async function presStart(){
   if (typeof CG_BUILD !== 'undefined') return;
+  let ok; FB_READY = new Promise(r => ok = r);
   try {
-    const app = await import(PRES_SDK + 'firebase-app.js'), fb = await import(PRES_SDK + 'firebase-database.js');
-    PRES.fb = fb; PRES.db = fb.getDatabase(app.initializeApp({ databaseURL: PRES_URL }, 'maai-pres'));
+    const appM = await import(PRES_SDK + 'firebase-app.js').catch(() => null), fb = appM && await import(PRES_SDK + 'firebase-database.js').catch(() => null);
+    if (!fb) { ok(null); return; }
+    const app = appM.initializeApp(FB_CFG);
+    PRES.fb = fb; PRES.db = fb.getDatabase(app); ok({ app, fb, db: PRES.db });
     PRES.me = fb.ref(PRES.db, 'online/' + PRES.id);
     fb.onValue(fb.ref(PRES.db, 'online'), snap => {
       let n = 0, r = 0; snap.forEach(c => { if (c.key !== PRES.id) { n++; if (c.val() && c.val().r) r++; } });
@@ -7276,7 +7332,7 @@ async function presStart(){
     // つなぎ直すたびに書き直す（切れている間にサーバー側で消えるため）
     fb.onValue(fb.ref(PRES.db, '.info/connected'), s => { if (s.val() === true) { PRES.on = false; presWrite(); } });
     document.addEventListener('visibilitychange', presWrite);
-  } catch(e) { PRES.db = null; }
+  } catch(e) { PRES.db = null; ok(null); }
 }
 // 裏に回っても（PC では別の窓に隠れただけでも hidden になる）すぐには消さず、3分たったら消す。裏の間は乱入を受けられない扱い
 function presWrite(){
@@ -7305,6 +7361,242 @@ function presSync(){
 }
 setTimeout(presStart, 1500);
 setInterval(presSync, 500);
+
+// ================= v0.80 道場：ほかの人の武者（ゴースト）と戦う =================
+// 自分の武者（見た目・武器・仕掛け・心臓・鍔玉・到達Lv・戦い方のくせ）を Firebase の gh/<uid> に1体だけ置く（上書き）
+//   uid は匿名ログイン（firebase-auth）。ルールで本人しか書けない
+// 道場では近い Lv の武者を並べ、選ぶと CPU がその装備とくせで戦う（くせ＝PERSONA の掛け率）
+// 結果は持ち主の gr/<uid>/<push> に {w: 武者が勝ったか, t, by} を置き、持ち主が次に開いたとき小判にして消す
+// くせ：1対1の CPU 戦（ステージを含む）で、攻める回数・相手が構えたときの返し（はじき・ガード・回避）・投げ・間合いを数え、
+//   localStorage maai_sty に古い分を少しずつ薄めてためる
+// CrazyGames 版（CG_BUILD）では動かさない（build_crazygames.py が HM_MODES.dojo も消す）
+const GH_PAY = { win: 15, lose: 3, cap: 300 };   // 留守のあいだの小判（持ち主）：武者が勝てば15、負けても3、1回に300まで
+const GH_NAME_A = [['鉄', 'Tetsu'], ['雷', 'Rai'], ['月', 'Tsuki'], ['朱', 'Aka'], ['蒼', 'Ao'], ['銀', 'Gin'], ['影', 'Kage'], ['嵐', 'Arashi'],
+  ['鋼', 'Hagane'], ['風', 'Kaze'], ['炎', 'Homura'], ['霧', 'Kiri'], ['岩', 'Iwa'], ['虎', 'Tora'], ['隼', 'Hayabusa'], ['桜', 'Sakura'],
+  ['龍', 'Ryu'], ['星', 'Hoshi'], ['雪', 'Yuki'], ['剛', 'Gou'], ['紅', 'Beni'], ['闇', 'Yami'], ['光', 'Hikari'], ['獅子', 'Shishi']];
+const GH_NAME_B = [['丸', 'maru'], ['之助', 'nosuke'], ['斎', 'sai'], ['衛門', 'emon'], ['坊', 'bou'], ['太', 'ta'], ['蔵', 'zou'], ['兵衛', 'bei'],
+  ['郎', 'rou'], ['丞', 'jou'], ['介', 'suke'], ['姫', 'hime']];
+const GH = { auth: null, fbA: null, uid: null, db: null, fb: null, list: null, claimAt: 0, upAt: 0, note: null };
+const ghHash = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+// 名前：決まった言葉の前半×後半。nm＝前半×100＋後半（自分で選んだもの）。なければ id から決める
+const ghNameAB = (a, b) => { const A = GH_NAME_A[a], B = GH_NAME_B[b]; return LANG === 'en' ? A[1] + B[1] : A[0] + B[0]; };
+const ghNm = h => { const n = h && h.nm; if (typeof n === 'number' && GH_NAME_A[Math.floor(n/100)] && GH_NAME_B[n % 100]) return [Math.floor(n/100), n % 100];
+  const x = ghHash(h && h.id); return [x % GH_NAME_A.length, (x >>> 8) % GH_NAME_B.length]; };
+const ghName = h => ghNameAB(...ghNm(h));
+// 自分の名前（localStorage maai_ghName、まだ選んでいなければ uid から）
+const ghMyNm = () => { let n = null; try { n = JSON.parse(localStorage.getItem('maai_ghName') || 'null'); } catch(e) {} return ghNm({ id: GH.uid || '', nm: n }); };
+const ghClamp = (v, a, b, d) => typeof v === 'number' && isFinite(v) ? clamp(v, a, b) : d;
+
+// ---------- くせを数える（1対1の CPU 戦のあいだ、aiThink のたびに自分＝G.p を見る） ----------
+{ const _ai = aiThink; aiThink = function(dt, e = G.e, p = G.p, ai = G.ai){ if (!G.melee && !G.net && !G.practice && p === G.p && e === G.e) ghWatch(dt, e, p); return _ai(dt, e, p, ai); }; }
+function ghWatch(dt, e, p){
+  if (G.phase !== 'fight') return;
+  const S = G.sty || (G.sty = { T: 0, far: 0, atk: 0, thr: 0, wind: 0, par: 0, grd: 0, dod: 0, pW: -1, pT: -1, cur: null });
+  const d = Math.hypot(e.x - p.x, e.y - p.y);
+  S.T += dt; if (d > p.w.atk[0].reach + 56) S.far += dt;
+  if (p.state === 'windup' && p.windId !== S.pW) { S.pW = p.windId; S.atk++; }
+  if (p.state === 'throw' && p.thrId !== S.pT) { S.pT = p.thrId; S.thr++; }
+  // 相手が構えた → その一撃が終わるまでに、はじいたか（count.parry が増えた）・回避したか・ガードしたか
+  const done = c => { if (c.par) S.par++; else if (c.dod) S.dod++; else if (c.grd) S.grd++; };
+  if (S.cur && (e.windId !== S.cur.id || (e.state !== 'windup' && e.state !== 'active'))) { done(S.cur); S.cur = null; }
+  if (!S.cur && e.state === 'windup' && e.windId !== S.lastE && d < e.w.atk[e.atk].reach + 70) { S.lastE = e.windId; S.wind++; S.cur = { id: e.windId, p0: G.count.parry }; }
+  if (S.cur) { if (G.count.parry > S.cur.p0) S.cur.par = true; if (p.state === 'dash') S.cur.dod = true; if (p.guard) S.cur.grd = true; }
+}
+// 試合が終わったら、ためている数に足す（古い分は 0.85 倍ずつ薄める＝最近の戦い方ほど効く）
+function ghCommit(){
+  const S = G && G.sty; if (!S || S.T < 5) return;
+  let o = {}; try { o = JSON.parse(localStorage.getItem('maai_sty') || '{}') || {}; } catch(e) {}
+  for (const k of ['T', 'far', 'atk', 'thr', 'wind', 'par', 'grd', 'dod']) o[k] = (+o[k] || 0)*.85 + S[k];
+  try { localStorage.setItem('maai_sty', JSON.stringify(o)); localStorage.setItem('maai_ghDirty', '1'); } catch(e) {}
+  G.sty = null;
+}
+// ためた数 → PERSONA と同じ掛け率（1 がふつうの CPU）。数が少ないうちは 1 に寄せる
+function ghStyle(){
+  let o = {}; try { o = JSON.parse(localStorage.getItem('maai_sty') || '{}') || {}; } catch(e) {}
+  const T = +o.T || 0, W = Math.max(1, +o.wind || 0), k = Math.min(1, T/60), mix = (v, lo, hi) => +(1 + (clamp(v, lo, hi) - 1)*k).toFixed(2);
+  return {
+    agg: mix((+o.atk || 0)/Math.max(1, T)/.8, .4, 2.2),
+    parry: mix((+o.par || 0)/W/.12, .2, 3),
+    block: mix((+o.grd || 0)/W/.35, .3, 2),
+    dodge: mix((+o.dod || 0)/W/.15, .3, 2.5),
+    thr: mix((+o.thr || 0)/Math.max(1, (+o.atk || 0) + (+o.thr || 0))/.08, .2, 3),
+    keep: +(clamp(((+o.far || 0)/Math.max(1, T) - .35)/.4, 0, 1)*k).toFixed(2) };
+}
+// 受け取ったくせは範囲に収める（書き換えられていても強くなりすぎない）
+const ghStyIn = s => ({ n: '武者', c: '#FFC93A', agg: ghClamp(s && s.agg, .4, 2.2, 1), parry: ghClamp(s && s.parry, .2, 3, 1), block: ghClamp(s && s.block, .3, 2, 1),
+  dodge: ghClamp(s && s.dodge, .3, 2.5, 1), thr: ghClamp(s && s.thr, .2, 3, 1), keep: ghClamp(s && s.keep, 0, 1, 0) });
+// くせの札（目立つものを2つまで）
+function ghTags(s){
+  const t = [[s.agg >= 1.3, '攻め好き'], [s.parry >= 1.5, 'はじき上手'], [s.block >= 1.3, '守りが固い'], [s.dodge >= 1.5, '回避が多い'], [s.thr >= 1.6, '投げ好き'], [s.keep >= .5, '間合いを取る'],
+    [s.agg <= .7, '慎重']].filter(x => x[0]).map(x => x[1]).slice(0, 2);
+  return t.length ? t : ['素直'];
+}
+
+// ---------- Firebase（presence.js と同じアプリ）＋匿名ログイン ----------
+async function ghFB(){
+  if (typeof CG_BUILD !== 'undefined') return null;
+  if (GH.auth) return GH;
+  for (let i = 0; i < 40 && !FB_READY; i++) await new Promise(r => setTimeout(r, 250));
+  const R = FB_READY && await FB_READY; if (!R) return null;
+  if (!GH.authP) GH.authP = (async () => {
+    const A = await import(PRES_SDK + 'firebase-auth.js');
+    const auth = A.getAuth(R.app);
+    await (auth.authStateReady ? auth.authStateReady() : Promise.resolve());
+    if (!auth.currentUser) await A.signInAnonymously(auth);
+    GH.fbA = A; GH.db = R.db; GH.fb = R.fb; GH.uid = auth.currentUser.uid; GH.auth = auth; return GH;
+  })().catch(() => { GH.authP = null; return null; });
+  return GH.authP;
+}
+// 自分の武者を置く（1面もクリアしていない人は置かない）。くせが変わったか、6時間たったら
+async function ghUpload(force){
+  if (bestLv < 2) return;
+  const dirty = (() => { try { return localStorage.getItem('maai_ghDirty') === '1'; } catch(e) { return false; } })();
+  if (!force && !dirty && Date.now() - GH.upAt < 6*3600e3) return;
+  const g = await ghFB(); if (!g) return;
+  syncGear();
+  let rec = { w: 0, l: 0 }; try { rec = { w: 0, l: 0, ...JSON.parse(localStorage.getItem('maai_ghRec') || '{}') }; } catch(e) {}
+  const data = { v: 1, t: g.fb.serverTimestamp(), lv: clamp(Math.round(bestLv), 1, 200), w: myW, skin: { ...mySkin }, gear: netGearOut(myGear), sty: ghStyle(), rec: { w: rec.w | 0, l: rec.l | 0 } };
+  { const [a, b] = ghMyNm(); data.nm = a*100 + b; }
+  const h = myHeart(), o = myOrb(); if (h) data.heart = h; if (o) data.orb = o;
+  await g.fb.set(g.fb.ref(g.db, 'gh/' + g.uid), data).then(() => { GH.upAt = Date.now(); try { localStorage.removeItem('maai_ghDirty'); } catch(e) {} }).catch(() => {});
+}
+// 留守のあいだの結果を受け取る → 小判、記録を消す
+async function ghClaim(){
+  if (Date.now() - GH.claimAt < 60e3) return null;
+  GH.claimAt = Date.now();
+  const g = await ghFB(); if (!g) return null;
+  const snap = await g.fb.get(g.fb.ref(g.db, 'gr/' + g.uid)).catch(() => null);
+  if (!snap || !snap.exists()) return null;
+  let w = 0, l = 0; const del = {};
+  snap.forEach(c => { const v = c.val() || {}; if (v.w) w++; else l++; del[c.key] = null; });
+  await g.fb.update(g.fb.ref(g.db, 'gr/' + g.uid), del).catch(() => {});
+  const pay = Math.min(GH_PAY.cap, w*GH_PAY.win + l*GH_PAY.lose);
+  bag.koban += pay; saveBag();
+  let rec = { w: 0, l: 0 }; try { rec = { w: 0, l: 0, ...JSON.parse(localStorage.getItem('maai_ghRec') || '{}') }; } catch(e) {}
+  rec.w += w; rec.l += l; try { localStorage.setItem('maai_ghRec', JSON.stringify(rec)); localStorage.setItem('maai_ghDirty', '1'); } catch(e) {}
+  return { w, l, pay };
+}
+// ホームを開いたとき：受け取り → 知らせ、そのあと自分の武者を置き直す
+{ const _title = title; title = function(){ _title(); ghHome(); }; }
+async function ghHome(){
+  if (typeof CG_BUILD !== 'undefined') return;
+  const r = await ghClaim().catch(() => null);
+  if (r) GH.note = r;
+  ghNoteShow();
+  ghUpload().catch(() => {});
+}
+function ghNoteShow(){
+  const r = GH.note, st = document.getElementById('hStage'); if (!r || !st) return;
+  GH.note = null; SFX.win();
+  const el = document.createElement('div'); el.className = 'ghNote';
+  el.innerHTML = `<b>留守のあいだに</b><span>あなたの武者が${r.w + r.l}戦 ${r.w}勝${r.l}敗</span><em>小判 +${r.pay}</em><button>受け取る</button>`;
+  el.onclick = e => { e.stopPropagation(); el.remove(); title(); };
+  document.getElementById('app').appendChild(el);
+}
+
+// ---------- 最初からいる武者（だれもいなくても相手がいるように）。見た目・装備は決まった乱数で作る ----------
+function ghSeeds(){
+  if (GH.seeds) return GH.seeds;
+  const per = ['tosshin', 'shincho', 'kaeshi', 'nage', 'nigeru', 'tosshin'], off = [-1, 0, 1, 0, 2, -2];
+  const rnd0 = Math.random; let seed = 20261017;
+  Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; };
+  try {
+    GH.seeds = per.map((p, i) => { const P = PERSONA[p];
+      return { id: 'seed' + i, seed: true, off: off[i], w: WKEYS[i % WKEYS.length], skin: randSkin(), gear: netGearOut(randomGear()),
+        sty: { agg: P.agg, parry: P.parry, block: P.block, dodge: P.dodge, thr: P.thr, keep: P.keep }, rec: null }; });
+  } finally { Math.random = rnd0; }
+  return GH.seeds;
+}
+
+// ---------- 道場の画面 ----------
+HM_MODES.dojo = { n: '道場', ic: '🏯', d: 'ほかの人の武者と戦う', c: '#9B6BD8', go: () => ghScreen() };
+async function ghScreen(){
+  screen('道場', `<div class="nBox ghBox"><p class="nNote">ほかの人が育てた武者と戦う。武者は持ち主の装備と戦い方のくせで動く。勝てば小判、相手の持ち主にも小判が届く。</p>
+    <div id="ghMe" class="ghMe"></div><div id="ghList" class="ghList"><div class="nSt">武者を呼んでいます…</div></div></div>`);
+  document.getElementById('back').onclick = title;
+  ghMeRow();
+  const lv = clamp(Math.round(bestLv), 1, 200);
+  let real = [];
+  const g = await ghFB();
+  if (g) {
+    const q = g.fb.query(g.fb.ref(g.db, 'gh'), g.fb.orderByChild('lv'), g.fb.startAt(Math.max(1, lv - 3)), g.fb.endAt(lv + 3), g.fb.limitToLast(40));
+    const snap = await g.fb.get(q).catch(() => null);
+    if (snap) snap.forEach(c => { const v = c.val(); if (c.key !== g.uid && v && WEAPONS[v.w] && Date.now() - (+v.t || 0) < 60*86400e3) real.push({ id: c.key, ...v }); });
+    if (real.length < 4) {   // 近い Lv が少なければ、最近の武者から足す
+      const s2 = await g.fb.get(g.fb.query(g.fb.ref(g.db, 'gh'), g.fb.orderByChild('lv'), g.fb.limitToLast(30))).catch(() => null);
+      if (s2) s2.forEach(c => { const v = c.val(); if (c.key !== g.uid && v && WEAPONS[v.w] && !real.some(r => r.id === c.key)) real.push({ id: c.key, ...v }); });
+    }
+  }
+  for (let i = real.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i + 1)); [real[i], real[j]] = [real[j], real[i]]; }
+  const seeds = ghSeeds().map(s => ({ ...s, lv: clamp(lv + s.off, 1, 200) }));
+  const list = [...real.slice(0, 6), ...seeds].slice(0, 6).sort((a, b) => (+a.lv || 1) - (+b.lv || 1));
+  GH.list = list;
+  ghMeRow();
+  const box = document.getElementById('ghList'); if (!box) return;
+  box.innerHTML = list.map((h, i) => { const s = ghStyIn(h.sty), rec = h.rec && (h.rec.w || h.rec.l) ? `<small>戦績 ${h.rec.w | 0}勝${h.rec.l | 0}敗</small>` : '';
+    return `<button class="ghRow" data-i="${i}"><canvas width="56" height="56"></canvas><span class="ghInfo"><b>${ghName(h)}<i>Lv${h.lv | 0}</i>${h.seed ? '<em>師範代</em>' : ''}</b>
+      <span>${WEAPONS[h.w].name}・${ghTags(s).join('・')}</span>${rec}</span><span class="ghGo">挑む</span></button>`; }).join('')
+    + (g ? '' : '<div class="nSt"><span class="ng">つながらないので、道場の師範代だけです</span></div>');
+  box.querySelectorAll('.ghRow').forEach(b => {
+    const h = list[+b.dataset.i], c = b.querySelector('canvas'), x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+    try { drawMech(x, 28, 92, Math.PI/2 - .3, ghSkin(h.skin), 'red', MECH_BASE(), { px: 3.2, noSword: true, wk: h.w }); } catch(e) {}
+    b.onclick = () => { SFX.coin(); ghFight(h); };
+  });
+}
+const ghSkin = s => Object.fromEntries(Object.keys(SKINS).map(k => [k, s && SKINS[k].list[s[k]] ? s[k] : DEFAULT_SKIN[k]]));
+
+// ---------- 戦う ----------
+function ghFight(h){
+  CUR_STAGE = null;
+  PERSONA.__gh = ghStyIn(h.sty); PERSONA.__gh.n = ghTags(PERSONA.__gh).join('・');   // 名前の下に出る性格の札＝くせ
+  const lv = clamp(+h.lv || 1, 1, 200);
+  newMatch(lv, h.w, netGearIn(h.gear));
+  G.boss = null; G.ghost = h; G.round = 1; newRound();
+}
+{ const _nr = newRound; newRound = function(){ _nr(); const h = G && G.ghost; if (!h || G.net) return;
+    G.e.skin = ghSkin(h.skin); G.e.per = '__gh'; G.e.heart = netKLv(h.heart, HEARTS); G.e.orb = netKLv(h.orb, ORBS); G.e.name = `${ghName(h)} Lv${G.level}`; }; }
+// 試合の終わり：くせをためる。道場の試合なら、結果を持ち主に送って道場の結果の札
+{ const _er = endRound; endRound = function(){
+  if (G && !G.net && !G.melee && (G.pw >= 2 || G.ew >= 2)) { if (!G.practice) ghCommit(); if (G.ghost) return ghOver(); }
+  return _er(); }; }
+function ghOver(){
+  const h = G.ghost, win = G.pw >= 2; G.phase = 'over';
+  const pay = [['1本×' + G.pw, G.pw*5], ['勝利', win ? 20 + G.level*3 : 0]].filter(x => x[1] > 0), total = pay.reduce((a, x) => a + x[1], 0);
+  bag.koban += total; saveBag(); if (win) SFX.win(); else SFX.lose();
+  if (!h.seed) ghFB().then(g => g && g.fb.set(g.fb.push(g.fb.ref(g.db, 'gr/' + h.id)), { w: !win, t: g.fb.serverTimestamp(), by: g.uid }).catch(() => {}));
+  const earn = !total ? '' : `<p class="earn">小判 <b>+${total}</b><small>${pay.map(x => `${x[0]} ${x[1]}`).join('　')}</small>持っている小判：${bag.koban}</p>`;
+  const who = h.seed ? '' : `<p class="ghSent">${win ? '相手の持ち主にも、戦った知らせと小判が届きます' : '相手の持ち主に、勝った知らせと小判が届きます'}</p>`;
+  card(`<h2>${win ? '勝利' : '敗北'}</h2><p>${G.e.name} に ${G.pw}-${G.ew}</p>${earn}${who}<button id="b1">${win ? '道場へ戻る' : 'もう一度挑む'}</button>
+    <br><button id="bR" class="sub">${win ? 'もう一度挑む' : '道場へ戻る'}</button>`, () => win ? ghScreen() : ghFight(h));
+  document.getElementById('bR').onclick = () => win ? ghFight(h) : ghScreen();
+  quitBtn.hidden = true;
+}
+
+// ---------- 自分の武者の名前を選ぶ ----------
+function ghMeRow(){
+  const el = document.getElementById('ghMe'); if (!el) return;
+  if (bestLv < 2) { el.innerHTML = '<span>1面クリアすると、あなたの武者も道場に並びます</span>'; return; }
+  el.innerHTML = `<span>あなたの武者：</span><b>${ghNameAB(...ghMyNm())}</b><button id="ghNmB">名前を変える</button>`;
+  document.getElementById('ghNmB').onclick = () => { SFX.coin(); ghPick(); };
+}
+function ghPick(){
+  let [a, b] = ghMyNm();
+  const box = document.createElement('div'); box.className = 'ghPick';
+  const draw = () => {
+    box.innerHTML = `<div class="ghPickIn"><h3>名前を選ぶ</h3><div class="ghPrev">${ghNameAB(a, b)}</div>
+      <div class="ghLbl">前</div><div class="ghWords">${GH_NAME_A.map((w, i) => `<button data-a="${i}" class="${i === a ? 'on' : ''}">${LANG === 'en' ? w[1] : w[0]}</button>`).join('')}</div>
+      <div class="ghLbl">後</div><div class="ghWords">${GH_NAME_B.map((w, i) => `<button data-b="${i}" class="${i === b ? 'on' : ''}">${LANG === 'en' ? w[1] : w[0]}</button>`).join('')}</div>
+      <div class="ghPickBot"><button id="ghPkNo" class="sub">やめる</button><button id="ghPkOk">決める</button></div></div>`;
+    box.querySelectorAll('[data-a]').forEach(x => x.onclick = () => { a = +x.dataset.a; SFX.coin(); draw(); });
+    box.querySelectorAll('[data-b]').forEach(x => x.onclick = () => { b = +x.dataset.b; SFX.coin(); draw(); });
+    box.querySelector('#ghPkNo').onclick = () => box.remove();
+    box.querySelector('#ghPkOk').onclick = () => {
+      try { localStorage.setItem('maai_ghName', String(a*100 + b)); localStorage.setItem('maai_ghDirty', '1'); } catch(e) {}
+      SFX.win(); box.remove(); ghMeRow(); ghUpload().catch(() => {});
+    };
+  };
+  draw(); (ov.querySelector('.eq') || ov).appendChild(box);
+}
 
 title();
 requestAnimationFrame(loop);
